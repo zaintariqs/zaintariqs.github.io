@@ -61,68 +61,63 @@
       margin: 15px 0 5px;
       font-weight: bold;
     }
-    form input
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Hawalay | حوالے</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: 'Segoe UI', sans-serif;
-      background-color: #f4f7f9;
-      color: #333;
+    form input {
+      width: 100%;
+      padding: 10px;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
     }
-    header {
-      background: url('https://via.placeholder.com/1600x600?text=Crypto+POS+Terminal') center center / cover no-repeat;
-      color: white;
-      text-align: center;
-      padding: 100px 20px 120px;
-      position: relative;
-    }
-    header::after {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0, 0, 0, 0.6);
-    }
-    header h1, header h2, header p {
-      position: relative;
-      z-index: 2;
-    }
-    header h1 {
-      font-size: 3rem;
-      margin: 0;
-    }
-    header h2 {
-      font-size: 1.8rem;
-      font-family: 'Noto Nastaliq Urdu', serif;
-      margin-top: 10px;
-    }
-    header p {
-      font-size: 1.2rem;
+    form button {
       margin-top: 20px;
-      max-width: 700px;
-      margin-left: auto;
-      margin-right: auto;
+      background-color: #008080;
+      color: white;
+      border: none;
+      padding: 12px;
+      width: 100%;
+      font-size: 1rem;
+      cursor: pointer;
+      border-radius: 4px;
     }
-    .container {
-      max-width: 500px;
-      margin: -60px auto 40px;
-      padding: 30px;
-      background: white;
-      border-radius: 10px;
-      box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    form button:hover {
+      background-color: #006666;
     }
-    .container h2 {
+    footer {
       text-align: center;
-      margin-bottom: 20px;
+      padding: 30px 0;
+      font-size: 0.9rem;
+      color: #666;
     }
-    form label {
-      display: block;
-      margin: 15px 0 5px;
-      font-weight: bold;
-    }
-    form input
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Hawalay</h1>
+    <h2>حوالے</h2>
+    <p>Pakistan’s first <strong>DePIN payment solution</strong> – enabling crypto payments via next-gen POS terminals.</p>
+  </header>
+
+  <div class="container">
+    <h2>Join the Pilot Launch</h2>
+    <p style="text-align:center;">Be the first to experience crypto-enabled retail in Pakistan.</p>
+    <form action="https://formspree.io/f/yourformid" method="POST">
+      <label for="name">Full Name</label>
+      <input type="text" id="name" name="name" required />
+
+      <label for="email">Email Address</label>
+      <input type="email" id="email" name="email" required />
+
+      <label for="phone">Phone Number</label>
+      <input type="tel" id="phone" name="phone" required />
+
+      <button type="submit">Sign Up Now</button>
+    </form>
+  </div>
+
+  <footer>
+    &copy; 2025 Hawalay – Powered by DePIN | All rights reserved.
+  </footer>
+
+</body>
+</html>
