@@ -141,7 +141,7 @@ form button {
 form button:hover {
   background-color: #006666;
 }
-.benefits {
+    .benefits {
   max-width: 800px;
   margin: auto;
   text-align: left;
@@ -170,11 +170,29 @@ form button:hover {
 .cta-button:hover {
   background-color: #006666;
 }
-
   </style>
 </head>
 
 <body>
+<script>
+  const faders = document.querySelectorAll('.fade-in');
+  const appearOptions = {
+    threshold: 0.3
+  };
+
+  const appearOnScroll = new IntersectionObserver((entries, observer) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      entry.target.classList.add('visible');
+      observer.unobserve(entry.target);
+    });
+  }, appearOptions);
+
+  faders.forEach(fader => {
+    appearOnScroll.observe(fader);
+  });
+</script>
+
 <header>
   <h1>Hawalay | حوالے</h1>
   <p>Pakistan’s first DePIN crypto-enabled POS solution</p>
@@ -207,7 +225,7 @@ form button:hover {
   </div>
 </section>
 
-  <!-- <div class="swiper">
+ <!-- <div class="swiper">
     <div class="swiper-wrapper">
       <div class="swiper-slide">🚀 Instant crypto payments at local stores</div>
       <div class="swiper-slide">🔐 Decentralized security powered by blockchain</div>
@@ -217,6 +235,9 @@ form button:hover {
     <div class="swiper-pagination"></div>
   </div>
 </section> -->
+
+   
+
 
 <section class="section">
   <section id="merchant-form" class="section">
