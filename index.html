@@ -1,255 +1,56 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Hawalay | حوالے</title>
-
-  
-  <!-- Swiper.js for slider -->
-  <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CryptoPOS - Instant Crypto Payments for Merchants</title>
   <style>
     body {
+      font-family: Arial, sans-serif;
       margin: 0;
-      font-family: 'Segoe UI', sans-serif;
-      background-color: #f4f7f9;
+      padding: 0;
+      background: #f9f9f9;
       color: #333;
     }
     header {
-      background: url('https://elements-resized.envatousercontent.com/elements-cover-images/41ee6058-d2be-4ddb-b65b-c50193fe6a4b?w=1370&cf_fit=scale-down&q=85&format=auto&s=378c193e2e6f12a34807aa1d1e169fd73eb652d773ca2f30739385a9e555671f') center/cover no-repeat;
-      color: white;
-      object-fit:scale-down;
+      background: #141414;
+      color: #fff;
+      padding: 2rem;
       text-align: center;
-      padding: 120px 20px 140px;
-      position: relative;
-    }
-    header::after {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0, 0, 0, 0.6);
-    }
-    header h1, header p {
-      position: relative;
-      z-index: 2;
     }
     header h1 {
-      font-size: 3rem;
       margin: 0;
     }
-    header p {
-      font-size: 1.2rem;
-      margin-top: 15px;
-      max-width: 700px;
-      margin-left: auto;
-      margin-right: auto;
+    nav a {
+      color: #fff;
+      margin: 0 1rem;
+      text-decoration: none;
     }
-
-    .section {
-      padding: 60px 20px;
+    .container {
+      max-width: 1000px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+    .hero {
       text-align: center;
-    }
-
-    .swiper {
-      width: 90%;
-      max-width: 900px;
-      margin: auto;
-      padding: 40px 0;
-    }
-    .swiper-slide {
-      background: #ffffff;
+      padding: 3rem 1rem;
+      background: #e6f2ff;
       border-radius: 10px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-      padding: 40px;
-      font-size: 1.1rem;
     }
-
-    .form-section {
-      max-width: 500px;
-      margin: auto;
+    .hero h2 {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+    section {
+      margin: 2rem 0;
+    }
+    .features, .metrics, .pricing {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+    .card {
       background: white;
-      padding: 30px;
+      padding: 1.5rem;
       border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    form label {
-      display: block;
-      margin-top: 15px;
-      font-weight: bold;
-    }
-    form input {
-      width: 100%;
-      padding: 10px;
-      margin-top: 5px;
-      font-size: 1rem;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
-    form button {
-      margin-top: 20px;
-      background-color: #008080;
-      color: white;
-      border: none;
-      padding: 12px;
-      width: 100%;
-      font-size: 1rem;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    form button:hover {
-      background-color: #006666;
-    }
-
-    footer {
-      text-align: center;
-      padding: 30px 0;
-      font-size: 0.9rem;
-      color: #666;
-    }
-.form-section {
-  max-width: 600px;
-  margin: auto;
-  background: white;
-  padding: 30px;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-}
-form label {
-  display: block;
-  margin-top: 15px;
-  font-weight: bold;
-}
-form input, form textarea {
-  width: 100%;
-  padding: 10px;
-  margin-top: 5px;
-  font-size: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-form button {
-  margin-top: 25px;
-  background-color: #008080;
-  color: white;
-  border: none;
-  padding: 12px;
-  width: 100%;
-  font-size: 1rem;
-  border-radius: 4px;
-  cursor: pointer;
-}
-form button:hover {
-  background-color: #006666;
-}
-    .benefits {
-  max-width: 800px;
-  margin: auto;
-  text-align: left;
-}
-
-  </style>
-</head>
-
-<body>
-<header>
-  <h1>Hawalay | حوالے</h1>
-  <p>Pakistan’s first DePIN crypto-enabled POS solution</p>
-    <p>Bridging blockchain and retail payments seamlessly with local currency</p>
-</header>
-  <!-- Why Accept Crypto Section -->
-<section class="section" id="why-crypto">
-  <h2 style="text-align: center; margin-bottom: 40px;"><b><i>Hawalay</i></b> is where traditional trust meets decentralized tech</h2>
-  <div class="benefits">
-    <div class="benefit fade-in">
-      <strong>🚀 Faster Payments, Lower Fees:</strong>
-      <p>Traditional gateways charge 2–4%. Crypto settles in minutes, for pennies.</p>
-    </div>
-    <div class="benefit fade-in">
-      <strong>🌍 Borderless Transactions:</strong>
-      <p>Accept from overseas customers or diaspora without bank delays.</p>
-    </div>
-    <div class="benefit fade-in">
-      <strong>💰 New Customer Segments:</strong>
-      <p>Crypto users are looking to spend — meet them where they are.</p>
-    </div>
-    <div class="benefit fade-in">
-      <strong>🔒 Transparent & Secure:</strong>
-      <p>No chargebacks, no fraud — just verified blockchain payments.</p>
-    </div>
-    <div class="benefit fade-in">
-      <strong>📈 Non volatile:</strong>
-      <p>Accept crypto from customer, recieve PKR at best rates instantly.</p>
-    </div>
-  </div>
-</section>
-
-  <div class="swiper">
-    <div class="swiper-wrapper">
-     <!-- <div class="swiper-slide">🚀 Instant crypto payments at local stores</div>
-      <div class="swiper-slide">🔐 Decentralized security powered by blockchain</div>
-      <div class="swiper-slide">💸 Save fees with on-chain settlement</div>
-      <div class="swiper-slide">📲 Modern POS terminals with QR & wallet scan</div>
-    </div> -->
-    <div class="swiper-pagination"></div>
-  </div>
-</section>
-
-   
-
-
-<section class="section">
-  <section id="merchant-form" class="section">
-  <h2 style="text-align:center;">Merchant Pilot Program</h2>
-  <p style="text-align:center; max-width:600px; margin: 0 auto 30px;">
-    Are you a retailer or business interested in accepting crypto payments? Join the Hawalay pilot program and get early access to our blockchain-powered POS system.
-  </p>
-  <div class="form-section">
-    <form action="https://formspree.io/f/yourformid" method="POST">
-      <label for="shopName">Shop Name</label>
-      <input type="text" id="shopName" name="shopName" required />
-
-      <label for="ownerName">Owner Name</label>
-      <input type="text" id="ownerName" name="ownerName" required />
-
-      <label for="shopType">Type of Business</label>
-      <input type="text" id="shopType" name="shopType" placeholder="e.g. Grocery, Electronics" required />
-
-      <label for="location">Shop Location</label>
-      <input type="text" id="location" name="location" placeholder="City or area" required />
-
-      <label for="email">Email Address</label>
-      <input type="email" id="email" name="email" required />
-
-      <label for="phone">Phone Number</label>
-      <input type="tel" id="phone" name="phone" required />
-
-      <label for="comments">Additional Comments</label>
-      <input type="text" id="comments" name="comments" placeholder="(Optional)" />
-
-      <button type="submit">Apply for Pilot Program</button>
-    </form>
-  </div>
-</section>
-
-
-<footer>
-  &copy; 2025 Hawalay – Powered by DePIN & Blockchain
-</footer>
-
-<!-- Swiper.js -->
-<script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
-<script>
-  const swiper = new Swiper('.swiper', {
-    direction: 'horizontal',
-    loop: true,
-    pagination: {
-      el: '.swiper-pagination',
-    },
-    autoplay: {
-      delay: 3000,
-    },
-  });
-</script>
-
-</body>
-</html>
+      box-shadow: 0 0 10px rgba
