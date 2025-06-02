@@ -180,7 +180,24 @@ form button:hover {
   <p>Pakistan’s first DePIN crypto-enabled POS solution</p>
     <p>Bridging blockchain and retail payments seamlessly with local currency</p>
 </header>
+<script>
+  const faders = document.querySelectorAll('.fade-in');
+  const appearOptions = {
+    threshold: 0.3
+  };
 
+  const appearOnScroll = new IntersectionObserver((entries, observer) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      entry.target.classList.add('visible');
+      observer.unobserve(entry.target);
+    });
+  }, appearOptions);
+
+  faders.forEach(fader => {
+    appearOnScroll.observe(fader);
+  });
+</script>
   <!-- Why Accept Crypto Section -->
 <section class="section" id="why-crypto">
   <h2 style="text-align: center; margin-bottom: 40px;"><b><i>Hawalay</i></b> is where traditional trust meets decentralized tech</h2>
