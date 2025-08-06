@@ -1,17 +1,17 @@
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import HeroSection from "@/components/HeroSection";
-import FeaturesSection from "@/components/FeaturesSection";
+import CryptoHeader from "@/components/CryptoHeader";
+import CryptoFooter from "@/components/CryptoFooter";
+import CryptoHeroSection from "@/components/CryptoHeroSection";
+import CryptoTokenSection from "@/components/CryptoTokenSection";
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
+    <div className="min-h-screen bg-crypto-dark">
+      <CryptoHeader />
       <main>
-        <HeroSection />
-        <FeaturesSection />
+        <CryptoHeroSection />
+        <CryptoTokenSection />
       </main>
-      <Footer />
+      <CryptoFooter />
     </div>
   );
 };
