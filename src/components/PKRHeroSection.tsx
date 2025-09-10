@@ -70,18 +70,27 @@ const PKRHeroSection = () => {
           </div>
 
           {/* Features Preview */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-16 w-full max-w-3xl">
-            <div className="flex items-center space-x-3 text-gray-300">
-              <Shield className="h-6 w-6 text-crypto-green" />
-              <span>Bank-Grade Security</span>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16 w-full max-w-4xl">
+            <div className="bg-crypto-gray/10 backdrop-blur-sm border border-crypto-green/20 rounded-xl p-6 text-center hover:border-crypto-green/40 transition-all duration-300">
+              <Shield className="h-8 w-8 text-crypto-green mx-auto mb-3" />
+              <h3 className="text-lg font-semibold text-white mb-2">Bank-Grade Security</h3>
+              <p className="text-sm text-gray-400 leading-relaxed">
+                Multi-signature wallets and institutional-grade encryption protect your digital assets with the same standards used by major financial institutions.
+              </p>
             </div>
-            <div className="flex items-center space-x-3 text-gray-300">
-              <TrendingUp className="h-6 w-6 text-crypto-green" />
-              <span>Stable Value</span>
+            <div className="bg-crypto-gray/10 backdrop-blur-sm border border-crypto-green/20 rounded-xl p-6 text-center hover:border-crypto-green/40 transition-all duration-300">
+              <TrendingUp className="h-8 w-8 text-crypto-green mx-auto mb-3" />
+              <h3 className="text-lg font-semibold text-white mb-2">Stable Value</h3>
+              <p className="text-sm text-gray-400 leading-relaxed">
+                Always pegged 1:1 to Pakistani Rupee with real PKR reserves backing every token. No volatility, just reliable digital currency you can trust.
+              </p>
             </div>
-            <div className="flex items-center space-x-3 text-gray-300">
-              <Zap className="h-6 w-6 text-crypto-green" />
-              <span>Instant Transfers</span>
+            <div className="bg-crypto-gray/10 backdrop-blur-sm border border-crypto-green/20 rounded-xl p-6 text-center hover:border-crypto-green/40 transition-all duration-300">
+              <Zap className="h-8 w-8 text-crypto-green mx-auto mb-3" />
+              <h3 className="text-lg font-semibold text-white mb-2">Instant Transfers</h3>
+              <p className="text-sm text-gray-400 leading-relaxed">
+                Send and receive PKR Stable instantly, 24/7, anywhere in Pakistan or globally. No waiting periods, no bank holidays, just fast payments.
+              </p>
             </div>
           </div>
         </div>
