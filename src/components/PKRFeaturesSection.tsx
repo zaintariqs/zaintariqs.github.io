@@ -3,7 +3,7 @@ import { Shield, TrendingUp, Zap, Users, Eye, MessageCircle } from "lucide-react
 
 const PKRFeaturesSection = () => {
   const handleWhatsAppContact = () => {
-    window.open("https://wa.me/+905314390365", "_Welcome to the future ");
+    window.open("https://wa.me/+905324390365", "_blank");
   };
 
   const features = [
