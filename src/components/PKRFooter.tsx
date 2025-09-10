@@ -1,4 +1,4 @@
-import { MessageCircle, Mail, MapPin, Phone } from "lucide-react";
+import { MessageCircle, Mail, MapPin } from "lucide-react";
 
 const PKRFooter = () => {
   const handleWhatsAppContact = () => {
@@ -57,11 +57,7 @@ const PKRFooter = () => {
               </button>
               <div className="flex items-center space-x-2 text-sm text-gray-400">
                 <Mail className="h-4 w-4" />
-                <span>support@pkrstable.pk</span>
-              </div>
-              <div className="flex items-center space-x-2 text-sm text-gray-400">
-                <Phone className="h-4 w-4" />
-                <span>+92 300 123 4567</span>
+                <span>support@pkrsc.org</span>
               </div>
               <div className="flex items-center space-x-2 text-sm text-gray-400">
                 <MapPin className="h-4 w-4" />
@@ -74,7 +70,7 @@ const PKRFooter = () => {
         <div className="border-t border-crypto-gray mt-8 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <p className="text-gray-400 text-sm">
-              © 2024 PKR Stable. All rights reserved.
+              © 2025 PKR Stable. All rights reserved.
             </p>
             <div className="text-gray-400 text-sm">
               Regulated and compliant with Pakistani financial laws
