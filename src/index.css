@@ -123,3 +123,93 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
+
+/* Money to Digital Animation Styles */
+@layer components {
+  .money-bill {
+    @apply inline-block p-2 bg-crypto-green/10 border border-crypto-green/20 rounded-lg;
+    animation: float 3s ease-in-out infinite, fade-pulse 2s ease-in-out infinite;
+  }
+
+  .digital-particles {
+    @apply flex space-x-2;
+    animation: drift 4s ease-in-out infinite;
+  }
+
+  .particle {
+    @apply text-crypto-green text-xs font-mono opacity-60;
+    animation: digital-pulse 1.5s ease-in-out infinite;
+  }
+
+  .digital-flow .flow-line {
+    @apply transform rotate-12;
+    animation: data-stream 3s linear infinite;
+  }
+
+  .transformation-center {
+    animation: transform-pulse 2s ease-in-out infinite;
+  }
+
+  /* Keyframe Animations */
+  @keyframes float {
+    0%, 100% { 
+      transform: translateY(0px) rotate(0deg); 
+    }
+    50% { 
+      transform: translateY(-20px) rotate(5deg); 
+    }
+  }
+
+  @keyframes fade-pulse {
+    0%, 100% { 
+      opacity: 0.4; 
+    }
+    50% { 
+      opacity: 0.8; 
+    }
+  }
+
+  @keyframes drift {
+    0%, 100% { 
+      transform: translateX(0px); 
+    }
+    50% { 
+      transform: translateX(20px); 
+    }
+  }
+
+  @keyframes digital-pulse {
+    0%, 100% { 
+      opacity: 0.3; 
+      transform: scale(1); 
+    }
+    50% { 
+      opacity: 1; 
+      transform: scale(1.2); 
+    }
+  }
+
+  @keyframes data-stream {
+    0% { 
+      transform: translateX(-100px) rotate(12deg) opacity(0); 
+    }
+    10% { 
+      opacity: 1; 
+    }
+    90% { 
+      opacity: 1; 
+    }
+    100% { 
+      transform: translateX(100px) rotate(12deg) opacity(0); 
+    }
+  }
+
+  @keyframes transform-pulse {
+    0%, 100% { 
+      transform: scale(1) rotate(0deg); 
+    }
+    50% { 
+      transform: scale(1.1) rotate(180deg); 
+    }
+  }
+}

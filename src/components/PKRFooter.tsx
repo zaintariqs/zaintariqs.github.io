@@ -8,7 +8,7 @@ const PKRFooter = () => {
   return (
     <footer className="bg-crypto-dark border-t border-crypto-gray">
       <div className="container px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Brand Section */}
           <div className="space-y-4">
             <div className="flex items-center space-x-3">
@@ -28,19 +28,7 @@ const PKRFooter = () => {
             <div className="space-y-2 text-sm">
               <a href="#features" className="block text-gray-400 hover:text-crypto-green transition-colors">Features</a>
               <a href="#security" className="block text-gray-400 hover:text-crypto-green transition-colors">Security</a>
-              <a href="#whitepaper" className="block text-gray-400 hover:text-crypto-green transition-colors">Whitepaper</a>
               <a href="#about" className="block text-gray-400 hover:text-crypto-green transition-colors">About Us</a>
-            </div>
-          </div>
-
-          {/* Legal */}
-          <div className="space-y-4">
-            <h4 className="text-white font-semibold">Legal</h4>
-            <div className="space-y-2 text-sm">
-              <a href="#privacy" className="block text-gray-400 hover:text-crypto-green transition-colors">Privacy Policy</a>
-              <a href="#terms" className="block text-gray-400 hover:text-crypto-green transition-colors">Terms of Service</a>
-              <a href="#compliance" className="block text-gray-400 hover:text-crypto-green transition-colors">Compliance</a>
-              <a href="#aml" className="block text-gray-400 hover:text-crypto-green transition-colors">AML Policy</a>
             </div>
           </div>
 
