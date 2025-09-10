@@ -58,7 +58,7 @@ const PKRFooter = () => {
         <div className="border-t border-crypto-gray mt-8 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <p className="text-gray-400 text-sm">
-              © 2025 PKR Stable. All rights reserved.
+              © 2025 PKRSC. All rights reserved.
             </p>
             <div className="text-gray-400 text-sm">
               Regulated and compliant with Pakistani financial laws
