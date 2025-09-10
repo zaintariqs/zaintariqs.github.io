@@ -6,7 +6,7 @@ const PKRHeader = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const handleWhatsAppContact = () => {
-    window.open("https://wa.me/+905324390365", "_blank");
+    window.open("https://wa.me/+905314390365", "_blank");
   };
 
   return (
