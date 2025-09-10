@@ -1,17 +1,17 @@
-import CryptoHeader from "@/components/CryptoHeader";
-import CryptoFooter from "@/components/CryptoFooter";
-import CryptoHeroSection from "@/components/CryptoHeroSection";
-import CryptoTokenSection from "@/components/CryptoTokenSection";
+import PKRHeader from "@/components/PKRHeader";
+import PKRHeroSection from "@/components/PKRHeroSection";
+import PKRFeaturesSection from "@/components/PKRFeaturesSection";
+import PKRFooter from "@/components/PKRFooter";
 
 const Index = () => {
   return (
     <div className="min-h-screen bg-crypto-dark">
-      <CryptoHeader />
+      <PKRHeader />
       <main>
-        <CryptoHeroSection />
-        <CryptoTokenSection />
+        <PKRHeroSection />
+        <PKRFeaturesSection />
       </main>
-      <CryptoFooter />
+      <PKRFooter />
     </div>
   );
 };
