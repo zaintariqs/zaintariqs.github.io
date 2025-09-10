@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X, MessageCircle } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const PKRHeader = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -25,12 +26,12 @@ const PKRHeader = () => {
           <a href="#features" className="text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
             Features
           </a>
-          <a href="#security" className="text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
+          <Link to="/security" className="text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
             Security
-          </a>
-          <a href="#whitepaper" className="text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
-            Whitepaper
-          </a>
+          </Link>
+          <Link to="/learn-more" className="text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
+            Learn More
+          </Link>
         </nav>
 
         {/* Contact Button */}
@@ -62,12 +63,12 @@ const PKRHeader = () => {
             <a href="#features" className="block text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
               Features
             </a>
-            <a href="#security" className="block text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
+            <Link to="/security" className="block text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
               Security
-            </a>
-            <a href="#whitepaper" className="block text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
-              Whitepaper
-            </a>
+            </Link>
+            <Link to="/learn-more" className="block text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
+              Learn More
+            </Link>
             <Button 
               onClick={handleWhatsAppContact}
               className="w-full bg-crypto-green hover:bg-crypto-green/90 text-white"
