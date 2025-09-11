@@ -1,4 +1,5 @@
 import { MessageCircle, Mail, MapPin } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const PKRFooter = () => {
   const handleWhatsAppContact = () => {
@@ -27,8 +28,8 @@ const PKRFooter = () => {
             <h4 className="text-white font-semibold">Quick Links</h4>
             <div className="space-y-2 text-sm">
               <a href="#features" className="block text-gray-400 hover:text-crypto-green transition-colors">Features</a>
-              <a href="#security" className="block text-gray-400 hover:text-crypto-green transition-colors">Security</a>
-              <a href="#about" className="block text-gray-400 hover:text-crypto-green transition-colors">About Us</a>
+              <Link to="/security" className="block text-gray-400 hover:text-crypto-green transition-colors">Security</Link>
+              <Link to="/learn-more" className="block text-gray-400 hover:text-crypto-green transition-colors">Learn More</Link>
             </div>
           </div>
 
