@@ -13,6 +13,15 @@ const LearnMore = () => {
     alert("We'll notify you when the whitepaper is published!");
   };
 
+  const handleDownloadWhitepaper = () => {
+    const link = document.createElement('a');
+    link.href = '/documents/whitepaper.pdf';
+    link.download = 'PKR-Stable-Whitepaper.pdf';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="min-h-screen bg-crypto-dark">
       <PKRHeader />
@@ -55,13 +64,12 @@ const LearnMore = () => {
                     </div>
                     
                     <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-                      Whitepaper Coming Soon
+                      PKR Stable Whitepaper
                     </h2>
                     
                     <p className="text-lg text-gray-300 mb-8 max-w-2xl mx-auto leading-relaxed">
-                      Our comprehensive technical whitepaper is currently under final review and will be published soon 
-                      for public audit. The document will include detailed information about our tokenomics, security architecture, 
-                      regulatory compliance, and technical implementation.
+                      Download our comprehensive technical whitepaper for detailed information about tokenomics, 
+                      security architecture, regulatory compliance, and technical implementation of PKR Stable.
                     </p>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
@@ -92,12 +100,12 @@ const LearnMore = () => {
 
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
                       <Button 
-                        onClick={handleNotifyMe}
+                        onClick={handleDownloadWhitepaper}
                         size="lg"
                         className="bg-crypto-green hover:bg-crypto-green/90 text-white px-8 py-4 text-lg font-semibold"
                       >
-                        <Bell className="h-5 w-5 mr-2" />
-                        Notify Me When Published
+                        <Download className="h-5 w-5 mr-2" />
+                        Download Whitepaper
                       </Button>
                       
                       <Button 
