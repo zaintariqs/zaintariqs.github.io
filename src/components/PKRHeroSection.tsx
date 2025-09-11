@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { MessageCircle, Shield, TrendingUp, Zap } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const PKRHeroSection = () => {
   const handleWhatsAppContact = () => {
@@ -64,8 +65,9 @@ const PKRHeroSection = () => {
               size="lg"
               variant="outline"
               className="border-crypto-green text-crypto-green hover:bg-crypto-green/10 px-8 py-4 text-lg font-semibold"
+              asChild
             >
-              Learn More
+              <Link to="/learn-more">Learn More</Link>
             </Button>
           </div>
 
