@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -121,6 +123,20 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* RTL Support */
+  [dir="rtl"] {
+    text-align: right;
+  }
+
+  [dir="rtl"] .font-urdu {
+    font-family: 'Noto Nastaliq Urdu', serif;
+  }
+
+  /* Urdu Font Class */
+  .font-urdu {
+    font-family: 'Noto Nastaliq Urdu', serif;
   }
 }
 

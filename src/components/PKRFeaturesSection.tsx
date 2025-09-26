@@ -1,7 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { Shield, TrendingUp, Zap, Users, Eye, MessageCircle } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { translations } from "@/translations";
 
 const PKRFeaturesSection = () => {
+  const { language, isUrdu } = useLanguage();
+  const t = translations[language];
+
   const handleWhatsAppContact = () => {
     window.open("https://wa.me/905314390365", "_blank");
   };
@@ -9,45 +14,45 @@ const PKRFeaturesSection = () => {
   const features = [
     {
       icon: Shield,
-      title: "Bank-Grade Security",
-      description: "Multi-signature wallets, cold storage, and institutional-grade security protocols protect your funds."
+      title: t.feature1.title,
+      description: t.feature1.description
     },
     {
       icon: TrendingUp,
-      title: "Price Stability",
-      description: "Always worth exactly 1 PKR. No volatility, no surprises - just stable digital currency."
+      title: t.feature2.title,
+      description: t.feature2.description
     },
     {
       icon: Zap,
-      title: "Instant Transfers",
-      description: "Send and receive payments instantly, 24/7, anywhere in Pakistan or globally."
+      title: t.feature3.title,
+      description: t.feature3.description
     },
     {
       icon: Eye,
-      title: "Full Transparency",
-      description: "Real-time reserve audits and transparent reporting. Every PKR is backed by real reserves."
+      title: t.feature4.title,
+      description: t.feature4.description
     },
     {
       icon: Users,
-      title: "Mass Adoption Ready",
-      description: "Designed for businesses, individuals, and institutions. Scale from personal use to enterprise."
+      title: t.feature5.title,
+      description: t.feature5.description
     },
     {
       icon: MessageCircle,
-      title: "Local Support",
-      description: "Pakistani team providing 24/7 support in Urdu and English via WhatsApp and other channels."
+      title: t.feature6.title,
+      description: t.feature6.description
     }
   ];
 
   return (
     <section id="features" className="py-20 bg-crypto-dark">
       <div className="container px-4">
-        <div className="text-center max-w-3xl mx-auto mb-16">
+        <div className={`text-center max-w-3xl mx-auto mb-16 ${isUrdu ? 'font-urdu text-right' : ''}`}>
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-            Why Choose PKR Stable?
+            {t.featuresTitle}
           </h2>
           <p className="text-xl text-gray-300">
-            Built specifically for the Pakistani market with local needs, regulations, and preferences in mind.
+            {t.featuresSubtitle}
           </p>
         </div>
 
@@ -61,20 +66,20 @@ const PKRFeaturesSection = () => {
                 <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-crypto-green/10">
                   <feature.icon className="h-6 w-6 text-crypto-green" />
                 </div>
-                <h3 className="text-xl font-semibold text-white">{feature.title}</h3>
+                <h3 className={`text-xl font-semibold text-white ${isUrdu ? 'text-right' : ''}`}>{feature.title}</h3>
               </div>
-              <p className="text-gray-300 leading-relaxed">{feature.description}</p>
+              <p className={`text-gray-300 leading-relaxed ${isUrdu ? 'text-right' : ''}`}>{feature.description}</p>
             </div>
           ))}
         </div>
 
         {/* CTA Section */}
-        <div className="text-center bg-gradient-to-r from-crypto-green/10 to-crypto-green/5 border border-crypto-green/20 rounded-2xl p-8">
+        <div className={`text-center bg-gradient-to-r from-crypto-green/10 to-crypto-green/5 border border-crypto-green/20 rounded-2xl p-8 ${isUrdu ? 'text-right' : ''}`}>
           <h3 className="text-2xl md:text-3xl font-bold text-white mb-4">
-            Ready to Get Started?
+            {t.ctaTitle}
           </h3>
           <p className="text-lg text-gray-300 mb-6 max-w-2xl mx-auto">
-            Join the future of Pakistani digital payments. Contact us on WhatsApp to learn more about PKR Stable and how to get started.
+            {t.ctaSubtitle}
           </p>
           <Button 
             size="lg"
@@ -82,7 +87,7 @@ const PKRFeaturesSection = () => {
             className="bg-crypto-green hover:bg-crypto-green/90 text-white px-8 py-4 text-lg font-semibold"
           >
             <MessageCircle className="h-5 w-5 mr-2" />
-            Contact Us on WhatsApp
+            {isUrdu ? "واٹس ایپ پر رابطہ کریں" : "Contact Us on WhatsApp"}
           </Button>
         </div>
       </div>

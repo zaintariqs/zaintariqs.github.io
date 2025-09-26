@@ -1,13 +1,21 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Menu, X, MessageCircle } from "lucide-react";
+import { Menu, X, MessageCircle, Globe } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { translations } from "@/translations";
 
 const PKRHeader = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { language, setLanguage, isUrdu } = useLanguage();
+  const t = translations[language];
 
   const handleWhatsAppContact = () => {
     window.open("https://wa.me/905314390365", "_blank");
+  };
+
+  const toggleLanguage = () => {
+    setLanguage(language === 'en' ? 'ur' : 'en');
   };
 
   return (
@@ -22,26 +30,35 @@ const PKRHeader = () => {
         </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center space-x-8">
+        <nav className={`hidden md:flex items-center ${isUrdu ? 'space-x-reverse space-x-8' : 'space-x-8'}`}>
           <a href="#features" className="text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
-            Features
+            {t.features}
           </a>
           <Link to="/security" className="text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
-            Security
+            {t.security}
           </Link>
           <Link to="/learn-more" className="text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
-            Learn More
+            {t.learnMore}
           </Link>
         </nav>
 
-        {/* Contact Button */}
-        <div className="hidden md:flex items-center space-x-4">
+        {/* Contact Button & Language Toggle */}
+        <div className={`hidden md:flex items-center ${isUrdu ? 'space-x-reverse space-x-4' : 'space-x-4'}`}>
+          <Button
+            onClick={toggleLanguage}
+            variant="ghost"
+            size="sm"
+            className="text-gray-300 hover:text-crypto-green"
+          >
+            <Globe className="h-4 w-4 mr-2" />
+            {language === 'en' ? 'اردو' : 'EN'}
+          </Button>
           <Button 
             onClick={handleWhatsAppContact}
             className="bg-crypto-green hover:bg-crypto-green/90 text-white"
           >
             <MessageCircle className="h-4 w-4 mr-2" />
-            Contact Us
+            {t.contactUs}
           </Button>
         </div>
 
@@ -61,20 +78,37 @@ const PKRHeader = () => {
         <div className="md:hidden border-t border-crypto-gray bg-crypto-dark">
           <div className="container py-4 space-y-4">
             <a href="#features" className="block text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
-              Features
+              {t.features}
             </a>
             <Link to="/security" className="block text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
-              Security
+              {t.security}
             </Link>
             <Link to="/learn-more" className="block text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
-              Learn More
+              {t.learnMore}
             </Link>
+            <div className="flex items-center space-x-2">
+              <Button
+                onClick={() => {
+                  toggleLanguage();
+                  setIsMenuOpen(false);
+                }}
+                variant="ghost"
+                size="sm"
+                className="text-gray-300 hover:text-crypto-green"
+              >
+                <Globe className="h-4 w-4 mr-2" />
+                {language === 'en' ? 'اردو' : 'EN'}
+              </Button>
+            </div>
             <Button 
-              onClick={handleWhatsAppContact}
+              onClick={() => {
+                handleWhatsAppContact();
+                setIsMenuOpen(false);
+              }}
               className="w-full bg-crypto-green hover:bg-crypto-green/90 text-white"
             >
               <MessageCircle className="h-4 w-4 mr-2" />
-              Contact Us
+              {t.contactUs}
             </Button>
           </div>
         </div>
