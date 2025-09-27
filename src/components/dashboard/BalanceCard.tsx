@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
-import { useAccount, useBalance, useChainId } from 'wagmi'
+import { useAccount, useBalance, useChainId, useReadContract } from 'wagmi'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { RefreshCw, Wallet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { supportedChains } from '@/lib/web3-config'
+import { formatUnits } from 'viem'
 
 export function BalanceCard() {
   const { address } = useAccount()
@@ -17,13 +18,53 @@ export function BalanceCard() {
 
   const currentChain = supportedChains.find(chain => chain.id === chainId)
 
-  // Mock PKRSC balance - in real implementation, this would come from a contract
-  const [pkrscBalance, setPkrscBalance] = useState('125,000.50')
+  // PKRSC Contract Address
+  const PKRSC_CONTRACT_ADDRESS = '0x1f192CB7B36d7acfBBdCA1E0C1d697361508F9D5'
+
+  // ERC20 ABI for balanceOf function
+  const erc20Abi = [
+    {
+      inputs: [{ name: 'account', type: 'address' }],
+      name: 'balanceOf',
+      outputs: [{ name: '', type: 'uint256' }],
+      stateMutability: 'view',
+      type: 'function',
+    },
+    {
+      inputs: [],
+      name: 'decimals',
+      outputs: [{ name: '', type: 'uint8' }],
+      stateMutability: 'view',
+      type: 'function',
+    },
+  ] as const
+
+  // Read PKRSC balance from contract
+  const { data: pkrscBalance, refetch: refetchPkrsc } = useReadContract({
+    address: PKRSC_CONTRACT_ADDRESS as `0x${string}`,
+    abi: erc20Abi,
+    functionName: 'balanceOf',
+    args: address ? [address] : ['0x0000000000000000000000000000000000000000'],
+  })
+
+  // Read PKRSC decimals
+  const { data: pkrscDecimals } = useReadContract({
+    address: PKRSC_CONTRACT_ADDRESS as `0x${string}`,
+    abi: erc20Abi,
+    functionName: 'decimals',
+  })
+
+  // Format PKRSC balance  
+  const formattedPkrscBalance = pkrscBalance && pkrscDecimals 
+    ? parseFloat(formatUnits(pkrscBalance, pkrscDecimals)).toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      })
+    : '0.00'
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
-    await refetch()
-    // Simulate API call for PKRSC balance
+    await Promise.all([refetch(), refetchPkrsc()])
     setTimeout(() => setIsRefreshing(false), 1000)
   }
 
@@ -58,10 +99,10 @@ export function BalanceCard() {
             <span className="text-sm font-medium text-card-foreground">PKRSC Balance</span>
           </div>
           <div className="text-3xl font-bold text-primary">
-            {pkrscBalance} PKRSC
+            {formattedPkrscBalance} PKRSC
           </div>
           <div className="text-sm text-muted-foreground">
-            ≈ PKR {pkrscBalance}
+            ≈ PKR {formattedPkrscBalance}
           </div>
         </div>
 

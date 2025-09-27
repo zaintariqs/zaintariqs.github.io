@@ -14,7 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      redemptions: {
+        Row: {
+          account_number: string
+          account_title: string
+          bank_name: string
+          burn_address: string
+          created_at: string
+          id: string
+          pkrsc_amount: number
+          status: Database["public"]["Enums"]["redemption_status"]
+          transaction_hash: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_number: string
+          account_title: string
+          bank_name: string
+          burn_address?: string
+          created_at?: string
+          id?: string
+          pkrsc_amount: number
+          status?: Database["public"]["Enums"]["redemption_status"]
+          transaction_hash?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_number?: string
+          account_title?: string
+          bank_name?: string
+          burn_address?: string
+          created_at?: string
+          id?: string
+          pkrsc_amount?: number
+          status?: Database["public"]["Enums"]["redemption_status"]
+          transaction_hash?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +64,12 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      redemption_status:
+        | "pending"
+        | "burn_confirmed"
+        | "processing"
+        | "completed"
+        | "failed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +196,14 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      redemption_status: [
+        "pending",
+        "burn_confirmed",
+        "processing",
+        "completed",
+        "failed",
+      ],
+    },
   },
 } as const

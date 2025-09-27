@@ -4,6 +4,7 @@ import PKRFooter from '@/components/PKRFooter'
 import { BalanceCard } from '@/components/dashboard/BalanceCard'
 import { TopUpSection } from '@/components/dashboard/TopUpSection'
 import { UniswapSection } from '@/components/dashboard/UniswapSection'
+import { RedeemSection } from '@/components/dashboard/RedeemSection'
 import { Navigate } from 'react-router-dom'
 
 export default function Dashboard() {
@@ -36,6 +37,7 @@ export default function Dashboard() {
             {/* Actions Section */}
             <div className="lg:col-span-2 space-y-8">
               <TopUpSection />
+              <RedeemSection />
               <UniswapSection />
             </div>
           </div>
