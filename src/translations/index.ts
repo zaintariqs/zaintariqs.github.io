@@ -15,6 +15,7 @@ export const translations = {
       security: "Bank-Grade Security"
     },
     getStarted: "Get Started on WhatsApp",
+    buyNow: "Buy Now",
     
     // Features
     featuresTitle: "Why Choose PKR Stable?",
@@ -76,6 +77,7 @@ export const translations = {
       security: "بینک گریڈ سیکورٹی"
     },
     getStarted: "واٹس ایپ پر شروع کریں",
+    buyNow: "ابھی خریدیں",
     
     // Features
     featuresTitle: "PKR سٹیبل کیوں منتخب کریں؟",

@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { MessageCircle, Shield, TrendingUp, Zap } from "lucide-react";
+import { MessageCircle, Shield, TrendingUp, Zap, ExternalLink } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { translations } from "@/translations";
@@ -10,6 +10,10 @@ const PKRHeroSection = () => {
 
   const handleWhatsAppContact = () => {
     window.open("https://wa.me/905314390365", "_blank");
+  };
+
+  const handleBuyNow = () => {
+    window.open("https://app.uniswap.org", "_blank");
   };
 
   return (
@@ -79,8 +83,16 @@ const PKRHeroSection = () => {
           <div className={`flex flex-col sm:flex-row gap-4 ${isUrdu ? 'sm:flex-row-reverse' : ''}`}>
             <Button 
               size="lg"
-              onClick={handleWhatsAppContact}
+              onClick={handleBuyNow}
               className="bg-crypto-green hover:bg-crypto-green/90 text-white px-8 py-4 text-lg font-semibold"
+            >
+              <ExternalLink className="h-5 w-5 mr-2" />
+              {t.buyNow}
+            </Button>
+            <Button 
+              size="lg"
+              onClick={handleWhatsAppContact}
+              className="bg-crypto-gray/20 border border-crypto-green/30 text-crypto-green hover:bg-crypto-green/10 px-8 py-4 text-lg font-semibold"
             >
               <MessageCircle className="h-5 w-5 mr-2" />
               {t.getStarted}
