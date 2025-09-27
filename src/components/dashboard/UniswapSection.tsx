@@ -1,28 +1,18 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
-import { ArrowUpDown, ExternalLink, TrendingUp, Zap } from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
+import { ExternalLink, TrendingUp } from 'lucide-react'
 
 // PKRSC Contract Address
 const PKRSC_CONTRACT_ADDRESS = '0x1f192CB7B36d7acfBBdCA1E0C1d697361508F9D5'
 
 export function UniswapSection() {
-  const [fromAmount, setFromAmount] = useState('')
-  const [toAmount, setToAmount] = useState('')
-  const [fromToken, setFromToken] = useState('PKRSC')
-  const [toToken, setToToken] = useState('USDT')
-  const [isSwapping, setIsSwapping] = useState(false)
   const [poolData, setPoolData] = useState({
     tvl: '$0',
     volume24h: '$0',
     loading: true
   })
-  const { toast } = useToast()
+  
 
   // Fetch actual PKRSC/USDT pool data from Uniswap V3 subgraph
   useEffect(() => {
@@ -121,56 +111,6 @@ export function UniswapSection() {
     return () => clearInterval(interval)
   }, [])
 
-  // Mock exchange rates
-  const exchangeRate = fromToken === 'PKRSC' ? 0.0036 : 277.78 // PKR to USD rate
-
-  const handleSwap = () => {
-    if (!fromAmount) {
-      toast({
-        title: "Enter Amount",
-        description: "Please enter the amount you want to swap",
-        variant: "destructive"
-      })
-      return
-    }
-
-    setIsSwapping(true)
-    
-    // Simulate swap
-    setTimeout(() => {
-      toast({
-        title: "Swap Successful",
-        description: `Successfully swapped ${fromAmount} ${fromToken} for ${toAmount} ${toToken}`,
-      })
-      setIsSwapping(false)
-      setFromAmount('')
-      setToAmount('')
-    }, 2000)
-  }
-
-  const swapTokens = () => {
-    const tempToken = fromToken
-    setFromToken(toToken)
-    setToToken(tempToken)
-    setFromAmount('')
-    setToAmount('')
-  }
-
-  // Calculate output amount based on input
-  const calculateOutput = (input: string) => {
-    if (!input) return ''
-    const inputNum = parseFloat(input)
-    if (fromToken === 'PKRSC') {
-      return (inputNum * exchangeRate).toFixed(6)
-    } else {
-      return (inputNum / exchangeRate).toFixed(2)
-    }
-  }
-
-  const handleFromAmountChange = (value: string) => {
-    setFromAmount(value)
-    setToAmount(calculateOutput(value))
-  }
 
   return (
     <Card className="bg-card border-border">
@@ -202,147 +142,33 @@ export function UniswapSection() {
           </div>
         </div>
 
-        {/* Swap Interface */}
-        <div className="space-y-4">
-          {/* From Token */}
-          <div className="space-y-2">
-            <Label>From</Label>
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <Input
-                  type="number"
-                  placeholder="0.00"
-                  value={fromAmount}
-                  onChange={(e) => handleFromAmountChange(e.target.value)}
-                  className="text-lg"
-                />
-              </div>
-              <div className="w-24">
-                <Button
-                  variant="outline"
-                  className="w-full h-full font-medium"
-                  onClick={() => setFromToken(fromToken === 'PKRSC' ? 'USDT' : 'PKRSC')}
-                >
-                  {fromToken}
-                </Button>
-              </div>
-            </div>
+        {/* Swap via Uniswap (Embedded) */}
+        <section className="space-y-4">
+          <div className="rounded-lg overflow-hidden border border-border">
+            <iframe
+              title="Uniswap PKRSC/USDT Swap"
+              src="https://app.uniswap.org/swap?chain=base&inputCurrency=0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2&outputCurrency=0x1f192CB7B36d7acfBBdCA1E0C1d697361508F9D5"
+              className="w-full"
+              style={{ height: 640, border: '0' }}
+              loading="lazy"
+            />
           </div>
-
-          {/* Swap Button */}
-          <div className="flex justify-center">
+          <div className="flex justify-end">
             <Button
-              variant="ghost"
-              size="sm"
-              onClick={swapTokens}
-              className="rounded-full p-2"
+              variant="outline"
+              onClick={() =>
+                window.open(
+                  'https://app.uniswap.org/swap?chain=base&inputCurrency=0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2&outputCurrency=0x1f192CB7B36d7acfBBdCA1E0C1d697361508F9D5',
+                  '_blank'
+                )
+              }
+              className="px-6"
             >
-              <ArrowUpDown className="h-4 w-4" />
+              Open in Uniswap
+              <ExternalLink className="ml-2 h-4 w-4" />
             </Button>
           </div>
-
-          {/* To Token */}
-          <div className="space-y-2">
-            <Label>To</Label>
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <Input
-                  type="number"
-                  placeholder="0.00"
-                  value={toAmount}
-                  readOnly
-                  className="text-lg bg-muted/50"
-                />
-              </div>
-              <div className="w-24">
-                <Button
-                  variant="outline"
-                  className="w-full h-full font-medium"
-                  onClick={() => setToToken(toToken === 'PKRSC' ? 'USDT' : 'PKRSC')}
-                >
-                  {toToken}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <Separator />
-
-        {/* Trade Details */}
-        <div className="space-y-3 text-sm">
-          <div className="flex justify-between items-center">
-            <span className="text-muted-foreground">Exchange Rate</span>
-            <span className="text-card-foreground">
-              1 {fromToken} = {fromToken === 'PKRSC' ? '0.0036' : '277.78'} {toToken}
-            </span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-muted-foreground">Network Fee</span>
-            <span className="text-card-foreground">~$2.50</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-muted-foreground">Slippage Tolerance</span>
-            <Badge variant="secondary" className="bg-primary/10 text-primary">
-              0.5%
-            </Badge>
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex gap-3">
-          <Button 
-            onClick={handleSwap}
-            disabled={isSwapping || !fromAmount}
-            className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
-          >
-            {isSwapping ? 'Swapping...' : 'Swap Tokens'}
-            <Zap className="ml-2 h-4 w-4" />
-          </Button>
-          <Button 
-            variant="outline"
-            onClick={() => window.open('https://app.uniswap.org', '_blank')}
-            className="px-6"
-          >
-            <ExternalLink className="h-4 w-4" />
-          </Button>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="flex gap-2">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => handleFromAmountChange('1000')}
-            className="text-xs"
-          >
-            1K
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => handleFromAmountChange('5000')}
-            className="text-xs"
-          >
-            5K
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => handleFromAmountChange('10000')}
-            className="text-xs"
-          >
-            10K
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => handleFromAmountChange('125000')} // Max balance
-            className="text-xs"
-          >
-            MAX
-          </Button>
-        </div>
+        </section>
 
         {/* Warning */}
         <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
