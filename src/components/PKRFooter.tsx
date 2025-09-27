@@ -1,4 +1,3 @@
-// PKRFooter component for PKRSC application
 import { MessageCircle, Mail, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
