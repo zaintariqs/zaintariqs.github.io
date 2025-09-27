@@ -41,6 +41,9 @@ const PKRHeader = () => {
           <Link to="/learn-more" className="text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
             {t.learnMore}
           </Link>
+          <Link to="/dashboard" className="text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
+            Dashboard
+          </Link>
         </nav>
 
         {/* Wallet Connect, Contact Button & Language Toggle */}
@@ -90,6 +93,9 @@ const PKRHeader = () => {
             </Link>
             <Link to="/learn-more" className="block text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
               {t.learnMore}
+            </Link>
+            <Link to="/dashboard" className="block text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
+              Dashboard
             </Link>
             <div className="flex items-center space-x-2">
               <Button
