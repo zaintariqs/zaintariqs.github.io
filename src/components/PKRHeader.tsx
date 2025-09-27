@@ -4,6 +4,7 @@ import { Menu, X, MessageCircle, Globe } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { translations } from "@/translations";
+import { WalletConnect } from "@/components/WalletConnect";
 
 const PKRHeader = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -42,8 +43,9 @@ const PKRHeader = () => {
           </Link>
         </nav>
 
-        {/* Contact Button & Language Toggle */}
+        {/* Wallet Connect, Contact Button & Language Toggle */}
         <div className={`hidden md:flex items-center ${isUrdu ? 'space-x-reverse space-x-4' : 'space-x-4'}`}>
+          <WalletConnect />
           <Button
             onClick={toggleLanguage}
             variant="ghost"
@@ -77,6 +79,9 @@ const PKRHeader = () => {
       {isMenuOpen && (
         <div className="md:hidden border-t border-crypto-gray bg-crypto-dark">
           <div className="container py-4 space-y-4">
+            <div className="mb-4">
+              <WalletConnect />
+            </div>
             <a href="#features" className="block text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
               {t.features}
             </a>
