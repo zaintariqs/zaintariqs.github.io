@@ -204,7 +204,7 @@ export function RedeemSection() {
               <h4 className="font-medium text-sm text-card-foreground">Processing Information</h4>
               <ul className="text-xs text-muted-foreground space-y-1">
                 <li>• Processing time: 1-3 business days</li>
-                <li>• No processing fees</li>
+                <li>• Processing fees 100rs</li>
                 <li>• 1:1 exchange rate (1 PKRSC = 1 PKR)</li>
                 <li>• Transfers processed during banking hours</li>
               </ul>
