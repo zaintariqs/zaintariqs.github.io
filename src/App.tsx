@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import MouseFollowingBits from "@/components/MouseFollowingBits";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { Web3Provider } from "@/providers/Web3Provider";
@@ -15,24 +15,35 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+const AppContent = () => {
+  const location = useLocation();
+  const isDashboard = location.pathname === '/dashboard';
+  
+  return (
+    <>
+      {!isDashboard && <MouseFollowingBits />}
+      <Toaster />
+      <Sonner />
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/browse" element={<Browse />} />
+        <Route path="/security" element={<Security />} />
+        <Route path="/learn-more" element={<LearnMore />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </>
+  );
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <Web3Provider>
       <TooltipProvider>
         <LanguageProvider>
-          <MouseFollowingBits />
-          <Toaster />
-          <Sonner />
           <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/browse" element={<Browse />} />
-              <Route path="/security" element={<Security />} />
-              <Route path="/learn-more" element={<LearnMore />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <AppContent />
           </BrowserRouter>
         </LanguageProvider>
       </TooltipProvider>

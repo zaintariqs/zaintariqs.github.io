@@ -80,7 +80,7 @@ export function BalanceCard() {
           onClick={handleRefresh}
           disabled={isRefreshing}
         >
-          <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          <RefreshCw className="h-4 w-4" />
         </Button>
       </CardHeader>
       <CardContent className="space-y-4">
