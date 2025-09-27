@@ -24,36 +24,101 @@ export function UniswapSection() {
   })
   const { toast } = useToast()
 
-  // Fetch pool data from CoinGecko API
+  // Fetch actual PKRSC/USDT pool data from Uniswap V3 subgraph
   useEffect(() => {
     const fetchPoolData = async () => {
       try {
-        // For now, we'll use mock data as getting exact pool data requires the pool contract address
-        // In a real implementation, you would need the specific pool contract address for PKRSC/USDT
-        const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd&include_24hr_vol=true')
-        
+        // Query Uniswap V3 subgraph for Base network
+        const query = `{
+          pools(
+            where: {
+              token0_: { id: "${PKRSC_CONTRACT_ADDRESS.toLowerCase()}" }
+              token1_: { id: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913" }
+            }
+            orderBy: totalValueLockedUSD
+            orderDirection: desc
+            first: 1
+          ) {
+            id
+            totalValueLockedUSD
+            volumeUSD
+            token0 {
+              id
+              symbol
+              decimals
+            }
+            token1 {
+              id
+              symbol 
+              decimals
+            }
+          }
+        }`
+
+        const response = await fetch('https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v3-base', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ query })
+        })
+
         if (response.ok) {
-          // Mock realistic data based on PKRSC contract
-          setPoolData({
-            tvl: '$2,845,673',
-            volume24h: '$186,492',
-            loading: false
-          })
+          const data = await response.json()
+          if (data.data?.pools && data.data.pools.length > 0) {
+            const pool = data.data.pools[0]
+            setPoolData({
+              tvl: `$${parseFloat(pool.totalValueLockedUSD).toLocaleString('en-US', { maximumFractionDigits: 0 })}`,
+              volume24h: `$${parseFloat(pool.volumeUSD).toLocaleString('en-US', { maximumFractionDigits: 0 })}`,
+              loading: false
+            })
+          } else {
+            throw new Error('Pool not found')
+          }
         } else {
-          throw new Error('Failed to fetch')
+          throw new Error('Subgraph query failed')
         }
       } catch (error) {
         console.error('Error fetching pool data:', error)
-        // Fallback to mock data
-        setPoolData({
-          tvl: '$2,845,673',
-          volume24h: '$186,492',
-          loading: false
-        })
+        
+        // Try alternative: fetch from DEX Screener API for Base network
+        try {
+          const dexResponse = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${PKRSC_CONTRACT_ADDRESS}`)
+          if (dexResponse.ok) {
+            const dexData = await dexResponse.json()
+            const basePool = dexData.pairs?.find((pair: any) => 
+              pair.chainId === 'base' && 
+              (pair.quoteToken?.symbol === 'USDT' || pair.quoteToken?.symbol === 'USDC')
+            )
+            
+            if (basePool) {
+              setPoolData({
+                tvl: `$${parseFloat(basePool.liquidity?.usd || '0').toLocaleString('en-US', { maximumFractionDigits: 0 })}`,
+                volume24h: `$${parseFloat(basePool.volume?.h24 || '0').toLocaleString('en-US', { maximumFractionDigits: 0 })}`,
+                loading: false
+              })
+            } else {
+              throw new Error('No Base pool found')
+            }
+          } else {
+            throw new Error('DEX Screener failed')
+          }
+        } catch (dexError) {
+          console.error('DEX Screener fallback failed:', dexError)
+          // Final fallback to realistic mock data
+          setPoolData({
+            tvl: '$0',
+            volume24h: '$0',
+            loading: false
+          })
+        }
       }
     }
 
     fetchPoolData()
+    // Refresh data every 30 seconds
+    const interval = setInterval(fetchPoolData, 30000)
+    return () => clearInterval(interval)
   }, [])
 
   // Mock exchange rates
