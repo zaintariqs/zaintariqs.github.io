@@ -136,10 +136,10 @@ export function BalanceCard() {
               onClick={handleAddToMetaMask}
               variant="outline" 
               size="sm"
-              className="h-10 w-12 p-0"
+              className="h-5 w-6 p-0"
               title="Add PKRSC to MetaMask"
             >
-              <img src={MetaMaskIcon} alt="MetaMask" className="h-4 w-4" />
+              <img src={MetaMaskIcon} alt="MetaMask" className="h-3 w-3" />
             </Button>
           </div>
         </div>
