@@ -8,11 +8,11 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Shield, Coins, Flame, Ban, AlertTriangle, TrendingUp, FileText, Download, DollarSign, Users, Activity, PieChart, BarChart3, Landmark } from 'lucide-react'
+import { Shield, Coins, Flame, Ban, AlertTriangle, TrendingUp, FileText, Download, DollarSign, Users, Activity, BarChart3, Landmark } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { parseUnits, formatUnits } from 'viem'
 import { supportedChains } from '@/lib/web3-config'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPieChart, Cell, Pie } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Cell, Pie } from 'recharts'
 
 const MASTER_MINTER_ADDRESS = '0x5be080f81552c2495B288c04D2B64b9F7A4A9F3F'
 const PKRSC_CONTRACT_ADDRESS = '0x1f192CB7B36d7acfBBdCA1E0C1d697361508F9D5'
@@ -615,7 +615,7 @@ ${Object.entries(blacklistedAddresses.reduce((acc, entry) => {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={200}>
-              <RechartsPieChart>
+              <PieChart>
                 <Pie
                   data={chartData}
                   cx="50%"
@@ -631,7 +631,7 @@ ${Object.entries(blacklistedAddresses.reduce((acc, entry) => {
                   ))}
                 </Pie>
                 <Tooltip />
-              </RechartsPieChart>
+              </PieChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
