@@ -42,8 +42,12 @@ export default function Dashboard() {
 
             {/* Actions Section */}
             <div className="lg:col-span-2 space-y-8">
-              <TopUpSection />
-              <RedeemSection />
+              {!isAdmin && (
+                <>
+                  <TopUpSection />
+                  <RedeemSection />
+                </>
+              )}
               <UniswapSection />
             </div>
           </div>

@@ -6,9 +6,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Shield, Coins, Flame, Ban, AlertTriangle } from 'lucide-react'
+import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Shield, Coins, Flame, Ban, AlertTriangle, TrendingUp, FileText, Download, DollarSign, Users, Activity } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import { parseUnits } from 'viem'
+import { parseUnits, formatUnits } from 'viem'
 import { supportedChains } from '@/lib/web3-config'
 
 const MASTER_MINTER_ADDRESS = '0x5be080f81552c2495B288c04D2B64b9F7A4A9F3F'
@@ -20,6 +22,20 @@ const pkrscAbi = [
     inputs: [],
     name: 'decimals',
     outputs: [{ name: '', type: 'uint8' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'totalSupply',
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [{ name: 'account', type: 'address' }],
+    name: 'balanceOf',
+    outputs: [{ name: '', type: 'uint256' }],
     stateMutability: 'view',
     type: 'function',
   },
@@ -73,6 +89,15 @@ const pkrscAbi = [
   },
 ] as const
 
+type BlacklistReason = 'fraud' | 'compliance' | 'security' | 'suspicious_activity' | 'other'
+
+interface BlacklistEntry {
+  address: string
+  reason: BlacklistReason
+  description: string
+  timestamp: Date
+}
+
 export function AdminSection() {
   const { address } = useAccount()
   const chainId = useChainId()
@@ -81,22 +106,42 @@ export function AdminSection() {
   
   const currentChain = supportedChains.find(chain => chain.id === chainId)
   
-  // Read decimals from contract
+  // Read contract data
   const { data: decimals } = useReadContract({
     address: PKRSC_CONTRACT_ADDRESS as `0x${string}`,
     abi: pkrscAbi,
     functionName: 'decimals',
   })
   
-  const tokenDecimals = decimals || 6 // Default to 6 if not loaded yet
+  const { data: totalSupply } = useReadContract({
+    address: PKRSC_CONTRACT_ADDRESS as `0x${string}`,
+    abi: pkrscAbi,
+    functionName: 'totalSupply',
+  })
   
+  const { data: treasuryBalance } = useReadContract({
+    address: PKRSC_CONTRACT_ADDRESS as `0x${string}`,
+    abi: pkrscAbi,
+    functionName: 'balanceOf',
+    args: [MASTER_MINTER_ADDRESS as `0x${string}`],
+  })
+  
+  const tokenDecimals = decimals || 6
+  
+  // State for admin functions
   const [mintTo, setMintTo] = useState('')
   const [mintAmount, setMintAmount] = useState('')
   const [burnAmount, setBurnAmount] = useState('')
   const [burnFromAddress, setBurnFromAddress] = useState('')
   const [burnFromAmount, setBurnFromAmount] = useState('')
   const [blacklistAddress, setBlacklistAddress] = useState('')
+  const [blacklistReason, setBlacklistReason] = useState<BlacklistReason>('fraud')
+  const [blacklistDescription, setBlacklistDescription] = useState('')
   const [unblacklistAddress, setUnblacklistAddress] = useState('')
+  
+  // Local storage for blacklist tracking
+  const [blacklistedAddresses, setBlacklistedAddresses] = useState<BlacklistEntry[]>([])
+  const [transactions, setTransactions] = useState<any[]>([])
 
   // Check if current user is admin
   const isAdmin = address?.toLowerCase() === MASTER_MINTER_ADDRESS.toLowerCase()
@@ -104,6 +149,47 @@ export function AdminSection() {
   const { isLoading: isConfirming } = useWaitForTransactionReceipt({
     hash,
   })
+
+  useEffect(() => {
+    // Load blacklisted addresses from localStorage
+    const stored = localStorage.getItem('pkrsc-blacklist')
+    if (stored) {
+      setBlacklistedAddresses(JSON.parse(stored))
+    }
+    
+    // Load transaction history from localStorage
+    const storedTx = localStorage.getItem('pkrsc-transactions')
+    if (storedTx) {
+      setTransactions(JSON.parse(storedTx))
+    }
+  }, [])
+
+  const saveBlacklistEntry = (entry: BlacklistEntry) => {
+    const updated = [...blacklistedAddresses, entry]
+    setBlacklistedAddresses(updated)
+    localStorage.setItem('pkrsc-blacklist', JSON.stringify(updated))
+  }
+
+  const removeBlacklistEntry = (address: string) => {
+    const updated = blacklistedAddresses.filter(entry => entry.address.toLowerCase() !== address.toLowerCase())
+    setBlacklistedAddresses(updated)
+    localStorage.setItem('pkrsc-blacklist', JSON.stringify(updated))
+  }
+
+  const addTransaction = (type: string, amount: string, address?: string, hash?: string) => {
+    const tx = {
+      id: Date.now(),
+      type,
+      amount,
+      address,
+      hash,
+      timestamp: new Date().toISOString(),
+      admin: MASTER_MINTER_ADDRESS
+    }
+    const updated = [tx, ...transactions]
+    setTransactions(updated)
+    localStorage.setItem('pkrsc-transactions', JSON.stringify(updated))
+  }
 
   if (!isAdmin) {
     return null
@@ -130,6 +216,7 @@ export function AdminSection() {
         chain: currentChain,
       })
       
+      addTransaction('mint', mintAmount, mintTo, hash)
       toast({
         title: "Minting tokens",
         description: `Minting ${mintAmount} PKRSC to ${mintTo}`,
@@ -164,6 +251,7 @@ export function AdminSection() {
         chain: currentChain,
       })
       
+      addTransaction('burn', burnAmount, address, hash)
       toast({
         title: "Burning tokens",
         description: `Burning ${burnAmount} PKRSC from your wallet`,
@@ -198,6 +286,7 @@ export function AdminSection() {
         chain: currentChain,
       })
       
+      addTransaction('burnFrom', burnFromAmount, burnFromAddress, hash)
       toast({
         title: "Burning tokens",
         description: `Burning ${burnFromAmount} PKRSC from ${burnFromAddress}`,
@@ -212,10 +301,10 @@ export function AdminSection() {
   }
 
   const handleBlacklist = async () => {
-    if (!blacklistAddress) {
+    if (!blacklistAddress || !blacklistDescription) {
       toast({
         title: "Error",
-        description: "Please enter an address to blacklist",
+        description: "Please enter address and reason for blacklisting",
         variant: "destructive",
       })
       return
@@ -231,9 +320,17 @@ export function AdminSection() {
         chain: currentChain,
       })
       
+      saveBlacklistEntry({
+        address: blacklistAddress,
+        reason: blacklistReason,
+        description: blacklistDescription,
+        timestamp: new Date()
+      })
+      
+      addTransaction('blacklist', '0', blacklistAddress, hash)
       toast({
         title: "Blacklisting address",
-        description: `Blacklisting ${blacklistAddress}`,
+        description: `Blacklisting ${blacklistAddress} for ${blacklistReason}`,
       })
     } catch (error) {
       toast({
@@ -264,6 +361,8 @@ export function AdminSection() {
         chain: currentChain,
       })
       
+      removeBlacklistEntry(unblacklistAddress)
+      addTransaction('unblacklist', '0', unblacklistAddress, hash)
       toast({
         title: "Unblacklisting address",
         description: `Removing ${unblacklistAddress} from blacklist`,
@@ -277,153 +376,293 @@ export function AdminSection() {
     }
   }
 
+  const generatePDF = () => {
+    const content = `
+PKRSC Transaction Report
+Generated: ${new Date().toLocaleString()}
+Admin: ${MASTER_MINTER_ADDRESS}
+
+=== TREASURY OVERVIEW ===
+Total Supply: ${totalSupply ? formatUnits(totalSupply, tokenDecimals) : 'Loading...'} PKRSC
+Treasury Balance: ${treasuryBalance ? formatUnits(treasuryBalance, tokenDecimals) : 'Loading...'} PKRSC
+Blacklisted Addresses: ${blacklistedAddresses.length}
+
+=== TRANSACTION HISTORY ===
+${transactions.map(tx => 
+  `${new Date(tx.timestamp).toLocaleString()} | ${tx.type.toUpperCase()} | ${tx.amount} PKRSC | ${tx.address || 'N/A'} | ${tx.hash || 'Pending'}`
+).join('\n')}
+
+=== BLACKLISTED ADDRESSES ===
+${blacklistedAddresses.map(entry => 
+  `${entry.address} | ${entry.reason} | ${entry.description} | ${entry.timestamp.toLocaleString()}`
+).join('\n')}
+    `
+
+    const blob = new Blob([content], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `pkrsc-admin-report-${Date.now()}.txt`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+
+    toast({
+      title: "Report Generated",
+      description: "Transaction report downloaded successfully",
+    })
+  }
+
   return (
-    <Card className="bg-card border-border">
-      <CardHeader>
-        <div className="flex items-center gap-2">
-          <Shield className="h-5 w-5 text-primary" />
-          <CardTitle className="text-card-foreground">Admin Functions</CardTitle>
-          <Badge variant="destructive" className="text-xs">
-            <AlertTriangle className="h-3 w-3 mr-1" />
-            Master Minter
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <Tabs defaultValue="mint" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="mint" className="flex items-center gap-1">
-              <Coins className="h-4 w-4" />
-              Mint
-            </TabsTrigger>
-            <TabsTrigger value="burn" className="flex items-center gap-1">
-              <Flame className="h-4 w-4" />
-              Burn
-            </TabsTrigger>
-            <TabsTrigger value="blacklist" className="flex items-center gap-1">
-              <Ban className="h-4 w-4" />
-              Blacklist
-            </TabsTrigger>
-          </TabsList>
+    <div className="space-y-6">
+      {/* PKR Reserve Overview */}
+      <Card className="bg-card border-border">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <DollarSign className="h-5 w-5 text-primary" />
+            <CardTitle className="text-card-foreground">PKR Reserve Overview</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-sm text-muted-foreground">Total Supply</Label>
+              <div className="text-2xl font-bold text-primary">
+                {totalSupply ? `${Number(formatUnits(totalSupply, tokenDecimals)).toLocaleString()} PKRSC` : 'Loading...'}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm text-muted-foreground">Treasury Balance</Label>
+              <div className="text-2xl font-bold text-green-500">
+                {treasuryBalance ? `${Number(formatUnits(treasuryBalance, tokenDecimals)).toLocaleString()} PKRSC` : 'Loading...'}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-          <TabsContent value="mint" className="space-y-4 mt-4">
-            <div className="space-y-2">
-              <Label htmlFor="mint-to">Mint To Address</Label>
-              <Input
-                id="mint-to"
-                placeholder="0x..."
-                value={mintTo}
-                onChange={(e) => setMintTo(e.target.value)}
-              />
+      {/* Treasury Reporting */}
+      <Card className="bg-card border-border">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-primary" />
+              <CardTitle className="text-card-foreground">Treasury Reporting</CardTitle>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="mint-amount">Amount (PKRSC)</Label>
-              <Input
-                id="mint-amount"
-                type="number"
-                placeholder="1000"
-                value={mintAmount}
-                onChange={(e) => setMintAmount(e.target.value)}
-              />
-            </div>
-            <Button 
-              onClick={handleMint} 
-              disabled={isPending || isConfirming}
-              className="w-full"
-            >
-              {isPending || isConfirming ? 'Minting...' : 'Mint Tokens'}
+            <Button onClick={generatePDF} variant="outline" size="sm">
+              <Download className="h-4 w-4 mr-2" />
+              Download Report
             </Button>
-          </TabsContent>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="text-center">
+              <div className="text-lg font-semibold text-blue-500">{transactions.length}</div>
+              <div className="text-sm text-muted-foreground">Total Transactions</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-semibold text-red-500">{blacklistedAddresses.length}</div>
+              <div className="text-sm text-muted-foreground">Blacklisted Addresses</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-semibold text-green-500">
+                {transactions.filter(tx => tx.type === 'mint').length}
+              </div>
+              <div className="text-sm text-muted-foreground">Mint Operations</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-          <TabsContent value="burn" className="space-y-4 mt-4">
-            <div className="space-y-4">
+      {/* Admin Functions */}
+      <Card className="bg-card border-border">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Shield className="h-5 w-5 text-primary" />
+            <CardTitle className="text-card-foreground">Admin Functions</CardTitle>
+            <Badge variant="destructive" className="text-xs">
+              <AlertTriangle className="h-3 w-3 mr-1" />
+              Master Minter
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="mint" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="mint" className="flex items-center gap-1">
+                <Coins className="h-4 w-4" />
+                Mint
+              </TabsTrigger>
+              <TabsTrigger value="burn" className="flex items-center gap-1">
+                <Flame className="h-4 w-4" />
+                Burn
+              </TabsTrigger>
+              <TabsTrigger value="blacklist" className="flex items-center gap-1">
+                <Ban className="h-4 w-4" />
+                Blacklist
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="mint" className="space-y-4 mt-4">
               <div className="space-y-2">
-                <Label htmlFor="burn-amount">Burn From Your Wallet (PKRSC)</Label>
+                <Label htmlFor="mint-to">Mint To Address</Label>
                 <Input
-                  id="burn-amount"
+                  id="mint-to"
+                  placeholder="0x..."
+                  value={mintTo}
+                  onChange={(e) => setMintTo(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="mint-amount">Amount (PKRSC)</Label>
+                <Input
+                  id="mint-amount"
                   type="number"
                   placeholder="1000"
-                  value={burnAmount}
-                  onChange={(e) => setBurnAmount(e.target.value)}
+                  value={mintAmount}
+                  onChange={(e) => setMintAmount(e.target.value)}
                 />
-                <Button 
-                  onClick={handleBurn} 
-                  disabled={isPending || isConfirming}
-                  variant="destructive"
-                  className="w-full"
-                >
-                  {isPending || isConfirming ? 'Burning...' : 'Burn Your Tokens'}
-                </Button>
               </div>
-              
-              <div className="border-t pt-4 space-y-2">
-                <Label htmlFor="burn-from-address">Burn From Address</Label>
-                <Input
-                  id="burn-from-address"
-                  placeholder="0x..."
-                  value={burnFromAddress}
-                  onChange={(e) => setBurnFromAddress(e.target.value)}
-                />
-                <Label htmlFor="burn-from-amount">Amount (PKRSC)</Label>
-                <Input
-                  id="burn-from-amount"
-                  type="number"
-                  placeholder="1000"
-                  value={burnFromAmount}
-                  onChange={(e) => setBurnFromAmount(e.target.value)}
-                />
-                <Button 
-                  onClick={handleBurnFrom} 
-                  disabled={isPending || isConfirming}
-                  variant="destructive"
-                  className="w-full"
-                >
-                  {isPending || isConfirming ? 'Burning...' : 'Burn From Address'}
-                </Button>
-              </div>
-            </div>
-          </TabsContent>
+              <Button 
+                onClick={handleMint} 
+                disabled={isPending || isConfirming}
+                className="w-full"
+              >
+                {isPending || isConfirming ? 'Minting...' : 'Mint Tokens'}
+              </Button>
+            </TabsContent>
 
-          <TabsContent value="blacklist" className="space-y-4 mt-4">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="blacklist-address">Blacklist Address</Label>
-                <Input
-                  id="blacklist-address"
-                  placeholder="0x..."
-                  value={blacklistAddress}
-                  onChange={(e) => setBlacklistAddress(e.target.value)}
-                />
-                <Button 
-                  onClick={handleBlacklist} 
-                  disabled={isPending || isConfirming}
-                  variant="destructive"
-                  className="w-full"
-                >
-                  {isPending || isConfirming ? 'Blacklisting...' : 'Blacklist Address'}
-                </Button>
+            <TabsContent value="burn" className="space-y-4 mt-4">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="burn-amount">Burn From Your Wallet (PKRSC)</Label>
+                  <Input
+                    id="burn-amount"
+                    type="number"
+                    placeholder="1000"
+                    value={burnAmount}
+                    onChange={(e) => setBurnAmount(e.target.value)}
+                  />
+                  <Button 
+                    onClick={handleBurn} 
+                    disabled={isPending || isConfirming}
+                    variant="destructive"
+                    className="w-full"
+                  >
+                    {isPending || isConfirming ? 'Burning...' : 'Burn Your Tokens'}
+                  </Button>
+                </div>
+                
+                <div className="border-t pt-4 space-y-2">
+                  <Label htmlFor="burn-from-address">Burn From Address</Label>
+                  <Input
+                    id="burn-from-address"
+                    placeholder="0x..."
+                    value={burnFromAddress}
+                    onChange={(e) => setBurnFromAddress(e.target.value)}
+                  />
+                  <Label htmlFor="burn-from-amount">Amount (PKRSC)</Label>
+                  <Input
+                    id="burn-from-amount"
+                    type="number"
+                    placeholder="1000"
+                    value={burnFromAmount}
+                    onChange={(e) => setBurnFromAmount(e.target.value)}
+                  />
+                  <Button 
+                    onClick={handleBurnFrom} 
+                    disabled={isPending || isConfirming}
+                    variant="destructive"
+                    className="w-full"
+                  >
+                    {isPending || isConfirming ? 'Burning...' : 'Burn From Address'}
+                  </Button>
+                </div>
               </div>
-              
-              <div className="border-t pt-4 space-y-2">
-                <Label htmlFor="unblacklist-address">Remove From Blacklist</Label>
-                <Input
-                  id="unblacklist-address"
-                  placeholder="0x..."
-                  value={unblacklistAddress}
-                  onChange={(e) => setUnblacklistAddress(e.target.value)}
-                />
-                <Button 
-                  onClick={handleUnblacklist} 
-                  disabled={isPending || isConfirming}
-                  className="w-full"
-                >
-                  {isPending || isConfirming ? 'Unblacklisting...' : 'Remove From Blacklist'}
-                </Button>
+            </TabsContent>
+
+            <TabsContent value="blacklist" className="space-y-4 mt-4">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="blacklist-address">Blacklist Address</Label>
+                  <Input
+                    id="blacklist-address"
+                    placeholder="0x..."
+                    value={blacklistAddress}
+                    onChange={(e) => setBlacklistAddress(e.target.value)}
+                  />
+                  <Label htmlFor="blacklist-reason">Reason</Label>
+                  <Select value={blacklistReason} onValueChange={(value: BlacklistReason) => setBlacklistReason(value)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="fraud">Fraud</SelectItem>
+                      <SelectItem value="compliance">Compliance Violation</SelectItem>
+                      <SelectItem value="security">Security Risk</SelectItem>
+                      <SelectItem value="suspicious_activity">Suspicious Activity</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Label htmlFor="blacklist-description">Description</Label>
+                  <Textarea
+                    id="blacklist-description"
+                    placeholder="Detailed reason for blacklisting..."
+                    value={blacklistDescription}
+                    onChange={(e) => setBlacklistDescription(e.target.value)}
+                  />
+                  <Button 
+                    onClick={handleBlacklist} 
+                    disabled={isPending || isConfirming}
+                    variant="destructive"
+                    className="w-full"
+                  >
+                    {isPending || isConfirming ? 'Blacklisting...' : 'Blacklist Address'}
+                  </Button>
+                </div>
+                
+                <div className="border-t pt-4 space-y-2">
+                  <Label htmlFor="unblacklist-address">Remove From Blacklist</Label>
+                  <Input
+                    id="unblacklist-address"
+                    placeholder="0x..."
+                    value={unblacklistAddress}
+                    onChange={(e) => setUnblacklistAddress(e.target.value)}
+                  />
+                  <Button 
+                    onClick={handleUnblacklist} 
+                    disabled={isPending || isConfirming}
+                    className="w-full"
+                  >
+                    {isPending || isConfirming ? 'Unblacklisting...' : 'Remove From Blacklist'}
+                  </Button>
+                </div>
+
+                {blacklistedAddresses.length > 0 && (
+                  <div className="border-t pt-4">
+                    <Label className="text-sm font-medium">Blacklisted Addresses ({blacklistedAddresses.length})</Label>
+                    <div className="mt-2 space-y-2 max-h-40 overflow-y-auto">
+                      {blacklistedAddresses.map((entry, index) => (
+                        <div key={index} className="p-2 bg-muted rounded text-xs">
+                          <div className="font-mono">{entry.address}</div>
+                          <div className="text-muted-foreground">
+                            {entry.reason} - {entry.description}
+                          </div>
+                          <div className="text-muted-foreground">
+                            {entry.timestamp.toLocaleString()}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          </TabsContent>
-        </Tabs>
-      </CardContent>
-    </Card>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+    </div>
   )
 }
