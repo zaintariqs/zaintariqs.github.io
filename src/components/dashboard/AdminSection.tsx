@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useAccount, useWriteContract, useWaitForTransactionReceipt, useChainId } from 'wagmi'
+import { useState, useEffect } from 'react'
+import { useAccount, useWriteContract, useWaitForTransactionReceipt, useChainId, useReadContract } from 'wagmi'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,6 +16,13 @@ const PKRSC_CONTRACT_ADDRESS = '0x1f192CB7B36d7acfBBdCA1E0C1d697361508F9D5'
 
 // ERC20 with minting/burning/blacklisting functions ABI
 const pkrscAbi = [
+  {
+    inputs: [],
+    name: 'decimals',
+    outputs: [{ name: '', type: 'uint8' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
   {
     inputs: [
       { name: 'to', type: 'address' },
@@ -74,6 +81,15 @@ export function AdminSection() {
   
   const currentChain = supportedChains.find(chain => chain.id === chainId)
   
+  // Read decimals from contract
+  const { data: decimals } = useReadContract({
+    address: PKRSC_CONTRACT_ADDRESS as `0x${string}`,
+    abi: pkrscAbi,
+    functionName: 'decimals',
+  })
+  
+  const tokenDecimals = decimals || 6 // Default to 6 if not loaded yet
+  
   const [mintTo, setMintTo] = useState('')
   const [mintAmount, setMintAmount] = useState('')
   const [burnAmount, setBurnAmount] = useState('')
@@ -104,7 +120,7 @@ export function AdminSection() {
     }
 
     try {
-      const amount = parseUnits(mintAmount, 18) // Assuming 18 decimals
+      const amount = parseUnits(mintAmount, tokenDecimals)
       writeContract({
         address: PKRSC_CONTRACT_ADDRESS as `0x${string}`,
         abi: pkrscAbi,
@@ -138,7 +154,7 @@ export function AdminSection() {
     }
 
     try {
-      const amount = parseUnits(burnAmount, 18)
+      const amount = parseUnits(burnAmount, tokenDecimals)
       writeContract({
         address: PKRSC_CONTRACT_ADDRESS as `0x${string}`,
         abi: pkrscAbi,
@@ -172,7 +188,7 @@ export function AdminSection() {
     }
 
     try {
-      const amount = parseUnits(burnFromAmount, 18)
+      const amount = parseUnits(burnFromAmount, tokenDecimals)
       writeContract({
         address: PKRSC_CONTRACT_ADDRESS as `0x${string}`,
         abi: pkrscAbi,
