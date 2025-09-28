@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import MouseFollowingBits from "@/components/MouseFollowingBits";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { Web3Provider } from "@/providers/Web3Provider";
+import { SecurityProvider } from "@/components/SecurityProvider";
 import Index from "./pages/Index";
 import Browse from "./pages/Browse";
 import Security from "./pages/Security";
@@ -40,13 +41,15 @@ const AppContent = () => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <Web3Provider>
-      <TooltipProvider>
-        <LanguageProvider>
-          <BrowserRouter>
-            <AppContent />
-          </BrowserRouter>
-        </LanguageProvider>
-      </TooltipProvider>
+      <SecurityProvider>
+        <TooltipProvider>
+          <LanguageProvider>
+            <BrowserRouter>
+              <AppContent />
+            </BrowserRouter>
+          </LanguageProvider>
+        </TooltipProvider>
+      </SecurityProvider>
     </Web3Provider>
   </QueryClientProvider>
 );
