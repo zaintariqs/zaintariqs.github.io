@@ -128,9 +128,20 @@ export function BalanceCard() {
         {/* Network Info */}
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">Network</span>
-          <Badge variant="secondary" className="bg-primary/10 text-primary">
-            {currentChain?.name || 'Unknown'}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" className="bg-primary/10 text-primary">
+              {currentChain?.name || 'Unknown'}
+            </Badge>
+            <Button 
+              onClick={handleAddToMetaMask}
+              variant="outline" 
+              size="sm"
+              className="h-10 w-12 p-0"
+              title="Add PKRSC to MetaMask"
+            >
+              <img src={MetaMaskIcon} alt="MetaMask" className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         {/* PKRSC Balance */}
@@ -145,15 +156,6 @@ export function BalanceCard() {
           <div className="text-sm text-muted-foreground">
             ≈ PKR {formattedPkrscBalance}
           </div>
-          <Button 
-            onClick={handleAddToMetaMask}
-            variant="outline" 
-            size="sm"
-            className="mt-2 w-full"
-          >
-            <img src={MetaMaskIcon} alt="MetaMask" className="h-4 w-4 mr-2" />
-            Add to MetaMask
-          </Button>
         </div>
 
         {/* Native Token Balance */}
