@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Shield, Coins, Flame, Ban, AlertTriangle, TrendingUp, FileText, Download, DollarSign, Users, Activity, BarChart3, Landmark } from 'lucide-react'
+import { Shield, Coins, Flame, Ban, AlertTriangle, TrendingUp, Download, DollarSign, BarChart3, Landmark, PieChart as PieChartIcon } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { parseUnits, formatUnits } from 'viem'
 import { supportedChains } from '@/lib/web3-config'
@@ -141,10 +141,9 @@ export function AdminSection() {
   const [unblacklistAddress, setUnblacklistAddress] = useState('')
   const [bankReserves, setBankReserves] = useState('0')
   
-  // Local storage for blacklist tracking
+  // Local storage for tracking
   const [blacklistedAddresses, setBlacklistedAddresses] = useState<BlacklistEntry[]>([])
   const [transactions, setTransactions] = useState<any[]>([])
-  const [blacklistBalances, setBlacklistBalances] = useState<{[key: string]: string}>({})
 
   // Chart colors
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8']
@@ -157,19 +156,17 @@ export function AdminSection() {
   })
 
   useEffect(() => {
-    // Load blacklisted addresses from localStorage
-    const stored = localStorage.getItem('pkrsc-blacklist')
-    if (stored) {
-      setBlacklistedAddresses(JSON.parse(stored))
+    // Load data from localStorage
+    const storedBlacklist = localStorage.getItem('pkrsc-blacklist')
+    if (storedBlacklist) {
+      setBlacklistedAddresses(JSON.parse(storedBlacklist))
     }
     
-    // Load transaction history from localStorage
     const storedTx = localStorage.getItem('pkrsc-transactions')
     if (storedTx) {
       setTransactions(JSON.parse(storedTx))
     }
 
-    // Load bank reserves from localStorage
     const storedReserves = localStorage.getItem('pkrsc-bank-reserves')
     if (storedReserves) {
       setBankReserves(storedReserves)
@@ -201,6 +198,14 @@ export function AdminSection() {
     const updated = [tx, ...transactions]
     setTransactions(updated)
     localStorage.setItem('pkrsc-transactions', JSON.stringify(updated))
+  }
+
+  const updateBankReserves = () => {
+    localStorage.setItem('pkrsc-bank-reserves', bankReserves)
+    toast({
+      title: "Bank Reserves Updated",
+      description: `Bank reserves set to ${bankReserves} PKR`,
+    })
   }
 
   if (!isAdmin) {
@@ -397,6 +402,7 @@ Admin: ${MASTER_MINTER_ADDRESS}
 === TREASURY OVERVIEW ===
 Total Supply: ${totalSupply ? formatUnits(totalSupply, tokenDecimals) : 'Loading...'} PKRSC
 Treasury Balance: ${treasuryBalance ? formatUnits(treasuryBalance, tokenDecimals) : 'Loading...'} PKRSC
+Bank Reserves: ${bankReserves} PKR
 Blacklisted Addresses: ${blacklistedAddresses.length}
 
 === TRANSACTION HISTORY ===
@@ -427,18 +433,6 @@ ${blacklistedAddresses.map(entry =>
   }
 
   const generateBlacklistPDF = async () => {
-    // Fetch balances for blacklisted addresses
-    const balances: {[key: string]: string} = {}
-    for (const entry of blacklistedAddresses) {
-      try {
-        // In a real implementation, you'd fetch from the contract
-        // For now, we'll simulate with random values
-        balances[entry.address] = Math.floor(Math.random() * 10000).toString()
-      } catch (error) {
-        balances[entry.address] = "Error fetching"
-      }
-    }
-
     const content = `
 PKRSC Blacklisted Addresses Report
 Generated: ${new Date().toLocaleString()}
@@ -446,12 +440,10 @@ Admin: ${MASTER_MINTER_ADDRESS}
 
 === BLACKLISTED ADDRESSES SUMMARY ===
 Total Blacklisted: ${blacklistedAddresses.length}
-Total Frozen Funds: ${Object.values(balances).reduce((sum, bal) => sum + (parseFloat(bal) || 0), 0).toLocaleString()} PKRSC
 
 === DETAILED BLACKLIST ===
 ${blacklistedAddresses.map((entry, index) => 
   `${index + 1}. Address: ${entry.address}
-   Balance: ${balances[entry.address] || 'Unknown'} PKRSC
    Reason: ${entry.reason.toUpperCase()}
    Description: ${entry.description}
    Blacklisted: ${entry.timestamp.toLocaleString()}
@@ -483,14 +475,6 @@ ${Object.entries(blacklistedAddresses.reduce((acc, entry) => {
     })
   }
 
-  const updateBankReserves = () => {
-    localStorage.setItem('pkrsc-bank-reserves', bankReserves)
-    toast({
-      title: "Bank Reserves Updated",
-      description: `Bank reserves set to ${bankReserves} PKR`,
-    })
-  }
-
   // Prepare chart data
   const transactionsByType = transactions.reduce((acc, tx) => {
     acc[tx.type] = (acc[tx.type] || 0) + 1
@@ -509,7 +493,7 @@ ${Object.entries(blacklistedAddresses.reduce((acc, entry) => {
   }, {} as {[key: string]: number})
 
   const dailyChartData = Object.entries(dailyTransactions)
-    .slice(-7) // Last 7 days
+    .slice(-7)
     .map(([date, count]) => ({
       date: new Date(date).toLocaleDateString(),
       transactions: count
@@ -517,111 +501,138 @@ ${Object.entries(blacklistedAddresses.reduce((acc, entry) => {
 
   return (
     <div className="space-y-6">
-      {/* PKR Reserve Overview */}
-      <Card className="bg-card border-border">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5 text-primary" />
-            <CardTitle className="text-card-foreground">PKR Reserve Overview</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label className="text-sm text-muted-foreground">Total Supply</Label>
-              <div className="text-2xl font-bold text-primary">
-                {totalSupply ? `${Number(formatUnits(totalSupply, tokenDecimals)).toLocaleString()} PKRSC` : 'Loading...'}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm text-muted-foreground">Treasury Balance</Label>
-              <div className="text-2xl font-bold text-green-500">
-                {treasuryBalance ? `${Number(formatUnits(treasuryBalance, tokenDecimals)).toLocaleString()} PKRSC` : 'Loading...'}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm text-muted-foreground">Bank Reserves (PKR)</Label>
-              <div className="text-2xl font-bold text-blue-500">
-                {Number(bankReserves).toLocaleString()} PKR
-              </div>
-            </div>
-          </div>
-          
-          {/* Bank Reserves Management */}
-          <div className="mt-6 pt-4 border-t">
-            <div className="flex items-center gap-2 mb-3">
-              <Landmark className="h-4 w-4 text-primary" />
-              <Label className="font-medium">Update Bank Reserves</Label>
-            </div>
-            <div className="flex gap-2">
-              <Input
-                type="number"
-                placeholder="Enter PKR amount"
-                value={bankReserves}
-                onChange={(e) => setBankReserves(e.target.value)}
-                className="flex-1"
-              />
-              <Button onClick={updateBankReserves} variant="outline">
-                Update
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Header with Badge */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <Shield className="h-6 w-6 text-primary" />
+          <h2 className="text-2xl font-bold text-card-foreground">Admin Dashboard</h2>
+          <Badge variant="destructive" className="text-xs">
+            <AlertTriangle className="h-3 w-3 mr-1" />
+            Master Minter
+          </Badge>
+        </div>
+        <Button onClick={generatePDF} variant="outline" size="sm">
+          <Download className="h-4 w-4 mr-2" />
+          Download Full Report
+        </Button>
+      </div>
 
-      {/* Treasury Reporting */}
-      <Card className="bg-card border-border">
-        <CardHeader>
-          <div className="flex items-center justify-between">
+      {/* Overview Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* PKR Reserve Overview */}
+        <Card className="bg-card border-border">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-primary" />
+              <CardTitle className="text-lg">Reserve Overview</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Total Supply</Label>
+              <div className="text-xl font-bold text-primary">
+                {totalSupply ? `${Number(formatUnits(totalSupply, tokenDecimals)).toLocaleString()}` : 'Loading...'}
+              </div>
+              <div className="text-xs text-muted-foreground">PKRSC</div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Treasury Balance</Label>
+              <div className="text-xl font-bold text-green-500">
+                {treasuryBalance ? `${Number(formatUnits(treasuryBalance, tokenDecimals)).toLocaleString()}` : 'Loading...'}
+              </div>
+              <div className="text-xs text-muted-foreground">PKRSC</div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Bank Reserves */}
+        <Card className="bg-card border-border">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <Landmark className="h-5 w-5 text-primary" />
+              <CardTitle className="text-lg">Bank Reserves</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Current Reserves</Label>
+              <div className="text-xl font-bold text-blue-500">
+                {Number(bankReserves).toLocaleString()}
+              </div>
+              <div className="text-xs text-muted-foreground">PKR</div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">Update Amount</Label>
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  placeholder="PKR amount"
+                  value={bankReserves}
+                  onChange={(e) => setBankReserves(e.target.value)}
+                  className="text-sm"
+                />
+                <Button onClick={updateBankReserves} variant="outline" size="sm">
+                  Update
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Quick Stats */}
+        <Card className="bg-card border-border">
+          <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-primary" />
-              <CardTitle className="text-card-foreground">Treasury Reporting</CardTitle>
+              <CardTitle className="text-lg">Quick Stats</CardTitle>
             </div>
-            <Button onClick={generatePDF} variant="outline" size="sm">
-              <Download className="h-4 w-4 mr-2" />
-              Download Report
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="text-center">
-              <div className="text-lg font-semibold text-blue-500">{transactions.length}</div>
-              <div className="text-sm text-muted-foreground">Total Transactions</div>
-            </div>
-            <div className="text-center">
-              <div className="text-lg font-semibold text-red-500">{blacklistedAddresses.length}</div>
-              <div className="text-sm text-muted-foreground">Blacklisted Addresses</div>
-            </div>
-            <div className="text-center">
-              <div className="text-lg font-semibold text-green-500">
-                {transactions.filter(tx => tx.type === 'mint').length}
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="text-center">
+                <div className="text-lg font-semibold text-blue-500">{transactions.length}</div>
+                <div className="text-xs text-muted-foreground">Total Transactions</div>
               </div>
-              <div className="text-sm text-muted-foreground">Mint Operations</div>
+              <div className="text-center">
+                <div className="text-lg font-semibold text-red-500">{blacklistedAddresses.length}</div>
+                <div className="text-xs text-muted-foreground">Blacklisted</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-semibold text-green-500">
+                  {transactions.filter(tx => tx.type === 'mint').length}
+                </div>
+                <div className="text-xs text-muted-foreground">Mint Ops</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-semibold text-orange-500">
+                  {transactions.filter(tx => tx.type.includes('burn')).length}
+                </div>
+                <div className="text-xs text-muted-foreground">Burn Ops</div>
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
 
-      {/* Transaction Analytics */}
+      {/* Analytics Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Transaction Types Chart */}
         <Card className="bg-card border-border">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <PieChart className="h-5 w-5 text-primary" />
-              <CardTitle className="text-card-foreground">Transaction Types</CardTitle>
+              <PieChartIcon className="h-5 w-5 text-primary" />
+              <CardTitle className="text-lg">Transaction Types</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
+            <ResponsiveContainer width="100%" height={250}>
               <PieChart>
                 <Pie
                   data={chartData}
                   cx="50%"
                   cy="50%"
                   innerRadius={60}
-                  outerRadius={80}
+                  outerRadius={100}
                   fill="#8884d8"
                   dataKey="value"
                   label={({ name, value }) => `${name}: ${value}`}
@@ -641,11 +652,11 @@ ${Object.entries(blacklistedAddresses.reduce((acc, entry) => {
           <CardHeader>
             <div className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5 text-primary" />
-              <CardTitle className="text-card-foreground">Daily Transactions (Last 7 Days)</CardTitle>
+              <CardTitle className="text-lg">Daily Activity (Last 7 Days)</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
+            <ResponsiveContainer width="100%" height={250}>
               <BarChart data={dailyChartData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" />
@@ -663,101 +674,120 @@ ${Object.entries(blacklistedAddresses.reduce((acc, entry) => {
         <CardHeader>
           <div className="flex items-center gap-2">
             <Shield className="h-5 w-5 text-primary" />
-            <CardTitle className="text-card-foreground">Admin Functions</CardTitle>
-            <Badge variant="destructive" className="text-xs">
-              <AlertTriangle className="h-3 w-3 mr-1" />
-              Master Minter
-            </Badge>
+            <CardTitle className="text-lg">Admin Functions</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="mint" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="mint" className="flex items-center gap-1">
+            <TabsList className="grid w-full grid-cols-3 mb-6">
+              <TabsTrigger value="mint" className="flex items-center gap-2">
                 <Coins className="h-4 w-4" />
                 Mint
               </TabsTrigger>
-              <TabsTrigger value="burn" className="flex items-center gap-1">
+              <TabsTrigger value="burn" className="flex items-center gap-2">
                 <Flame className="h-4 w-4" />
                 Burn
               </TabsTrigger>
-              <TabsTrigger value="blacklist" className="flex items-center gap-1">
+              <TabsTrigger value="blacklist" className="flex items-center gap-2">
                 <Ban className="h-4 w-4" />
                 Blacklist
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="mint" className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label htmlFor="mint-to">Mint To Address</Label>
-                <Input
-                  id="mint-to"
-                  placeholder="0x..."
-                  value={mintTo}
-                  onChange={(e) => setMintTo(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="mint-amount">Amount (PKRSC)</Label>
-                <Input
-                  id="mint-amount"
-                  type="number"
-                  placeholder="1000"
-                  value={mintAmount}
-                  onChange={(e) => setMintAmount(e.target.value)}
-                />
+            <TabsContent value="mint" className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="mint-to" className="text-sm font-medium">Recipient Address</Label>
+                  <Input
+                    id="mint-to"
+                    placeholder="0x..."
+                    value={mintTo}
+                    onChange={(e) => setMintTo(e.target.value)}
+                    className="font-mono text-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="mint-amount" className="text-sm font-medium">Amount (PKRSC)</Label>
+                  <Input
+                    id="mint-amount"
+                    type="number"
+                    placeholder="1000"
+                    value={mintAmount}
+                    onChange={(e) => setMintAmount(e.target.value)}
+                  />
+                </div>
               </div>
               <Button 
                 onClick={handleMint} 
                 disabled={isPending || isConfirming}
-                className="w-full"
+                className="w-full md:w-auto px-8"
+                size="lg"
               >
                 {isPending || isConfirming ? 'Minting...' : 'Mint Tokens'}
               </Button>
             </TabsContent>
 
-            <TabsContent value="burn" className="space-y-4 mt-4">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="burn-amount">Burn From Your Wallet (PKRSC)</Label>
-                  <Input
-                    id="burn-amount"
-                    type="number"
-                    placeholder="1000"
-                    value={burnAmount}
-                    onChange={(e) => setBurnAmount(e.target.value)}
-                  />
+            <TabsContent value="burn" className="space-y-6">
+              <div className="space-y-6">
+                {/* Burn from own wallet */}
+                <div className="p-4 border rounded-lg space-y-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Flame className="h-4 w-4 text-destructive" />
+                    <Label className="font-medium">Burn From Your Wallet</Label>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="burn-amount" className="text-sm font-medium">Amount (PKRSC)</Label>
+                    <Input
+                      id="burn-amount"
+                      type="number"
+                      placeholder="1000"
+                      value={burnAmount}
+                      onChange={(e) => setBurnAmount(e.target.value)}
+                    />
+                  </div>
                   <Button 
                     onClick={handleBurn} 
                     disabled={isPending || isConfirming}
                     variant="destructive"
-                    className="w-full"
+                    className="w-full md:w-auto px-8"
                   >
                     {isPending || isConfirming ? 'Burning...' : 'Burn Your Tokens'}
                   </Button>
                 </div>
                 
-                <div className="border-t pt-4 space-y-2">
-                  <Label htmlFor="burn-from-address">Burn From Address</Label>
-                  <Input
-                    id="burn-from-address"
-                    placeholder="0x..."
-                    value={burnFromAddress}
-                    onChange={(e) => setBurnFromAddress(e.target.value)}
-                  />
-                  <Label htmlFor="burn-from-amount">Amount (PKRSC)</Label>
-                  <Input
-                    id="burn-from-amount"
-                    type="number"
-                    placeholder="1000"
-                    value={burnFromAmount}
-                    onChange={(e) => setBurnFromAmount(e.target.value)}
-                  />
+                {/* Burn from other address */}
+                <div className="p-4 border rounded-lg space-y-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Flame className="h-4 w-4 text-destructive" />
+                    <Label className="font-medium">Burn From Address</Label>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="burn-from-address" className="text-sm font-medium">Target Address</Label>
+                      <Input
+                        id="burn-from-address"
+                        placeholder="0x..."
+                        value={burnFromAddress}
+                        onChange={(e) => setBurnFromAddress(e.target.value)}
+                        className="font-mono text-sm"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="burn-from-amount" className="text-sm font-medium">Amount (PKRSC)</Label>
+                      <Input
+                        id="burn-from-amount"
+                        type="number"
+                        placeholder="1000"
+                        value={burnFromAmount}
+                        onChange={(e) => setBurnFromAmount(e.target.value)}
+                      />
+                    </div>
+                  </div>
                   <Button 
                     onClick={handleBurnFrom} 
                     disabled={isPending || isConfirming}
                     variant="destructive"
-                    className="w-full"
+                    className="w-full md:w-auto px-8"
                   >
                     {isPending || isConfirming ? 'Burning...' : 'Burn From Address'}
                   </Button>
@@ -765,89 +795,126 @@ ${Object.entries(blacklistedAddresses.reduce((acc, entry) => {
               </div>
             </TabsContent>
 
-            <TabsContent value="blacklist" className="space-y-4 mt-4">
-              <div className="flex justify-between items-center mb-4">
-                <Label className="text-sm font-medium">Blacklist Management</Label>
+            <TabsContent value="blacklist" className="space-y-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <div className="flex items-center gap-2">
+                  <Ban className="h-5 w-5 text-destructive" />
+                  <Label className="text-lg font-medium">Blacklist Management</Label>
+                </div>
                 <Button onClick={generateBlacklistPDF} variant="outline" size="sm">
                   <Download className="h-4 w-4 mr-2" />
-                  Download Blacklist Report
+                  Download Report
                 </Button>
               </div>
               
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="blacklist-address">Blacklist Address</Label>
-                  <Input
-                    id="blacklist-address"
-                    placeholder="0x..."
-                    value={blacklistAddress}
-                    onChange={(e) => setBlacklistAddress(e.target.value)}
-                  />
-                  <Label htmlFor="blacklist-reason">Reason</Label>
-                  <Select value={blacklistReason} onValueChange={(value: BlacklistReason) => setBlacklistReason(value)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="fraud">Fraud</SelectItem>
-                      <SelectItem value="compliance">Compliance Violation</SelectItem>
-                      <SelectItem value="security">Security Risk</SelectItem>
-                      <SelectItem value="suspicious_activity">Suspicious Activity</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Label htmlFor="blacklist-description">Description</Label>
-                  <Textarea
-                    id="blacklist-description"
-                    placeholder="Detailed reason for blacklisting..."
-                    value={blacklistDescription}
-                    onChange={(e) => setBlacklistDescription(e.target.value)}
-                  />
-                  <Button 
-                    onClick={handleBlacklist} 
-                    disabled={isPending || isConfirming}
-                    variant="destructive"
-                    className="w-full"
-                  >
-                    {isPending || isConfirming ? 'Blacklisting...' : 'Blacklist Address'}
-                  </Button>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Add to Blacklist */}
+                <div className="p-4 border rounded-lg space-y-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Ban className="h-4 w-4 text-destructive" />
+                    <Label className="font-medium">Add to Blacklist</Label>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="blacklist-address" className="text-sm font-medium">Address</Label>
+                      <Input
+                        id="blacklist-address"
+                        placeholder="0x..."
+                        value={blacklistAddress}
+                        onChange={(e) => setBlacklistAddress(e.target.value)}
+                        className="font-mono text-sm"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="blacklist-reason" className="text-sm font-medium">Reason</Label>
+                      <Select value={blacklistReason} onValueChange={(value: BlacklistReason) => setBlacklistReason(value)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="fraud">Fraud</SelectItem>
+                          <SelectItem value="compliance">Compliance Violation</SelectItem>
+                          <SelectItem value="security">Security Risk</SelectItem>
+                          <SelectItem value="suspicious_activity">Suspicious Activity</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="blacklist-description" className="text-sm font-medium">Description</Label>
+                      <Textarea
+                        id="blacklist-description"
+                        placeholder="Detailed reason for blacklisting..."
+                        value={blacklistDescription}
+                        onChange={(e) => setBlacklistDescription(e.target.value)}
+                        rows={3}
+                      />
+                    </div>
+                    <Button 
+                      onClick={handleBlacklist} 
+                      disabled={isPending || isConfirming}
+                      variant="destructive"
+                      className="w-full"
+                    >
+                      {isPending || isConfirming ? 'Blacklisting...' : 'Add to Blacklist'}
+                    </Button>
+                  </div>
                 </div>
                 
-                <div className="border-t pt-4 space-y-2">
-                  <Label htmlFor="unblacklist-address">Remove From Blacklist</Label>
-                  <Input
-                    id="unblacklist-address"
-                    placeholder="0x..."
-                    value={unblacklistAddress}
-                    onChange={(e) => setUnblacklistAddress(e.target.value)}
-                  />
-                  <Button 
-                    onClick={handleUnblacklist} 
-                    disabled={isPending || isConfirming}
-                    className="w-full"
-                  >
-                    {isPending || isConfirming ? 'Unblacklisting...' : 'Remove From Blacklist'}
-                  </Button>
-                </div>
-
-                {blacklistedAddresses.length > 0 && (
-                  <div className="border-t pt-4">
-                    <Label className="text-sm font-medium">Blacklisted Addresses ({blacklistedAddresses.length})</Label>
-                    <div className="mt-2 space-y-2 max-h-40 overflow-y-auto">
-                      {blacklistedAddresses.map((entry, index) => (
-                        <div key={index} className="p-2 bg-muted rounded text-xs">
-                          <div className="font-mono">{entry.address}</div>
-                          <div className="text-muted-foreground">
-                            {entry.reason} - {entry.description}
-                          </div>
-                          <div className="text-muted-foreground">
-                            {entry.timestamp.toLocaleString()}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                {/* Remove from Blacklist */}
+                <div className="p-4 border rounded-lg space-y-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Shield className="h-4 w-4 text-green-500" />
+                    <Label className="font-medium">Remove from Blacklist</Label>
                   </div>
-                )}
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="unblacklist-address" className="text-sm font-medium">Address</Label>
+                      <Input
+                        id="unblacklist-address"
+                        placeholder="0x..."
+                        value={unblacklistAddress}
+                        onChange={(e) => setUnblacklistAddress(e.target.value)}
+                        className="font-mono text-sm"
+                      />
+                    </div>
+                    <Button 
+                      onClick={handleUnblacklist} 
+                      disabled={isPending || isConfirming}
+                      className="w-full"
+                    >
+                      {isPending || isConfirming ? 'Unblacklisting...' : 'Remove from Blacklist'}
+                    </Button>
+                  </div>
+
+                  {/* Blacklisted Addresses List */}
+                  {blacklistedAddresses.length > 0 && (
+                    <div className="mt-6 pt-4 border-t">
+                      <div className="flex items-center justify-between mb-3">
+                        <Label className="text-sm font-medium">Blacklisted Addresses</Label>
+                        <Badge variant="secondary">{blacklistedAddresses.length}</Badge>
+                      </div>
+                      <div className="space-y-2 max-h-60 overflow-y-auto">
+                        {blacklistedAddresses.map((entry, index) => (
+                          <div key={index} className="p-3 bg-muted rounded-lg text-sm">
+                            <div className="font-mono text-xs truncate mb-1">{entry.address}</div>
+                            <div className="flex items-center justify-between">
+                              <Badge variant="outline" className="text-xs">
+                                {entry.reason.replace('_', ' ')}
+                              </Badge>
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(entry.timestamp).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1 truncate">
+                              {entry.description}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </TabsContent>
           </Tabs>
