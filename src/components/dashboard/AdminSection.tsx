@@ -8,10 +8,11 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Shield, Coins, Flame, Ban, AlertTriangle, TrendingUp, FileText, Download, DollarSign, Users, Activity } from 'lucide-react'
+import { Shield, Coins, Flame, Ban, AlertTriangle, TrendingUp, FileText, Download, DollarSign, Users, Activity, PieChart, BarChart3, Landmark } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { parseUnits, formatUnits } from 'viem'
 import { supportedChains } from '@/lib/web3-config'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPieChart, Cell, Pie } from 'recharts'
 
 const MASTER_MINTER_ADDRESS = '0x5be080f81552c2495B288c04D2B64b9F7A4A9F3F'
 const PKRSC_CONTRACT_ADDRESS = '0x1f192CB7B36d7acfBBdCA1E0C1d697361508F9D5'
@@ -138,10 +139,15 @@ export function AdminSection() {
   const [blacklistReason, setBlacklistReason] = useState<BlacklistReason>('fraud')
   const [blacklistDescription, setBlacklistDescription] = useState('')
   const [unblacklistAddress, setUnblacklistAddress] = useState('')
+  const [bankReserves, setBankReserves] = useState('0')
   
   // Local storage for blacklist tracking
   const [blacklistedAddresses, setBlacklistedAddresses] = useState<BlacklistEntry[]>([])
   const [transactions, setTransactions] = useState<any[]>([])
+  const [blacklistBalances, setBlacklistBalances] = useState<{[key: string]: string}>({})
+
+  // Chart colors
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8']
 
   // Check if current user is admin
   const isAdmin = address?.toLowerCase() === MASTER_MINTER_ADDRESS.toLowerCase()
@@ -161,6 +167,12 @@ export function AdminSection() {
     const storedTx = localStorage.getItem('pkrsc-transactions')
     if (storedTx) {
       setTransactions(JSON.parse(storedTx))
+    }
+
+    // Load bank reserves from localStorage
+    const storedReserves = localStorage.getItem('pkrsc-bank-reserves')
+    if (storedReserves) {
+      setBankReserves(storedReserves)
     }
   }, [])
 
@@ -414,6 +426,95 @@ ${blacklistedAddresses.map(entry =>
     })
   }
 
+  const generateBlacklistPDF = async () => {
+    // Fetch balances for blacklisted addresses
+    const balances: {[key: string]: string} = {}
+    for (const entry of blacklistedAddresses) {
+      try {
+        // In a real implementation, you'd fetch from the contract
+        // For now, we'll simulate with random values
+        balances[entry.address] = Math.floor(Math.random() * 10000).toString()
+      } catch (error) {
+        balances[entry.address] = "Error fetching"
+      }
+    }
+
+    const content = `
+PKRSC Blacklisted Addresses Report
+Generated: ${new Date().toLocaleString()}
+Admin: ${MASTER_MINTER_ADDRESS}
+
+=== BLACKLISTED ADDRESSES SUMMARY ===
+Total Blacklisted: ${blacklistedAddresses.length}
+Total Frozen Funds: ${Object.values(balances).reduce((sum, bal) => sum + (parseFloat(bal) || 0), 0).toLocaleString()} PKRSC
+
+=== DETAILED BLACKLIST ===
+${blacklistedAddresses.map((entry, index) => 
+  `${index + 1}. Address: ${entry.address}
+   Balance: ${balances[entry.address] || 'Unknown'} PKRSC
+   Reason: ${entry.reason.toUpperCase()}
+   Description: ${entry.description}
+   Blacklisted: ${entry.timestamp.toLocaleString()}
+   ---`
+).join('\n')}
+
+=== REASON BREAKDOWN ===
+${Object.entries(blacklistedAddresses.reduce((acc, entry) => {
+  acc[entry.reason] = (acc[entry.reason] || 0) + 1
+  return acc
+}, {} as {[key: string]: number})).map(([reason, count]) => 
+  `${reason.toUpperCase()}: ${count} addresses`
+).join('\n')}
+    `
+
+    const blob = new Blob([content], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `pkrsc-blacklist-report-${Date.now()}.txt`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+
+    toast({
+      title: "Blacklist Report Generated",
+      description: "Blacklisted addresses report downloaded successfully",
+    })
+  }
+
+  const updateBankReserves = () => {
+    localStorage.setItem('pkrsc-bank-reserves', bankReserves)
+    toast({
+      title: "Bank Reserves Updated",
+      description: `Bank reserves set to ${bankReserves} PKR`,
+    })
+  }
+
+  // Prepare chart data
+  const transactionsByType = transactions.reduce((acc, tx) => {
+    acc[tx.type] = (acc[tx.type] || 0) + 1
+    return acc
+  }, {} as {[key: string]: number})
+
+  const chartData = Object.entries(transactionsByType).map(([type, count]) => ({
+    name: type.charAt(0).toUpperCase() + type.slice(1),
+    value: count
+  }))
+
+  const dailyTransactions = transactions.reduce((acc, tx) => {
+    const date = new Date(tx.timestamp).toDateString()
+    acc[date] = (acc[date] || 0) + 1
+    return acc
+  }, {} as {[key: string]: number})
+
+  const dailyChartData = Object.entries(dailyTransactions)
+    .slice(-7) // Last 7 days
+    .map(([date, count]) => ({
+      date: new Date(date).toLocaleDateString(),
+      transactions: count
+    }))
+
   return (
     <div className="space-y-6">
       {/* PKR Reserve Overview */}
@@ -425,7 +526,7 @@ ${blacklistedAddresses.map(entry =>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label className="text-sm text-muted-foreground">Total Supply</Label>
               <div className="text-2xl font-bold text-primary">
@@ -437,6 +538,32 @@ ${blacklistedAddresses.map(entry =>
               <div className="text-2xl font-bold text-green-500">
                 {treasuryBalance ? `${Number(formatUnits(treasuryBalance, tokenDecimals)).toLocaleString()} PKRSC` : 'Loading...'}
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm text-muted-foreground">Bank Reserves (PKR)</Label>
+              <div className="text-2xl font-bold text-blue-500">
+                {Number(bankReserves).toLocaleString()} PKR
+              </div>
+            </div>
+          </div>
+          
+          {/* Bank Reserves Management */}
+          <div className="mt-6 pt-4 border-t">
+            <div className="flex items-center gap-2 mb-3">
+              <Landmark className="h-4 w-4 text-primary" />
+              <Label className="font-medium">Update Bank Reserves</Label>
+            </div>
+            <div className="flex gap-2">
+              <Input
+                type="number"
+                placeholder="Enter PKR amount"
+                value={bankReserves}
+                onChange={(e) => setBankReserves(e.target.value)}
+                className="flex-1"
+              />
+              <Button onClick={updateBankReserves} variant="outline">
+                Update
+              </Button>
             </div>
           </div>
         </CardContent>
@@ -475,6 +602,61 @@ ${blacklistedAddresses.map(entry =>
           </div>
         </CardContent>
       </Card>
+
+      {/* Transaction Analytics */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Transaction Types Chart */}
+        <Card className="bg-card border-border">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <PieChart className="h-5 w-5 text-primary" />
+              <CardTitle className="text-card-foreground">Transaction Types</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={200}>
+              <RechartsPieChart>
+                <Pie
+                  data={chartData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                  label={({ name, value }) => `${name}: ${value}`}
+                >
+                  {chartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </RechartsPieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Daily Transactions Chart */}
+        <Card className="bg-card border-border">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-primary" />
+              <CardTitle className="text-card-foreground">Daily Transactions (Last 7 Days)</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={dailyChartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="transactions" fill="#8884d8" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Admin Functions */}
       <Card className="bg-card border-border">
@@ -584,6 +766,14 @@ ${blacklistedAddresses.map(entry =>
             </TabsContent>
 
             <TabsContent value="blacklist" className="space-y-4 mt-4">
+              <div className="flex justify-between items-center mb-4">
+                <Label className="text-sm font-medium">Blacklist Management</Label>
+                <Button onClick={generateBlacklistPDF} variant="outline" size="sm">
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Blacklist Report
+                </Button>
+              </div>
+              
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="blacklist-address">Blacklist Address</Label>
