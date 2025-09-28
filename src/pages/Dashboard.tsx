@@ -5,10 +5,15 @@ import { BalanceCard } from '@/components/dashboard/BalanceCard'
 import { TopUpSection } from '@/components/dashboard/TopUpSection'
 import { UniswapSection } from '@/components/dashboard/UniswapSection'
 import { RedeemSection } from '@/components/dashboard/RedeemSection'
+import { AdminSection } from '@/components/dashboard/AdminSection'
 import { Navigate } from 'react-router-dom'
 
+const MASTER_MINTER_ADDRESS = '0x5be080f81552c2495B288c04D2B64b9F7A4A9F3F'
+
 export default function Dashboard() {
-  const { isConnected } = useAccount()
+  const { isConnected, address } = useAccount()
+  
+  const isAdmin = address?.toLowerCase() === MASTER_MINTER_ADDRESS.toLowerCase()
 
   if (!isConnected) {
     return <Navigate to="/" replace />
@@ -30,8 +35,9 @@ export default function Dashboard() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Balance Section */}
-            <div className="lg:col-span-1">
+            <div className="lg:col-span-1 space-y-8">
               <BalanceCard />
+              {isAdmin && <AdminSection />}
             </div>
 
             {/* Actions Section */}
