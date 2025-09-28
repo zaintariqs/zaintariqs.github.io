@@ -2,15 +2,18 @@ import { useState, useEffect } from 'react'
 import { useAccount, useBalance, useChainId, useReadContract } from 'wagmi'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { RefreshCw, Wallet } from 'lucide-react'
+import { RefreshCw, Wallet, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { supportedChains } from '@/lib/web3-config'
 import { formatUnits } from 'viem'
+import { useToast } from '@/hooks/use-toast'
+import MetaMaskIcon from '@/assets/metamask-icon.svg'
 
 export function BalanceCard() {
   const { address } = useAccount()
   const chainId = useChainId()
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const { toast } = useToast()
   
   const { data: ethBalance, refetch } = useBalance({
     address: address,
@@ -68,6 +71,44 @@ export function BalanceCard() {
     setTimeout(() => setIsRefreshing(false), 1000)
   }
 
+  const handleAddToMetaMask = async () => {
+    try {
+      if (typeof window.ethereum !== 'undefined') {
+        const wasAdded = await window.ethereum.request({
+          method: 'wallet_watchAsset',
+          params: {
+            type: 'ERC20',
+            options: {
+              address: PKRSC_CONTRACT_ADDRESS,
+              symbol: 'PKRSC',
+              decimals: pkrscDecimals || 18,
+              image: 'https://cdn-icons-png.flaticon.com/512/825/825532.png',
+            },
+          },
+        })
+        
+        if (wasAdded) {
+          toast({
+            title: "Token Added",
+            description: "PKRSC has been added to your MetaMask wallet!",
+          })
+        }
+      } else {
+        toast({
+          title: "MetaMask Required",
+          description: "Please install MetaMask to add this token.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add token to MetaMask. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
   return (
     <Card className="bg-card border-border">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -104,6 +145,15 @@ export function BalanceCard() {
           <div className="text-sm text-muted-foreground">
             ≈ PKR {formattedPkrscBalance}
           </div>
+          <Button 
+            onClick={handleAddToMetaMask}
+            variant="outline" 
+            size="sm"
+            className="mt-2 w-full"
+          >
+            <img src={MetaMaskIcon} alt="MetaMask" className="h-4 w-4 mr-2" />
+            Add to MetaMask
+          </Button>
         </div>
 
         {/* Native Token Balance */}
