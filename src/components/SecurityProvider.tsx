@@ -12,32 +12,34 @@ export function SecurityProvider({ children }: SecurityProviderProps) {
   const { toast } = useToast()
   const hasRunSecurityCheck = useRef(false)
 
-  // Run security check only once on initial mount
+  // Check for refresh logout flag on mount
   useEffect(() => {
-    if (hasRunSecurityCheck.current) return
-    hasRunSecurityCheck.current = true
+    const wasRefreshLogout = sessionStorage.getItem('wallet-refresh-logout')
+    
+    if (wasRefreshLogout) {
+      sessionStorage.removeItem('wallet-refresh-logout')
+      // Force disconnect regardless of connection state since flag was set
+      disconnect()
+      toast({
+        title: "Security Logout",
+        description: "You have been logged out for security reasons due to page refresh.",
+        variant: "default",
+      })
+    }
+  }, [disconnect, toast])
 
-    // Small delay to ensure any existing connections are established
-    const checkTimeout = setTimeout(() => {
-      // Check if there was a refresh flag set from previous session
+  // Monitor connection state changes after refresh logout
+  useEffect(() => {
+    if (!hasRunSecurityCheck.current) {
+      hasRunSecurityCheck.current = true
+      // Additional check for any lingering connections after refresh
       const wasRefreshLogout = sessionStorage.getItem('wallet-refresh-logout')
-      
-      if (wasRefreshLogout) {
+      if (wasRefreshLogout && isConnected) {
         sessionStorage.removeItem('wallet-refresh-logout')
-        // Only disconnect if user is actually connected
-        if (isConnected) {
-          disconnect()
-          toast({
-            title: "Security Logout",
-            description: "You have been logged out for security reasons due to page refresh.",
-            variant: "default",
-          })
-        }
+        disconnect()
       }
-    }, 100)
-
-    return () => clearTimeout(checkTimeout)
-  }, []) // Empty dependency array - run only once
+    }
+  }, [isConnected, disconnect])
 
   // Set refresh flag when user navigates away while connected
   useEffect(() => {
