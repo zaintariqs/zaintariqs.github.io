@@ -1,4 +1,5 @@
 import { useAccount } from 'wagmi'
+import { useEffect } from 'react'
 import PKRHeader from '@/components/PKRHeader'
 import PKRFooter from '@/components/PKRFooter'
 import { BalanceCard } from '@/components/dashboard/BalanceCard'
@@ -14,6 +15,11 @@ export default function Dashboard() {
   const { isConnected, address } = useAccount()
   
   const isAdmin = address?.toLowerCase() === MASTER_MINTER_ADDRESS.toLowerCase()
+
+  // Scroll to top when dashboard loads (after login)
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [])
 
   if (!isConnected) {
     return <Navigate to="/" replace />
