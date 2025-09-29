@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { useDisconnect, useAccount } from 'wagmi'
+import { useDisconnect, useAccount, useConnections } from 'wagmi'
 import { useToast } from '@/hooks/use-toast'
 
 interface SecurityProviderProps {
@@ -7,9 +7,10 @@ interface SecurityProviderProps {
 }
 
 export function SecurityProvider({ children }: SecurityProviderProps) {
-  const { disconnect } = useDisconnect()
+  const { disconnect, disconnectAsync, connectors } = useDisconnect()
   const { isConnected } = useAccount()
   const { toast } = useToast()
+  const connections = useConnections()
   const hasRunSecurityCheck = useRef(false)
 
   // Check for refresh logout flag on mount
@@ -38,16 +39,25 @@ export function SecurityProvider({ children }: SecurityProviderProps) {
         keysToClear.forEach((k) => localStorage.removeItem(k))
       } catch {}
 
-      // Disconnect current session
-      disconnect()
-
-      toast({
-        title: "Security Logout",
-        description: "You have been logged out for security reasons due to page refresh.",
-        variant: "default",
-      })
+      // Disconnect all active connectors to ensure a clean logout
+      const doDisconnect = async () => {
+        try {
+          await Promise.all(
+            connections.map(({ connector }) =>
+              disconnectAsync({ connector }).catch(() => void 0)
+            )
+          )
+        } finally {
+          toast({
+            title: "Security Logout",
+            description: "You have been logged out for security reasons due to page refresh.",
+            variant: "default",
+          })
+        }
+      }
+      void doDisconnect()
     }
-  }, [disconnect, toast])
+  }, [disconnectAsync, connections, toast])
 
   // Monitor connection state changes after refresh logout
   useEffect(() => {
