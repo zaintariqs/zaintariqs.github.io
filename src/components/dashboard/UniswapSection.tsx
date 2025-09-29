@@ -142,33 +142,25 @@ export function UniswapSection() {
           </div>
         </div>
 
-        {/* Swap via Uniswap (Embedded) */}
-        <section className="space-y-4">
-          <div className="rounded-lg overflow-hidden border border-border">
-            <iframe
-              title="Uniswap PKRSC/USDT Swap"
-              src="https://app.uniswap.org/swap?chain=base&inputCurrency=0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2&outputCurrency=0x1f192CB7B36d7acfBBdCA1E0C1d697361508F9D5"
-              className="w-full"
-              style={{ height: 640, border: '0' }}
-              loading="lazy"
-            />
-          </div>
-          <div className="flex justify-end">
-            <Button
-              variant="outline"
-              onClick={() =>
-                window.open(
-                  'https://app.uniswap.org/swap?chain=base&inputCurrency=0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2&outputCurrency=0x1f192CB7B36d7acfBBdCA1E0C1d697361508F9D5',
-                  '_blank'
-                )
-              }
-              className="px-6"
-            >
-              Open in Uniswap
-              <ExternalLink className="ml-2 h-4 w-4" />
-            </Button>
-          </div>
-        </section>
+        {/* Trade on Uniswap */}
+        <div className="p-6 bg-muted/30 rounded-lg text-center space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Connect your wallet on Uniswap to trade PKRSC tokens
+          </p>
+          <Button
+            size="lg"
+            onClick={() =>
+              window.open(
+                'https://app.uniswap.org/swap?chain=base&inputCurrency=0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2&outputCurrency=0x1f192CB7B36d7acfBBdCA1E0C1d697361508F9D5',
+                '_blank'
+              )
+            }
+            className="px-8"
+          >
+            Trade on Uniswap
+            <ExternalLink className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
 
         {/* Warning */}
         <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
