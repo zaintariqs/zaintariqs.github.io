@@ -59,26 +59,31 @@ export function RedeemSection() {
     setIsSubmitting(true)
 
     try {
-      // Validate wallet address format before submission
-      if (!address.match(/^0x[a-fA-F0-9]{40}$/)) {
-        throw new Error('Invalid wallet address format')
+      // Call the secure edge function instead of direct Supabase client
+      const response = await fetch(
+        'https://jdjreuxhvzmzockuduyq.supabase.co/functions/v1/redemptions',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-wallet-address': address,
+          },
+          body: JSON.stringify({
+            walletAddress: address,
+            pkrscAmount: parseFloat(formData.amount),
+            bankName: formData.bankName,
+            accountNumber: formData.accountNumber,
+            accountTitle: formData.accountTitle,
+          }),
+        }
+      )
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to create redemption request')
       }
 
-      const { data, error } = await supabase
-        .from('redemptions')
-        .insert({
-          user_id: address,
-          pkrsc_amount: parseFloat(formData.amount),
-          bank_name: formData.bankName,
-          account_number: formData.accountNumber,
-          account_title: formData.accountTitle,
-          burn_address: burnAddress,
-          status: 'pending'
-        })
-        .select()
-        .single()
-
-      if (error) throw error
+      const { data } = await response.json()
 
       setRedemptionId(data.id)
       toast({
@@ -87,25 +92,33 @@ export function RedeemSection() {
       })
 
       // Simulate transaction hash after some time (in real app, this would come from blockchain monitoring)
-      setTimeout(() => {
+      setTimeout(async () => {
         const mockTxHash = `0x${Math.random().toString(16).substr(2, 64)}`
         setTransactionHash(mockTxHash)
         
-        // Update redemption status
-        supabase
-          .from('redemptions')
-          .update({ 
-            transaction_hash: mockTxHash, 
-            status: 'burn_confirmed' 
-          })
-          .eq('id', data.id)
+        // Update redemption status via edge function
+        await fetch(
+          'https://jdjreuxhvzmzockuduyq.supabase.co/functions/v1/redemptions',
+          {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-wallet-address': address,
+            },
+            body: JSON.stringify({
+              redemptionId: data.id,
+              transactionHash: mockTxHash,
+              status: 'burn_confirmed',
+            }),
+          }
+        )
       }, 5000)
 
     } catch (error) {
       console.error('Error creating redemption:', error)
       toast({
         title: "Error",
-        description: "Failed to create redemption request",
+        description: error instanceof Error ? error.message : "Failed to create redemption request",
         variant: "destructive",
       })
     } finally {
