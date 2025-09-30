@@ -143,7 +143,7 @@ export function UniswapSection() {
         </div>
 
         {/* Trade on Uniswap */}
-        <div className="p-6 bg-muted/30 rounded-lg text-center space-y-4">
+        <div className="p-6 bg-card border border-border rounded-lg text-center space-y-4">
           <p className="text-sm text-muted-foreground">
             Connect your wallet on Uniswap to trade PKRSC tokens
           </p>
