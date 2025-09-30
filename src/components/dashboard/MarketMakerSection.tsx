@@ -7,6 +7,7 @@ import { Switch } from '@/components/ui/switch'
 import { Bot, TrendingUp, Activity, AlertCircle } from 'lucide-react'
 import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/hooks/use-toast'
+import { useAccount } from 'wagmi'
 
 interface BotConfig {
   id: string
@@ -32,6 +33,7 @@ interface Transaction {
 
 export function MarketMakerSection() {
   const { toast } = useToast()
+  const { address } = useAccount()
   const [config, setConfig] = useState<BotConfig | null>(null)
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
@@ -152,9 +154,20 @@ export function MarketMakerSection() {
   }
 
   const runBotNow = async () => {
+    if (!address) {
+      toast({
+        title: 'Error',
+        description: 'Wallet not connected',
+        variant: 'destructive'
+      })
+      return
+    }
+
     setUpdating(true)
     try {
-      const { error } = await supabase.functions.invoke('market-maker')
+      const { data, error } = await supabase.functions.invoke('market-maker', {
+        body: { walletAddress: address }
+      })
       
       if (error) throw error
 
@@ -167,7 +180,7 @@ export function MarketMakerSection() {
       console.error('Error running bot:', error)
       toast({
         title: 'Error',
-        description: 'Failed to run bot',
+        description: error instanceof Error ? error.message : 'Failed to run bot',
         variant: 'destructive'
       })
     }

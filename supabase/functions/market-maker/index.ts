@@ -6,6 +6,20 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Helper function to verify admin status
+async function verifyAdmin(supabase: any, walletAddress: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('is_admin_wallet', {
+    wallet_addr: walletAddress
+  })
+  
+  if (error) {
+    console.error('Error verifying admin:', error)
+    return false
+  }
+  
+  return data === true
+}
+
 // Uniswap V3 Router on Base
 const UNISWAP_ROUTER = '0x2626664c2603336E57B271c5C0b26F421741e481'
 const USDT_ADDRESS = '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2'
@@ -38,6 +52,29 @@ Deno.serve(async (req) => {
     const privateKey = Deno.env.get('MARKET_MAKER_PRIVATE_KEY')!
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
+    // Get the requesting wallet address from the request body
+    const { walletAddress } = await req.json().catch(() => ({}))
+    
+    if (!walletAddress) {
+      console.error('No wallet address provided')
+      return new Response(
+        JSON.stringify({ error: 'Wallet address required' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Verify admin status
+    const isAdmin = await verifyAdmin(supabase, walletAddress)
+    if (!isAdmin) {
+      console.error('Unauthorized: Not an admin wallet')
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized: Admin access required' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    console.log('Admin verified:', walletAddress)
 
     // Fetch bot configuration
     const { data: config, error: configError } = await supabase

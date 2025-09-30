@@ -1,5 +1,5 @@
 import { useAccount } from 'wagmi'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import PKRHeader from '@/components/PKRHeader'
 import PKRFooter from '@/components/PKRFooter'
 import { BalanceCard } from '@/components/dashboard/BalanceCard'
@@ -9,13 +9,43 @@ import { RedeemSection } from '@/components/dashboard/RedeemSection'
 import { AdminSection } from '@/components/dashboard/AdminSection'
 import { MarketMakerSection } from '@/components/dashboard/MarketMakerSection'
 import { Navigate } from 'react-router-dom'
-
-const MASTER_MINTER_ADDRESS = '0x5be080f81552c2495B288c04D2B64b9F7A4A9F3F'
+import { supabase } from '@/integrations/supabase/client'
 
 export default function Dashboard() {
   const { isConnected, address } = useAccount()
-  
-  const isAdmin = address?.toLowerCase() === MASTER_MINTER_ADDRESS.toLowerCase()
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [isCheckingAdmin, setIsCheckingAdmin] = useState(true)
+
+  // Check admin status server-side
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (!address) {
+        setIsAdmin(false)
+        setIsCheckingAdmin(false)
+        return
+      }
+
+      try {
+        const { data, error } = await supabase.functions.invoke('verify-admin', {
+          body: { walletAddress: address }
+        })
+
+        if (error) {
+          console.error('Error verifying admin status:', error)
+          setIsAdmin(false)
+        } else {
+          setIsAdmin(data?.isAdmin === true)
+        }
+      } catch (error) {
+        console.error('Failed to verify admin status:', error)
+        setIsAdmin(false)
+      } finally {
+        setIsCheckingAdmin(false)
+      }
+    }
+
+    checkAdminStatus()
+  }, [address])
 
   // Scroll to top when dashboard loads (after login)
   useEffect(() => {
@@ -24,6 +54,22 @@ export default function Dashboard() {
 
   if (!isConnected) {
     return <Navigate to="/" replace />
+  }
+
+  if (isCheckingAdmin) {
+    return (
+      <div className="min-h-screen bg-gradient-dark">
+        <PKRHeader />
+        <main className="container mx-auto px-4 py-8">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center py-20">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+              <p className="mt-4 text-muted-foreground">Verifying access...</p>
+            </div>
+          </div>
+        </main>
+      </div>
+    )
   }
 
   return (
