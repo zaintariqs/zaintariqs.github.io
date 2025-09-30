@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useAccount } from 'wagmi'
+import { useAccount, useSignMessage } from 'wagmi'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client'
 
 export function RedeemSection() {
   const { address } = useAccount()
+  const { signMessageAsync } = useSignMessage()
   const { toast } = useToast()
   const [formData, setFormData] = useState({
     amount: '',
@@ -59,7 +60,16 @@ export function RedeemSection() {
     setIsSubmitting(true)
 
     try {
-      // Call the secure edge function instead of direct Supabase client
+      // Generate authentication message and signature
+      const timestamp = Date.now()
+      const message = `PKRSC Redemption Authentication\nWallet: ${address}\nTimestamp: ${timestamp}`
+      
+      const signature = await signMessageAsync({ 
+        account: address,
+        message 
+      })
+      
+      // Call the secure edge function with cryptographic proof of wallet ownership
       const response = await fetch(
         'https://jdjreuxhvzmzockuduyq.supabase.co/functions/v1/redemptions',
         {
@@ -67,6 +77,8 @@ export function RedeemSection() {
           headers: {
             'Content-Type': 'application/json',
             'x-wallet-address': address,
+            'x-wallet-signature': signature,
+            'x-signature-message': message,
           },
           body: JSON.stringify({
             walletAddress: address,
@@ -96,7 +108,15 @@ export function RedeemSection() {
         const mockTxHash = `0x${Math.random().toString(16).substr(2, 64)}`
         setTransactionHash(mockTxHash)
         
-        // Update redemption status via edge function
+        // Generate new signature for update request
+        const updateTimestamp = Date.now()
+        const updateMessage = `PKRSC Redemption Update\nWallet: ${address}\nTimestamp: ${updateTimestamp}`
+        const updateSignature = await signMessageAsync({ 
+          account: address,
+          message: updateMessage 
+        })
+        
+        // Update redemption status via edge function with authentication
         await fetch(
           'https://jdjreuxhvzmzockuduyq.supabase.co/functions/v1/redemptions',
           {
@@ -104,6 +124,8 @@ export function RedeemSection() {
             headers: {
               'Content-Type': 'application/json',
               'x-wallet-address': address,
+              'x-wallet-signature': updateSignature,
+              'x-signature-message': updateMessage,
             },
             body: JSON.stringify({
               redemptionId: data.id,

@@ -3,7 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-wallet-address',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-wallet-address, x-wallet-signature, x-signature-message',
 }
 
 interface RedemptionRequest {
@@ -24,6 +24,43 @@ function sanitizeString(input: string): string {
   return input.trim().substring(0, 255) // Limit length
 }
 
+// Verify wallet signature to prove ownership
+async function verifyWalletSignature(
+  walletAddress: string,
+  signature: string,
+  message: string
+): Promise<boolean> {
+  try {
+    // Import ethers for signature verification
+    const { ethers } = await import('https://esm.sh/ethers@6.9.0')
+    
+    // Recover the address from the signature
+    const recoveredAddress = ethers.verifyMessage(message, signature)
+    
+    // Compare recovered address with claimed address (case-insensitive)
+    return recoveredAddress.toLowerCase() === walletAddress.toLowerCase()
+  } catch (error) {
+    console.error('Signature verification failed:', error)
+    return false
+  }
+}
+
+// Rate limiting map (wallet address -> last request timestamp)
+const rateLimitMap = new Map<string, number>()
+const RATE_LIMIT_MS = 5000 // 5 seconds between requests
+
+function checkRateLimit(walletAddress: string): boolean {
+  const now = Date.now()
+  const lastRequest = rateLimitMap.get(walletAddress.toLowerCase())
+  
+  if (lastRequest && now - lastRequest < RATE_LIMIT_MS) {
+    return false // Rate limited
+  }
+  
+  rateLimitMap.set(walletAddress.toLowerCase(), now)
+  return true
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -36,8 +73,57 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Verify wallet address from header
+    // Get authentication headers
     const walletAddressHeader = req.headers.get('x-wallet-address')
+    const signatureHeader = req.headers.get('x-wallet-signature')
+    const messageHeader = req.headers.get('x-signature-message')
+    
+    // Verify wallet signature for authentication
+    if (!walletAddressHeader || !signatureHeader || !messageHeader) {
+      console.warn('Missing authentication headers')
+      return new Response(
+        JSON.stringify({ error: 'Authentication required: wallet signature missing' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    if (!isValidEthAddress(walletAddressHeader)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid wallet address format' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    // Verify the signature proves wallet ownership
+    const isValidSignature = await verifyWalletSignature(
+      walletAddressHeader,
+      signatureHeader,
+      messageHeader
+    )
+    
+    if (!isValidSignature) {
+      console.error('Invalid wallet signature for address:', walletAddressHeader)
+      return new Response(
+        JSON.stringify({ error: 'Invalid wallet signature' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    // Check rate limiting
+    if (!checkRateLimit(walletAddressHeader)) {
+      console.warn('Rate limit exceeded for wallet:', walletAddressHeader)
+      return new Response(
+        JSON.stringify({ error: 'Too many requests. Please wait before trying again.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    // Log authenticated access for audit trail
+    await supabase.from('admin_actions').insert({
+      action_type: `redemption_${req.method.toLowerCase()}_access`,
+      wallet_address: walletAddressHeader.toLowerCase(),
+      details: { timestamp: new Date().toISOString(), method: req.method }
+    })
     
     if (req.method === 'POST') {
       const body: RedemptionRequest = await req.json()
@@ -51,9 +137,25 @@ serve(async (req) => {
       }
 
       // Verify header matches body (prevent address spoofing)
-      if (walletAddressHeader?.toLowerCase() !== body.walletAddress.toLowerCase()) {
+      if (walletAddressHeader.toLowerCase() !== body.walletAddress.toLowerCase()) {
         return new Response(
           JSON.stringify({ error: 'Wallet address mismatch' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      
+      // Check if wallet is blacklisted
+      const { data: blacklisted } = await supabase
+        .from('blacklisted_addresses')
+        .select('id')
+        .eq('wallet_address', body.walletAddress.toLowerCase())
+        .eq('is_active', true)
+        .single()
+      
+      if (blacklisted) {
+        console.warn('Blacklisted wallet attempted redemption:', body.walletAddress)
+        return new Response(
+          JSON.stringify({ error: 'Wallet address is not authorized' }),
           { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
@@ -96,6 +198,8 @@ serve(async (req) => {
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
+      
+      console.log('Redemption created successfully:', data.id, 'for wallet:', body.walletAddress)
 
       return new Response(
         JSON.stringify({ data }),
@@ -104,17 +208,10 @@ serve(async (req) => {
     }
 
     if (req.method === 'GET') {
-      // Get redemptions for a specific wallet
-      if (!walletAddressHeader || !isValidEthAddress(walletAddressHeader)) {
-        return new Response(
-          JSON.stringify({ error: 'Invalid or missing wallet address' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-
+      // Get redemptions for authenticated wallet only
       const { data, error } = await supabase
         .from('redemptions')
-        .select('*')
+        .select('id, pkrsc_amount, status, created_at, updated_at, burn_address, transaction_hash')
         .eq('user_id', walletAddressHeader.toLowerCase())
         .order('created_at', { ascending: false })
 
@@ -136,10 +233,11 @@ serve(async (req) => {
       // Update redemption status (for transaction hash)
       const body = await req.json()
       const { redemptionId, transactionHash, status } = body
-
-      if (!walletAddressHeader || !isValidEthAddress(walletAddressHeader)) {
+      
+      // Validate transaction hash format
+      if (transactionHash && !/^0x[a-fA-F0-9]{64}$/.test(transactionHash)) {
         return new Response(
-          JSON.stringify({ error: 'Invalid or missing wallet address' }),
+          JSON.stringify({ error: 'Invalid transaction hash format' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
@@ -159,8 +257,9 @@ serve(async (req) => {
       }
 
       if (existing.user_id.toLowerCase() !== walletAddressHeader.toLowerCase()) {
+        console.error('Unauthorized PATCH attempt:', walletAddressHeader, 'for redemption:', redemptionId)
         return new Response(
-          JSON.stringify({ error: 'Unauthorized' }),
+          JSON.stringify({ error: 'Unauthorized: You can only update your own redemptions' }),
           { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
