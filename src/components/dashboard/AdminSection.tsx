@@ -500,44 +500,47 @@ ${Object.entries(blacklistedAddresses.reduce((acc, entry) => {
     }))
 
   return (
-    <div className="space-y-6">
-      {/* Header with Badge */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Shield className="h-6 w-6 text-primary" />
-          <h2 className="text-2xl font-bold text-card-foreground">Admin Dashboard</h2>
-          <Badge variant="destructive" className="text-xs">
-            <AlertTriangle className="h-3 w-3 mr-1" />
-            Master Minter
-          </Badge>
+    <Card className="bg-card border-border">
+      <CardHeader>
+        {/* Header with Badge */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-3 flex-wrap">
+            <Shield className="h-6 w-6 text-primary" />
+            <CardTitle className="text-2xl">Admin Dashboard</CardTitle>
+            <Badge variant="destructive" className="text-xs">
+              <AlertTriangle className="h-3 w-3 mr-1" />
+              Master Minter
+            </Badge>
+          </div>
+          <Button onClick={generatePDF} variant="outline" size="sm" className="shrink-0">
+            <Download className="h-4 w-4 mr-2" />
+            Download Full Report
+          </Button>
         </div>
-        <Button onClick={generatePDF} variant="outline" size="sm">
-          <Download className="h-4 w-4 mr-2" />
-          Download Full Report
-        </Button>
-      </div>
+      </CardHeader>
+      <CardContent className="space-y-6">
 
       {/* Overview Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* PKR Reserve Overview */}
-        <Card className="bg-card border-border">
+        <Card className="bg-card/50 border-border">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-primary" />
-              <CardTitle className="text-lg">Reserve Overview</CardTitle>
+              <DollarSign className="h-4 w-4 text-primary" />
+              <CardTitle className="text-base">Reserve Overview</CardTitle>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
+          <CardContent className="space-y-3">
+            <div className="space-y-1">
               <Label className="text-xs text-muted-foreground uppercase tracking-wide">Total Supply</Label>
-              <div className="text-xl font-bold text-primary">
+              <div className="text-2xl font-bold text-foreground">
                 {totalSupply ? `${Number(formatUnits(totalSupply, tokenDecimals)).toLocaleString()}` : 'Loading...'}
               </div>
               <div className="text-xs text-muted-foreground">PKRSC</div>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1">
               <Label className="text-xs text-muted-foreground uppercase tracking-wide">Treasury Balance</Label>
-              <div className="text-xl font-bold text-green-500">
+              <div className="text-2xl font-bold text-primary">
                 {treasuryBalance ? `${Number(formatUnits(treasuryBalance, tokenDecimals)).toLocaleString()}` : 'Loading...'}
               </div>
               <div className="text-xs text-muted-foreground">PKRSC</div>
@@ -546,17 +549,17 @@ ${Object.entries(blacklistedAddresses.reduce((acc, entry) => {
         </Card>
 
         {/* Bank Reserves */}
-        <Card className="bg-card border-border">
+        <Card className="bg-card/50 border-border">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
-              <Landmark className="h-5 w-5 text-primary" />
-              <CardTitle className="text-lg">Bank Reserves</CardTitle>
+              <Landmark className="h-4 w-4 text-primary" />
+              <CardTitle className="text-base">Bank Reserves</CardTitle>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
+          <CardContent className="space-y-3">
+            <div className="space-y-1">
               <Label className="text-xs text-muted-foreground uppercase tracking-wide">Current Reserves</Label>
-              <div className="text-xl font-bold text-blue-500">
+              <div className="text-2xl font-bold text-foreground">
                 {Number(bankReserves).toLocaleString()}
               </div>
               <div className="text-xs text-muted-foreground">PKR</div>
@@ -569,9 +572,9 @@ ${Object.entries(blacklistedAddresses.reduce((acc, entry) => {
                   placeholder="PKR amount"
                   value={bankReserves}
                   onChange={(e) => setBankReserves(e.target.value)}
-                  className="text-sm"
+                  className="text-sm h-9"
                 />
-                <Button onClick={updateBankReserves} variant="outline" size="sm">
+                <Button onClick={updateBankReserves} variant="outline" size="sm" className="shrink-0">
                   Update
                 </Button>
               </div>
@@ -580,31 +583,32 @@ ${Object.entries(blacklistedAddresses.reduce((acc, entry) => {
         </Card>
 
         {/* Quick Stats */}
-        <Card className="bg-card border-border">
+        <Card className="bg-card/50 border-border">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-primary" />
-              <CardTitle className="text-lg">Quick Stats</CardTitle>
+              <TrendingUp className="h-4 w-4 text-primary" />
+              <CardTitle className="text-base">Quick Stats</CardTitle>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="text-center">
-                <div className="text-lg font-semibold text-blue-500">{transactions.length}</div>
-                <div className="text-xs text-muted-foreground">Total Transactions</div>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center p-2 rounded-lg bg-background/50">
+                <div className="text-2xl font-bold text-primary">{transactions.length}</div>
+                <div className="text-xs text-muted-foreground">Total</div>
+                <div className="text-xs text-muted-foreground">Transactions</div>
               </div>
-              <div className="text-center">
-                <div className="text-lg font-semibold text-red-500">{blacklistedAddresses.length}</div>
+              <div className="text-center p-2 rounded-lg bg-background/50">
+                <div className="text-2xl font-bold text-destructive">{blacklistedAddresses.length}</div>
                 <div className="text-xs text-muted-foreground">Blacklisted</div>
               </div>
-              <div className="text-center">
-                <div className="text-lg font-semibold text-green-500">
+              <div className="text-center p-2 rounded-lg bg-background/50">
+                <div className="text-2xl font-bold text-primary">
                   {transactions.filter(tx => tx.type === 'mint').length}
                 </div>
                 <div className="text-xs text-muted-foreground">Mint Ops</div>
               </div>
-              <div className="text-center">
-                <div className="text-lg font-semibold text-orange-500">
+              <div className="text-center p-2 rounded-lg bg-background/50">
+                <div className="text-2xl font-bold text-primary">
                   {transactions.filter(tx => tx.type.includes('burn')).length}
                 </div>
                 <div className="text-xs text-muted-foreground">Burn Ops</div>
@@ -670,11 +674,11 @@ ${Object.entries(blacklistedAddresses.reduce((acc, entry) => {
       </div>
 
       {/* Admin Functions */}
-      <Card className="bg-card border-border">
-        <CardHeader>
+      <Card className="bg-card/50 border-border">
+        <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-primary" />
-            <CardTitle className="text-lg">Admin Functions</CardTitle>
+            <Shield className="h-4 w-4 text-primary" />
+            <CardTitle className="text-base">Admin Functions</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
@@ -920,6 +924,7 @@ ${Object.entries(blacklistedAddresses.reduce((acc, entry) => {
           </Tabs>
         </CardContent>
       </Card>
-    </div>
+      </CardContent>
+    </Card>
   )
 }
