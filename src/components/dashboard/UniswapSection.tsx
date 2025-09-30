@@ -142,22 +142,30 @@ export function UniswapSection() {
           </div>
         </div>
 
-        {/* Trade on Uniswap */}
-        <div className="p-6 bg-card border border-border rounded-lg text-center space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Connect your wallet on Uniswap to trade PKRSC tokens
-          </p>
+        {/* Embedded Uniswap Swap Interface */}
+        <div className="bg-card border border-border rounded-lg overflow-hidden">
+          <iframe
+            src="https://app.uniswap.org/swap?chain=base&inputCurrency=0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2&outputCurrency=0x1f192CB7B36d7acfBBdCA1E0C1d697361508F9D5&theme=dark"
+            width="100%"
+            height="660px"
+            style={{ border: 'none', minHeight: '660px' }}
+            title="Uniswap Swap Interface"
+          />
+        </div>
+
+        {/* Open in New Tab Option */}
+        <div className="text-center">
           <Button
-            size="lg"
+            variant="outline"
+            size="sm"
             onClick={() =>
               window.open(
                 'https://app.uniswap.org/swap?chain=base&inputCurrency=0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2&outputCurrency=0x1f192CB7B36d7acfBBdCA1E0C1d697361508F9D5',
                 '_blank'
               )
             }
-            className="px-8"
           >
-            Trade on Uniswap
+            Open in New Tab
             <ExternalLink className="ml-2 h-4 w-4" />
           </Button>
         </div>
