@@ -12,23 +12,28 @@ const PKRHeroSection = () => {
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-crypto-dark">
       {/* Background Layers */}
       <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(34,197,94,0.15),transparent_50%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,rgba(34,197,94,0.1),transparent_50%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_0%,rgba(34,197,94,0.03)_50%,transparent_100%)]" />
+        <div className="absolute inset-0 bg-gradient-hero opacity-60" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,hsl(var(--crypto-cyan)/0.2),transparent_60%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,hsl(var(--crypto-purple)/0.15),transparent_60%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_0%,hsl(var(--crypto-green)/0.05)_50%,transparent_100%)]" />
       </div>
       
       {/* Floating Grid Pattern */}
-      <div className="absolute inset-0 opacity-[0.03]">
-        <div className="absolute inset-0" style={{ backgroundImage: 'linear-gradient(rgba(34,197,94,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(34,197,94,0.5) 1px, transparent 1px)', backgroundSize: '50px 50px' }} />
+      <div className="absolute inset-0 opacity-[0.05]">
+        <div className="absolute inset-0" style={{ 
+          backgroundImage: `linear-gradient(hsl(var(--crypto-green)) 1px, transparent 1px), 
+                           linear-gradient(90deg, hsl(var(--crypto-cyan)) 1px, transparent 1px)`, 
+          backgroundSize: '60px 60px' 
+        }} />
       </div>
 
       <div className="container relative z-10 px-4 py-20">
         <div className={`flex flex-col items-center text-center space-y-8 max-w-4xl mx-auto ${isUrdu ? 'font-urdu' : ''}`}>
           {/* Main Heading */}
           <div className="space-y-6">
-            <div className="inline-flex items-center px-5 py-2.5 bg-crypto-green/10 border border-crypto-green/30 rounded-full shadow-glow backdrop-blur-sm">
-              <div className="h-2 w-2 bg-crypto-green rounded-full mr-3" />
-              <span className="text-crypto-green text-sm font-semibold tracking-wide">
+            <div className="inline-flex items-center px-6 py-3 bg-gradient-crypto/20 border border-crypto-cyan/40 rounded-full shadow-cyan backdrop-blur-sm">
+              <div className="h-2 w-2 bg-crypto-cyan rounded-full mr-3 shadow-glow" />
+              <span className="text-white text-sm font-semibold tracking-wide">
                 {isUrdu ? "پاکستان کا پہلا PKR سے محفوظ سٹیبل کوائن" : "Pakistan's First PKR-Backed Stablecoin"}
               </span>
             </div>
@@ -37,14 +42,14 @@ const PKRHeroSection = () => {
               {isUrdu ? (
                 <>
                   <span className="inline-block">محفوظ۔ مستحکم۔</span>
-                  <span className="block bg-gradient-to-r from-crypto-green via-crypto-green-light to-crypto-green bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(34,197,94,0.3)]">
+                  <span className="block bg-gradient-rainbow bg-clip-text text-transparent drop-shadow-[0_0_40px_hsl(var(--crypto-green)/0.5)]">
                     پاکستانی۔
                   </span>
                 </>
               ) : (
                 <>
                   <span className="inline-block">Stable. Secure.</span>
-                  <span className="block bg-gradient-to-r from-crypto-green via-crypto-green-light to-crypto-green bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(34,197,94,0.3)]">
+                  <span className="block bg-gradient-rainbow bg-clip-text text-transparent drop-shadow-[0_0_40px_hsl(var(--crypto-green)/0.5)]">
                     Pakistani.
                   </span>
                 </>
@@ -58,19 +63,19 @@ const PKRHeroSection = () => {
 
           {/* Key Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-3xl">
-            <div className={`relative bg-crypto-gray/30 backdrop-blur-sm border border-crypto-green/20 rounded-2xl p-6 text-center ${isUrdu ? 'text-right' : ''}`}>
-              <div className="text-4xl font-extrabold text-crypto-green mb-2">1:1</div>
+            <div className={`relative bg-gradient-crypto/20 backdrop-blur-sm border border-crypto-cyan/30 rounded-2xl p-6 text-center shadow-cyan ${isUrdu ? 'text-right' : ''}`}>
+              <div className="text-4xl font-extrabold text-crypto-cyan mb-2">1:1</div>
               <div className="text-gray-300 text-sm font-medium">
                 {isUrdu ? "PKR محفوظ" : "PKR Backed"}
               </div>
             </div>
-            <div className={`relative bg-crypto-gray/30 backdrop-blur-sm border border-crypto-green/20 rounded-2xl p-6 text-center ${isUrdu ? 'text-right' : ''}`}>
-              <div className="text-4xl font-extrabold text-crypto-green mb-2">100%</div>
+            <div className={`relative bg-gradient-purple/20 backdrop-blur-sm border border-crypto-purple/30 rounded-2xl p-6 text-center shadow-purple ${isUrdu ? 'text-right' : ''}`}>
+              <div className="text-4xl font-extrabold text-crypto-purple mb-2">100%</div>
               <div className="text-gray-300 text-sm font-medium">
                 {isUrdu ? "شفاف" : "Transparent"}
               </div>
             </div>
-            <div className={`relative bg-crypto-gray/30 backdrop-blur-sm border border-crypto-green/20 rounded-2xl p-6 text-center ${isUrdu ? 'text-right' : ''}`}>
+            <div className={`relative bg-crypto-gray/40 backdrop-blur-sm border border-crypto-green/30 rounded-2xl p-6 text-center shadow-glow ${isUrdu ? 'text-right' : ''}`}>
               <div className="text-4xl font-extrabold text-crypto-green mb-2">24/7</div>
               <div className="text-gray-300 text-sm font-medium">
                 {isUrdu ? "دستیاب" : "Available"}
@@ -82,8 +87,7 @@ const PKRHeroSection = () => {
           <div className={`flex flex-col sm:flex-row gap-4 ${isUrdu ? 'sm:flex-row-reverse' : ''}`}>
             <Button 
               size="lg"
-              variant="outline"
-              className="border-crypto-green text-crypto-green hover:bg-crypto-green/10 px-8 py-4 text-lg font-semibold"
+              className="bg-gradient-crypto text-white hover:bg-gradient-rainbow shadow-crypto border-0 px-8 py-4 text-lg font-semibold"
               asChild
             >
               <Link to="/learn-more">{t.learnMore}</Link>

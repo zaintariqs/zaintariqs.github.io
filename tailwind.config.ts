@@ -54,6 +54,8 @@ export default {
 				},
 				'crypto-green': 'hsl(var(--crypto-green))',
 				'crypto-green-light': 'hsl(var(--crypto-green-light))',
+				'crypto-cyan': 'hsl(var(--crypto-cyan))',
+				'crypto-purple': 'hsl(var(--crypto-purple))',
 				'crypto-dark': 'hsl(var(--crypto-dark))',
 				'crypto-gray': 'hsl(var(--crypto-gray))',
 				sidebar: {
@@ -74,12 +76,16 @@ export default {
 			},
 			backgroundImage: {
 				'gradient-crypto': 'var(--gradient-crypto)',
+				'gradient-purple': 'var(--gradient-purple)',
+				'gradient-rainbow': 'var(--gradient-rainbow)',
 				'gradient-dark': 'var(--gradient-dark)',
 				'gradient-hero': 'var(--gradient-hero)'
 			},
 			boxShadow: {
 				'crypto': 'var(--shadow-crypto)',
-				'glow': 'var(--shadow-glow)'
+				'glow': 'var(--shadow-glow)',
+				'cyan': 'var(--shadow-cyan)',
+				'purple': 'var(--shadow-purple)'
 			},
 			keyframes: {
 				'accordion-down': {
