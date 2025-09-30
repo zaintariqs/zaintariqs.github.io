@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X, MessageCircle, Globe } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { translations } from "@/translations";
 import { WalletConnect } from "@/components/WalletConnect";
@@ -10,6 +10,8 @@ const PKRHeader = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { language, setLanguage, isUrdu } = useLanguage();
   const t = translations[language];
+  const location = useLocation();
+  const isDashboard = location.pathname === '/dashboard';
 
   const handleWhatsAppContact = () => {
     window.open("https://wa.me/905314390365", "_blank");
@@ -31,20 +33,19 @@ const PKRHeader = () => {
         </Link>
 
         {/* Desktop Navigation */}
-        <nav className={`hidden md:flex items-center ${isUrdu ? 'space-x-reverse space-x-8' : 'space-x-8'}`}>
-          <a href="#features" className="text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
-            {t.features}
-          </a>
-          <Link to="/security" className="text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
-            {t.security}
-          </Link>
-          <Link to="/learn-more" className="text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
-            {t.learnMore}
-          </Link>
-          <Link to="/dashboard" className="text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
-            Dashboard
-          </Link>
-        </nav>
+        {!isDashboard && (
+          <nav className={`hidden md:flex items-center ${isUrdu ? 'space-x-reverse space-x-8' : 'space-x-8'}`}>
+            <a href="#features" className="text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
+              {t.features}
+            </a>
+            <Link to="/security" className="text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
+              {t.security}
+            </Link>
+            <Link to="/learn-more" className="text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
+              {t.learnMore}
+            </Link>
+          </nav>
+        )}
 
         {/* Wallet Connect, Contact Button & Language Toggle */}
         <div className={`hidden md:flex items-center ${isUrdu ? 'space-x-reverse space-x-4' : 'space-x-4'}`}>
@@ -85,18 +86,19 @@ const PKRHeader = () => {
             <div className="mb-4">
               <WalletConnect />
             </div>
-            <a href="#features" className="block text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
-              {t.features}
-            </a>
-            <Link to="/security" className="block text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
-              {t.security}
-            </Link>
-            <Link to="/learn-more" className="block text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
-              {t.learnMore}
-            </Link>
-            <Link to="/dashboard" className="block text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
-              Dashboard
-            </Link>
+            {!isDashboard && (
+              <>
+                <a href="#features" className="block text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
+                  {t.features}
+                </a>
+                <Link to="/security" className="block text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
+                  {t.security}
+                </Link>
+                <Link to="/learn-more" className="block text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
+                  {t.learnMore}
+                </Link>
+              </>
+            )}
             <div className="flex items-center space-x-2">
               <Button
                 onClick={() => {
