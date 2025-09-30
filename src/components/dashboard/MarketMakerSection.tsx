@@ -79,24 +79,37 @@ export function MarketMakerSection() {
   }, [])
 
   const fetchConfig = async () => {
-    const { data, error } = await supabase
-      .from('market_maker_config')
-      .select('*')
-      .single()
+    if (!address) {
+      setLoading(false)
+      return
+    }
 
-    if (error) {
-      console.error('Error fetching config:', error)
+    try {
+      const { data, error } = await supabase.functions.invoke('get-market-maker-config', {
+        body: { walletAddress: address }
+      })
+
+      if (error) {
+        console.error('Error fetching config:', error)
+        toast({
+          title: 'Error',
+          description: 'Failed to load bot configuration',
+          variant: 'destructive'
+        })
+      } else if (data) {
+        setConfig(data)
+        setTargetPrice(data.target_price.toString())
+        setThreshold(data.price_threshold.toString())
+        setTradeAmount(data.trade_amount_usdt.toString())
+        setInterval(data.min_trade_interval_seconds.toString())
+      }
+    } catch (error) {
+      console.error('Failed to fetch config:', error)
       toast({
         title: 'Error',
         description: 'Failed to load bot configuration',
         variant: 'destructive'
       })
-    } else if (data) {
-      setConfig(data)
-      setTargetPrice(data.target_price.toString())
-      setThreshold(data.price_threshold.toString())
-      setTradeAmount(data.trade_amount_usdt.toString())
-      setInterval(data.min_trade_interval_seconds.toString())
     }
     setLoading(false)
   }
@@ -116,26 +129,37 @@ export function MarketMakerSection() {
   }
 
   const updateConfig = async (updates: Partial<BotConfig>) => {
-    if (!config) return
+    if (!config || !address) return
 
     setUpdating(true)
-    const { error } = await supabase
-      .from('market_maker_config')
-      .update(updates)
-      .eq('id', config.id)
+    try {
+      const { data, error } = await supabase.functions.invoke('update-market-maker-config', {
+        body: { 
+          walletAddress: address,
+          updates 
+        }
+      })
 
-    if (error) {
+      if (error) {
+        toast({
+          title: 'Error',
+          description: 'Failed to update configuration',
+          variant: 'destructive'
+        })
+      } else {
+        toast({
+          title: 'Success',
+          description: 'Configuration updated'
+        })
+        fetchConfig()
+      }
+    } catch (error) {
+      console.error('Update failed:', error)
       toast({
         title: 'Error',
         description: 'Failed to update configuration',
         variant: 'destructive'
       })
-    } else {
-      toast({
-        title: 'Success',
-        description: 'Configuration updated'
-      })
-      fetchConfig()
     }
     setUpdating(false)
   }
