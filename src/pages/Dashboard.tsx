@@ -86,25 +86,27 @@ export default function Dashboard() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Balance Section */}
-            <div className="lg:col-span-1 space-y-8">
+          {isAdmin ? (
+            // Top-down layout for admin
+            <div className="space-y-8">
               <BalanceCard />
-              {isAdmin && <AdminSection />}
-            </div>
-
-            {/* Actions Section */}
-            <div className="lg:col-span-2 space-y-8">
-              {!isAdmin && (
-                <>
-                  <TopUpSection />
-                  <RedeemSection />
-                </>
-              )}
+              <AdminSection />
+              <MarketMakerSection />
               <UniswapSection />
-              {isAdmin && <MarketMakerSection />}
             </div>
-          </div>
+          ) : (
+            // Grid layout for regular users
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-1">
+                <BalanceCard />
+              </div>
+              <div className="lg:col-span-2 space-y-8">
+                <TopUpSection />
+                <RedeemSection />
+                <UniswapSection />
+              </div>
+            </div>
+          )}
         </div>
       </main>
       <PKRFooter />
