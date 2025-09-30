@@ -14,6 +14,81 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_actions: {
+        Row: {
+          action_type: string
+          created_at: string
+          details: Json | null
+          id: string
+          wallet_address: string
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          wallet_address: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          wallet_address?: string
+        }
+        Relationships: []
+      }
+      admin_wallets: {
+        Row: {
+          added_at: string
+          added_by: string | null
+          id: string
+          is_active: boolean
+          wallet_address: string
+        }
+        Insert: {
+          added_at?: string
+          added_by?: string | null
+          id?: string
+          is_active?: boolean
+          wallet_address: string
+        }
+        Update: {
+          added_at?: string
+          added_by?: string | null
+          id?: string
+          is_active?: boolean
+          wallet_address?: string
+        }
+        Relationships: []
+      }
+      blacklisted_addresses: {
+        Row: {
+          blacklisted_at: string
+          blacklisted_by: string
+          id: string
+          is_active: boolean
+          reason: string
+          wallet_address: string
+        }
+        Insert: {
+          blacklisted_at?: string
+          blacklisted_by: string
+          id?: string
+          is_active?: boolean
+          reason: string
+          wallet_address: string
+        }
+        Update: {
+          blacklisted_at?: string
+          blacklisted_by?: string
+          id?: string
+          is_active?: boolean
+          reason?: string
+          wallet_address?: string
+        }
+        Relationships: []
+      }
       market_maker_config: {
         Row: {
           created_at: string
@@ -133,9 +208,19 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      market_maker_status: {
+        Row: {
+          last_trade_at: string | null
+          status: Database["public"]["Enums"]["bot_status"] | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      is_admin_wallet: {
+        Args: { wallet_addr: string }
+        Returns: boolean
+      }
       is_wallet_owner: {
         Args: { wallet_address: string }
         Returns: boolean
