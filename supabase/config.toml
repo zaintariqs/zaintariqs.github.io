@@ -1,1 +1,4 @@
 project_id = "jdjreuxhvzmzockuduyq"
+
+[functions.market-maker]
+verify_jwt = false

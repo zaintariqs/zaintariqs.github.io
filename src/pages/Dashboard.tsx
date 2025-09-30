@@ -7,6 +7,7 @@ import { TopUpSection } from '@/components/dashboard/TopUpSection'
 import { UniswapSection } from '@/components/dashboard/UniswapSection'
 import { RedeemSection } from '@/components/dashboard/RedeemSection'
 import { AdminSection } from '@/components/dashboard/AdminSection'
+import { MarketMakerSection } from '@/components/dashboard/MarketMakerSection'
 import { Navigate } from 'react-router-dom'
 
 const MASTER_MINTER_ADDRESS = '0x5be080f81552c2495B288c04D2B64b9F7A4A9F3F'
@@ -55,6 +56,7 @@ export default function Dashboard() {
                 </>
               )}
               <UniswapSection />
+              {isAdmin && <MarketMakerSection />}
             </div>
           </div>
         </div>

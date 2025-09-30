@@ -14,6 +14,81 @@ export type Database = {
   }
   public: {
     Tables: {
+      market_maker_config: {
+        Row: {
+          created_at: string
+          id: string
+          last_trade_at: string | null
+          min_trade_interval_seconds: number
+          price_threshold: number
+          status: Database["public"]["Enums"]["bot_status"]
+          target_price: number
+          trade_amount_usdt: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_trade_at?: string | null
+          min_trade_interval_seconds?: number
+          price_threshold?: number
+          status?: Database["public"]["Enums"]["bot_status"]
+          target_price?: number
+          trade_amount_usdt?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_trade_at?: string | null
+          min_trade_interval_seconds?: number
+          price_threshold?: number
+          status?: Database["public"]["Enums"]["bot_status"]
+          target_price?: number
+          trade_amount_usdt?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      market_maker_transactions: {
+        Row: {
+          action: string
+          amount_pkrsc: number
+          amount_usdt: number
+          created_at: string
+          error_message: string | null
+          gas_used: number | null
+          id: string
+          price: number
+          status: string
+          transaction_hash: string
+        }
+        Insert: {
+          action: string
+          amount_pkrsc: number
+          amount_usdt: number
+          created_at?: string
+          error_message?: string | null
+          gas_used?: number | null
+          id?: string
+          price: number
+          status?: string
+          transaction_hash: string
+        }
+        Update: {
+          action?: string
+          amount_pkrsc?: number
+          amount_usdt?: number
+          created_at?: string
+          error_message?: string | null
+          gas_used?: number | null
+          id?: string
+          price?: number
+          status?: string
+          transaction_hash?: string
+        }
+        Relationships: []
+      }
       redemptions: {
         Row: {
           account_number: string
@@ -64,6 +139,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      bot_status: "active" | "paused" | "error"
       redemption_status:
         | "pending"
         | "burn_confirmed"
@@ -197,6 +273,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      bot_status: ["active", "paused", "error"],
       redemption_status: [
         "pending",
         "burn_confirmed",
