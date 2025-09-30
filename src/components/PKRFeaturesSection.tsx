@@ -60,21 +60,17 @@ const PKRFeaturesSection = () => {
           {features.map((feature, index) => (
             <div 
               key={index}
-              className="group relative bg-gradient-to-br from-crypto-gray/30 to-crypto-gray/10 border border-crypto-gray/30 rounded-2xl p-8 hover:border-crypto-green/50 transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_60px_-15px_rgba(34,197,94,0.3)]"
-              style={{ animationDelay: `${index * 0.1}s` }}
+              className="relative bg-gradient-to-br from-crypto-gray/30 to-crypto-gray/10 border border-crypto-gray/30 rounded-2xl p-8"
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-crypto-green/5 to-transparent opacity-0 group-hover:opacity-100 rounded-2xl transition-opacity duration-500" />
-              <div className="relative">
-                <div className="mb-6 inline-flex h-16 w-16 items-center justify-center rounded-xl bg-crypto-green/10 group-hover:bg-crypto-green/20 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500">
-                  <feature.icon className="h-8 w-8 text-crypto-green" />
-                </div>
-                <h3 className={`text-xl font-bold text-white mb-3 group-hover:text-crypto-green-light transition-colors duration-300 ${isUrdu ? 'text-right' : ''}`}>
-                  {feature.title}
-                </h3>
-                <p className={`text-gray-300 leading-relaxed group-hover:text-gray-200 transition-colors duration-300 ${isUrdu ? 'text-right' : ''}`}>
-                  {feature.description}
-                </p>
+              <div className="mb-6 inline-flex h-16 w-16 items-center justify-center rounded-xl bg-crypto-green/10">
+                <feature.icon className="h-8 w-8 text-crypto-green" />
               </div>
+              <h3 className={`text-xl font-bold text-white mb-3 ${isUrdu ? 'text-right' : ''}`}>
+                {feature.title}
+              </h3>
+              <p className={`text-gray-300 leading-relaxed ${isUrdu ? 'text-right' : ''}`}>
+                {feature.description}
+              </p>
             </div>
           ))}
         </div>
@@ -92,9 +88,9 @@ const PKRFeaturesSection = () => {
             <Button 
               size="lg"
               onClick={handleWhatsAppContact}
-              className="group bg-crypto-green hover:bg-crypto-green-light text-white px-10 py-6 text-lg font-bold rounded-xl shadow-glow hover:shadow-[0_0_60px_rgba(34,197,94,0.4)] hover:scale-105 transition-all duration-300"
+              className="bg-crypto-green hover:bg-crypto-green-light text-white px-10 py-6 text-lg font-bold rounded-xl shadow-glow"
             >
-              <MessageCircle className="h-6 w-6 mr-2 group-hover:rotate-12 transition-transform duration-300" />
+              <MessageCircle className="h-6 w-6 mr-2" />
               {isUrdu ? "واٹس ایپ پر رابطہ کریں" : "Contact Us on WhatsApp"}
             </Button>
           </div>
