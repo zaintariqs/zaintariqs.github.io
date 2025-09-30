@@ -136,7 +136,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_wallet_owner: {
+        Args: { wallet_address: string }
+        Returns: boolean
+      }
     }
     Enums: {
       bot_status: "active" | "paused" | "error"

@@ -59,6 +59,11 @@ export function RedeemSection() {
     setIsSubmitting(true)
 
     try {
+      // Validate wallet address format before submission
+      if (!address.match(/^0x[a-fA-F0-9]{40}$/)) {
+        throw new Error('Invalid wallet address format')
+      }
+
       const { data, error } = await supabase
         .from('redemptions')
         .insert({
