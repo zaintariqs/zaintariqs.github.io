@@ -6,33 +6,33 @@ const Security = () => {
   const securityFeatures = [
     {
       icon: Shield,
-      title: "Military-Grade Encryption",
-      description: "All transactions and data are protected with AES-256 encryption, the same standard used by financial institutions worldwide."
+      title: "Non-Custodial Control",
+      description: "You maintain complete control of your assets in your own wallet. We never hold, store, or have access to your funds."
     },
     {
       icon: Database,
-      title: "Immutable Blockchain Records",
-      description: "Every PKR token issuance and transaction is permanently recorded on the blockchain, creating an unchangeable audit trail."
+      title: "Seamless Bridge Service",
+      description: "We provide a secure bridge between crypto and cash, connecting you directly with regulated financial institutions without intermediaries."
     },
     {
       icon: Lock,
-      title: "Multi-Signature Security",
-      description: "Reserve funds are secured with multi-signature wallets requiring multiple authorized parties for any transaction."
+      title: "No KYC Required",
+      description: "Since our partner financial institutions have already verified your identity, you don't need to go through KYC again with us."
     },
     {
       icon: Network,
       title: "Decentralized Infrastructure",
-      description: "Built on battle-tested blockchain technology with no single point of failure, ensuring 24/7 availability."
+      description: "Built on battle-tested blockchain technology with no single point of failure, ensuring 24/7 availability and transparency."
     },
     {
       icon: Server,
-      title: "Real-Time Auditing",
-      description: "Smart contracts enable continuous monitoring and verification of PKR reserves backing every token in circulation."
+      title: "Transparent Operations",
+      description: "All bridge transactions are recorded on the blockchain, creating an immutable and auditable record of every conversion."
     },
     {
       icon: CheckCircle,
-      title: "Regulatory Compliance",
-      description: "Designed to meet Pakistani financial regulations and international cryptocurrency compliance standards."
+      title: "User Sovereignty",
+      description: "Your keys, your crypto. We facilitate the connection but you remain in full control of your digital and fiat assets at all times."
     }
   ];
 
@@ -53,14 +53,14 @@ const Security = () => {
                 </div>
               </div>
               <h1 className="text-4xl md:text-6xl font-bold text-white mb-6">
-                Bank-Grade
-                <span className="block bg-gradient-to-r from-crypto-green to-green-400 bg-clip-text text-transparent">
-                  Security Architecture
+                Non-Custodial
+                <span className="block bg-gradient-rainbow bg-clip-text text-transparent">
+                  You Control Your Assets
                 </span>
               </h1>
               <p className="text-xl text-gray-300 mb-8 max-w-3xl mx-auto leading-relaxed">
-                PKR Stable is built on enterprise-grade blockchain infrastructure with multiple layers of security 
-                to protect your digital assets and ensure the integrity of every transaction.
+                PKR Stable never holds your assets. We provide a secure bridge between crypto and cash, 
+                giving you complete control while connecting you to regulated financial institutions.
               </p>
             </div>
           </div>
@@ -71,10 +71,10 @@ const Security = () => {
           <div className="container">
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-                Multi-Layer Security Framework
+                Your Assets, Your Control
               </h2>
               <p className="text-lg text-gray-400 max-w-2xl mx-auto">
-                Our security architecture combines proven blockchain technology with advanced cryptographic methods
+                We bridge crypto and cash without ever touching your funds. You stay in complete control.
               </p>
             </div>
 
@@ -104,72 +104,72 @@ const Security = () => {
             <div className="max-w-4xl mx-auto">
               <div className="text-center mb-16">
                 <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-                  Blockchain Architecture
+                  How Our Bridge Works
                 </h2>
                 <p className="text-lg text-gray-400">
-                  Understanding the technical foundation that makes PKR Stable secure and reliable
+                  Understanding how PKR Stable connects your crypto to cash while keeping you in control
                 </p>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
                 <div className="space-y-6">
-                  <div className="bg-crypto-gray/20 backdrop-blur-sm border border-crypto-green/10 rounded-xl p-6">
-                    <h3 className="text-xl font-semibold text-white mb-4">Smart Contract Security</h3>
+                  <div className="bg-crypto-gray/20 backdrop-blur-sm border border-crypto-cyan/10 rounded-xl p-6">
+                    <h3 className="text-xl font-semibold text-white mb-4">Non-Custodial Design</h3>
                     <ul className="space-y-3 text-gray-400">
                       <li className="flex items-center">
-                        <CheckCircle className="h-5 w-5 text-crypto-green mr-3 flex-shrink-0" />
-                        Audited smart contracts with no backdoors
+                        <CheckCircle className="h-5 w-5 text-crypto-cyan mr-3 flex-shrink-0" />
+                        Your wallet, your keys - we never hold your assets
                       </li>
                       <li className="flex items-center">
-                        <CheckCircle className="h-5 w-5 text-crypto-green mr-3 flex-shrink-0" />
-                        Automated reserve verification mechanisms
+                        <CheckCircle className="h-5 w-5 text-crypto-cyan mr-3 flex-shrink-0" />
+                        Direct connection to regulated financial institutions
                       </li>
                       <li className="flex items-center">
-                        <CheckCircle className="h-5 w-5 text-crypto-green mr-3 flex-shrink-0" />
-                        Time-locked upgrades for transparency
+                        <CheckCircle className="h-5 w-5 text-crypto-cyan mr-3 flex-shrink-0" />
+                        Zero counterparty risk from our platform
                       </li>
                     </ul>
                   </div>
 
-                  <div className="bg-crypto-gray/20 backdrop-blur-sm border border-crypto-green/10 rounded-xl p-6">
-                    <h3 className="text-xl font-semibold text-white mb-4">Reserve Management</h3>
+                  <div className="bg-crypto-gray/20 backdrop-blur-sm border border-crypto-purple/10 rounded-xl p-6">
+                    <h3 className="text-xl font-semibold text-white mb-4">Simplified Compliance</h3>
                     <ul className="space-y-3 text-gray-400">
                       <li className="flex items-center">
-                        <CheckCircle className="h-5 w-5 text-crypto-green mr-3 flex-shrink-0" />
-                        100% Pakistani Rupee backing in regulated banks
+                        <CheckCircle className="h-5 w-5 text-crypto-purple mr-3 flex-shrink-0" />
+                        No additional KYC - institutions handle verification
                       </li>
                       <li className="flex items-center">
-                        <CheckCircle className="h-5 w-5 text-crypto-green mr-3 flex-shrink-0" />
-                        Real-time attestations of reserve holdings
+                        <CheckCircle className="h-5 w-5 text-crypto-purple mr-3 flex-shrink-0" />
+                        Bridge to pre-verified banking partners
                       </li>
                       <li className="flex items-center">
-                        <CheckCircle className="h-5 w-5 text-crypto-green mr-3 flex-shrink-0" />
-                        Multi-signature custody solutions
+                        <CheckCircle className="h-5 w-5 text-crypto-purple mr-3 flex-shrink-0" />
+                        Transparent, auditable bridge transactions
                       </li>
                     </ul>
                   </div>
                 </div>
 
                 <div className="relative">
-                  <div className="absolute inset-0 bg-gradient-to-r from-crypto-green/10 to-green-400/10 rounded-xl blur-2xl" />
+                  <div className="absolute inset-0 bg-gradient-rainbow/10 rounded-xl blur-2xl" />
                   <div className="relative bg-crypto-gray/20 backdrop-blur-sm border border-crypto-green/20 rounded-xl p-8">
                     <div className="text-center">
-                      <div className="inline-flex items-center justify-center w-16 h-16 bg-crypto-green/10 rounded-full mb-6">
+                      <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-crypto/20 rounded-full mb-6">
                         <Network className="h-8 w-8 text-crypto-green" />
                       </div>
-                      <h3 className="text-2xl font-bold text-white mb-4">Decentralized Network</h3>
+                      <h3 className="text-2xl font-bold text-white mb-4">Bridge Architecture</h3>
                       <p className="text-gray-400 mb-6">
-                        PKR Stable operates on a distributed network of validators, ensuring no single entity 
-                        can compromise the system integrity.
+                        PKR Stable acts as a secure bridge, facilitating conversion between crypto and cash 
+                        while you maintain full custody of your assets at all times.
                       </p>
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div className="bg-crypto-dark/50 rounded-lg p-3">
-                          <div className="text-crypto-green font-semibold">99.9%</div>
-                          <div className="text-gray-400">Uptime</div>
+                          <div className="text-crypto-cyan font-semibold">100%</div>
+                          <div className="text-gray-400">Your Control</div>
                         </div>
                         <div className="bg-crypto-dark/50 rounded-lg p-3">
-                          <div className="text-crypto-green font-semibold">24/7</div>
-                          <div className="text-gray-400">Monitoring</div>
+                          <div className="text-crypto-purple font-semibold">0%</div>
+                          <div className="text-gray-400">We Hold</div>
                         </div>
                       </div>
                     </div>
