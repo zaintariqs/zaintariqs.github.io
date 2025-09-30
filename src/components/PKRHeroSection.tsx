@@ -101,12 +101,12 @@ const PKRHeroSection = () => {
                 <Shield className="h-8 w-8 text-crypto-green" />
               </div>
               <h3 className={`text-xl font-bold text-white mb-3 ${isUrdu ? 'text-right' : ''}`}>
-                {isUrdu ? "بینک گریڈ سیکورٹی" : "Bank-Grade Security"}
+                {isUrdu ? "غیر تحویلی فن تعمیر" : "Non-Custodial Architecture"}
               </h3>
               <p className={`text-sm text-gray-300 leading-relaxed ${isUrdu ? 'text-right' : ''}`}>
                 {isUrdu 
-                  ? "ملٹی سگنیچر والیٹس اور ادارہ جاتی گریڈ انکرپشن آپ کے ڈیجیٹل اثاثوں کو بڑے مالیاتی اداروں کے معیار کے ساتھ محفوظ رکھتا ہے۔"
-                  : "Multi-signature wallets and institutional-grade encryption protect your digital assets with the same standards used by major financial institutions."
+                  ? "آپ اپنے اثاثوں پر مکمل کنٹرول برقرار رکھتے ہیں۔ ہم کبھی بھی آپ کے فنڈز کو نہیں رکھتے، صرف کرپٹو اور کیش کے درمیان محفوظ پل فراہم کرتے ہیں۔"
+                  : "You maintain complete control of your assets in your own wallet. We never hold your funds, only provide a secure bridge between crypto and cash."
                 }
               </p>
             </div>
