@@ -45,52 +45,52 @@ const PKRFeaturesSection = () => {
   ];
 
   return (
-    <section id="features" className="py-20 bg-crypto-dark">
+    <section id="features" className="py-24 bg-gradient-to-b from-crypto-dark to-[hsl(222,47%,13%)]">
       <div className="container px-4">
-        <div className={`text-center max-w-3xl mx-auto mb-16 ${isUrdu ? 'font-urdu text-right' : ''}`}>
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
+        <div className={`text-center max-w-3xl mx-auto mb-20 ${isUrdu ? 'font-urdu text-right' : ''}`}>
+          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6 tracking-tight">
             {t.featuresTitle}
           </h2>
-          <p className="text-xl text-gray-300">
+          <p className="text-lg text-gray-400 font-light">
             {t.featuresSubtitle}
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-20">
           {features.map((feature, index) => (
             <div 
               key={index}
-              className="relative bg-gradient-to-br from-crypto-gray/30 to-crypto-gray/10 border border-crypto-gray/30 rounded-2xl p-8"
+              className="group relative bg-gradient-card backdrop-blur-md border border-white/5 rounded-2xl p-8 hover:border-crypto-green/20 transition-all duration-500 hover:shadow-elegant"
             >
-              <div className="mb-6 inline-flex h-16 w-16 items-center justify-center rounded-xl bg-crypto-green/10">
-                <feature.icon className="h-8 w-8 text-crypto-green" />
+              <div className="mb-6 inline-flex h-14 w-14 items-center justify-center rounded-xl bg-crypto-green/10 group-hover:bg-crypto-green/15 transition-colors">
+                <feature.icon className="h-7 w-7 text-crypto-green" />
               </div>
-              <h3 className={`text-xl font-bold text-white mb-3 ${isUrdu ? 'text-right' : ''}`}>
+              <h3 className={`text-lg font-semibold text-white mb-3 ${isUrdu ? 'text-right' : ''}`}>
                 {feature.title}
               </h3>
-              <p className={`text-gray-300 leading-relaxed ${isUrdu ? 'text-right' : ''}`}>
+              <p className={`text-sm text-gray-400 leading-relaxed ${isUrdu ? 'text-right' : ''}`}>
                 {feature.description}
               </p>
             </div>
           ))}
         </div>
 
-        {/* CTA Section */}
-        <div className={`relative overflow-hidden text-center bg-gradient-to-r from-crypto-green/10 via-crypto-green/15 to-crypto-green/10 border border-crypto-green/30 rounded-3xl p-12 ${isUrdu ? 'text-right' : ''}`}>
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(34,197,94,0.15),transparent_70%)]" />
+        {/* CTA Section - Refined */}
+        <div className={`relative overflow-hidden text-center bg-gradient-card backdrop-blur-md border border-crypto-green/20 rounded-3xl p-16 ${isUrdu ? 'text-right' : ''}`}>
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,hsl(var(--crypto-green)/0.08),transparent_70%)]" />
           <div className="relative z-10">
-            <h3 className="text-3xl md:text-4xl font-extrabold text-white mb-4 bg-gradient-to-r from-white to-gray-200 bg-clip-text text-transparent">
+            <h3 className="text-3xl md:text-4xl font-bold text-white mb-5 tracking-tight">
               {t.ctaTitle}
             </h3>
-            <p className="text-lg text-gray-200 mb-8 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-base text-gray-400 mb-10 max-w-2xl mx-auto leading-relaxed font-light">
               {t.ctaSubtitle}
             </p>
             <Button 
               size="lg"
               onClick={handleWhatsAppContact}
-              className="bg-crypto-green hover:bg-crypto-green-light text-white px-10 py-6 text-lg font-bold rounded-xl shadow-glow"
+              className="bg-crypto-green hover:bg-crypto-green-light text-white px-8 py-6 text-base font-semibold rounded-xl shadow-crypto hover:shadow-glow transition-all duration-300"
             >
-              <MessageCircle className="h-6 w-6 mr-2" />
+              <MessageCircle className="h-5 w-5 mr-2" />
               {isUrdu ? "واٹس ایپ پر رابطہ کریں" : "Contact Us on WhatsApp"}
             </Button>
           </div>

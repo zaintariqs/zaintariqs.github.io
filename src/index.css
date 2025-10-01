@@ -38,26 +38,29 @@ All colors MUST be HSL.
     --input: 240 5.9% 90%;
     --ring: 142 76% 45%;
 
-    /* Crypto theme colors - More vibrant */
-    --crypto-green: 142 76% 45%;
-    --crypto-green-light: 158 64% 52%;
-    --crypto-cyan: 189 94% 43%;
-    --crypto-purple: 280 89% 65%;
-    --crypto-dark: 240 10% 3.9%;
-    --crypto-gray: 240 5% 12%;
+    /* Refined crypto theme colors - Professional palette */
+    --crypto-green: 142 71% 42%;
+    --crypto-green-light: 150 65% 48%;
+    --crypto-cyan: 189 85% 40%;
+    --crypto-purple: 280 75% 60%;
+    --crypto-dark: 222 47% 11%;
+    --crypto-gray: 215 28% 17%;
+    --crypto-accent: 165 82% 51%;
     
-    /* Vibrant Gradients */
-    --gradient-crypto: linear-gradient(135deg, hsl(142 76% 45%), hsl(189 94% 43%));
-    --gradient-purple: linear-gradient(135deg, hsl(280 89% 65%), hsl(260 89% 58%));
-    --gradient-rainbow: linear-gradient(135deg, hsl(142 76% 45%), hsl(189 94% 43%), hsl(280 89% 65%));
-    --gradient-dark: linear-gradient(135deg, hsl(240 10% 3.9%), hsl(240 5% 12%));
-    --gradient-hero: radial-gradient(ellipse at center, hsl(142 76% 45% / 0.4), hsl(189 94% 43% / 0.2), transparent);
+    /* Sophisticated Gradients */
+    --gradient-crypto: linear-gradient(135deg, hsl(142 71% 42% / 0.95), hsl(189 85% 40% / 0.95));
+    --gradient-purple: linear-gradient(135deg, hsl(280 75% 60% / 0.9), hsl(260 70% 55% / 0.9));
+    --gradient-rainbow: linear-gradient(120deg, hsl(142 71% 42%), hsl(165 82% 51%), hsl(189 85% 40%));
+    --gradient-dark: linear-gradient(180deg, hsl(222 47% 11%), hsl(215 28% 17%));
+    --gradient-hero: radial-gradient(ellipse 80% 50% at 50% 40%, hsl(142 71% 42% / 0.15), transparent);
+    --gradient-card: linear-gradient(145deg, hsl(215 28% 17% / 0.6), hsl(222 47% 11% / 0.4));
     
-    /* Enhanced Shadows */
-    --shadow-crypto: 0 8px 32px hsl(142 76% 45% / 0.4);
-    --shadow-glow: 0 0 80px hsl(142 76% 45% / 0.35);
-    --shadow-cyan: 0 8px 32px hsl(189 94% 43% / 0.4);
-    --shadow-purple: 0 8px 32px hsl(280 89% 65% / 0.4);
+    /* Refined Shadows */
+    --shadow-crypto: 0 20px 60px -15px hsl(142 71% 42% / 0.3);
+    --shadow-glow: 0 0 60px hsl(142 71% 42% / 0.25);
+    --shadow-cyan: 0 20px 60px -15px hsl(189 85% 40% / 0.3);
+    --shadow-purple: 0 20px 60px -15px hsl(280 75% 60% / 0.3);
+    --shadow-elegant: 0 4px 24px -4px hsl(222 47% 11% / 0.5);
 
     --radius: 0.5rem;
 
@@ -107,26 +110,29 @@ All colors MUST be HSL.
     --input: 240 5% 18%;
     --ring: 142 76% 55%;
 
-    /* Crypto theme colors - Dark mode vibrant */
-    --crypto-green: 142 76% 55%;
-    --crypto-green-light: 158 64% 62%;
-    --crypto-cyan: 189 94% 53%;
-    --crypto-purple: 280 89% 70%;
-    --crypto-dark: 240 10% 3.9%;
-    --crypto-gray: 240 5% 12%;
+    /* Refined crypto theme colors - Dark mode professional */
+    --crypto-green: 142 71% 52%;
+    --crypto-green-light: 150 65% 58%;
+    --crypto-cyan: 189 85% 50%;
+    --crypto-purple: 280 75% 68%;
+    --crypto-dark: 222 47% 11%;
+    --crypto-gray: 215 28% 17%;
+    --crypto-accent: 165 82% 51%;
 
-    /* Dark mode vibrant gradients */
-    --gradient-crypto: linear-gradient(135deg, hsl(142 76% 55%), hsl(189 94% 53%));
-    --gradient-purple: linear-gradient(135deg, hsl(280 89% 70%), hsl(260 89% 63%));
-    --gradient-rainbow: linear-gradient(135deg, hsl(142 76% 55%), hsl(189 94% 53%), hsl(280 89% 70%));
-    --gradient-dark: linear-gradient(135deg, hsl(240 10% 3.9%), hsl(240 5% 12%));
-    --gradient-hero: radial-gradient(ellipse at center, hsl(142 76% 55% / 0.3), hsl(189 94% 53% / 0.15), transparent);
+    /* Sophisticated gradients - Dark mode */
+    --gradient-crypto: linear-gradient(135deg, hsl(142 71% 52% / 0.95), hsl(189 85% 50% / 0.95));
+    --gradient-purple: linear-gradient(135deg, hsl(280 75% 68% / 0.9), hsl(260 70% 63% / 0.9));
+    --gradient-rainbow: linear-gradient(120deg, hsl(142 71% 52%), hsl(165 82% 51%), hsl(189 85% 50%));
+    --gradient-dark: linear-gradient(180deg, hsl(222 47% 11%), hsl(215 28% 17%));
+    --gradient-hero: radial-gradient(ellipse 80% 50% at 50% 40%, hsl(142 71% 52% / 0.15), transparent);
+    --gradient-card: linear-gradient(145deg, hsl(215 28% 17% / 0.6), hsl(222 47% 11% / 0.4));
     
-    /* Enhanced shadows for dark mode */
-    --shadow-crypto: 0 8px 32px hsl(142 76% 55% / 0.5);
-    --shadow-glow: 0 0 80px hsl(142 76% 55% / 0.4);
-    --shadow-cyan: 0 8px 32px hsl(189 94% 53% / 0.5);
-    --shadow-purple: 0 8px 32px hsl(280 89% 70% / 0.5);
+    /* Refined shadows - Dark mode */
+    --shadow-crypto: 0 20px 60px -15px hsl(142 71% 52% / 0.35);
+    --shadow-glow: 0 0 60px hsl(142 71% 52% / 0.3);
+    --shadow-cyan: 0 20px 60px -15px hsl(189 85% 50% / 0.35);
+    --shadow-purple: 0 20px 60px -15px hsl(280 75% 68% / 0.35);
+    --shadow-elegant: 0 4px 24px -4px hsl(222 47% 11% / 0.6);
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
