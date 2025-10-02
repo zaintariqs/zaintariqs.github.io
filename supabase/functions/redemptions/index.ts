@@ -19,27 +19,23 @@ function isValidEthAddress(address: string): boolean {
   return /^0x[a-fA-F0-9]{40}$/.test(address)
 }
 
-// Pakistani banks list for validation
+// Pakistani banks list for validation (matching frontend)
 const PAKISTANI_BANKS = [
-  'Allied Bank Limited',
-  'Askari Bank',
-  'Bank Alfalah',
-  'Bank Al Habib',
-  'Dubai Islamic Bank',
-  'Faysal Bank',
-  'Habib Bank Limited',
-  'Habib Metropolitan Bank',
-  'JS Bank',
-  'MCB Bank Limited',
+  'HBL Bank',
+  'UBL Bank',
   'Meezan Bank',
-  'National Bank of Pakistan',
-  'Samba Bank',
-  'Silk Bank',
+  'Bank Alfalah',
+  'MCB Bank',
+  'Faysal Bank',
+  'Standard Chartered',
+  'Habib Metro Bank',
   'Soneri Bank',
-  'Standard Chartered Bank',
-  'Summit Bank',
-  'United Bank Limited',
-  'Other'
+  'Bank Al Habib',
+  'JS Bank',
+  'Askari Bank',
+  'BOP Bank',
+  'NBP Bank',
+  'Allied Bank'
 ]
 
 // Comprehensive input validation
@@ -51,7 +47,7 @@ function validateBankDetails(bankName: string, accountNumber: string, accountTit
   if (bankName.length > 100) {
     return { valid: false, error: 'Bank name must be less than 100 characters' }
   }
-  if (!PAKISTANI_BANKS.includes(bankName) && bankName !== 'Other') {
+  if (!PAKISTANI_BANKS.includes(bankName)) {
     return { valid: false, error: 'Please select a valid Pakistani bank' }
   }
   
