@@ -76,11 +76,19 @@ export function SecurityProvider({ children }: SecurityProviderProps) {
     }
   }, [isConnected, disconnect])
 
-  // Set refresh flag when user navigates away while connected
+  // Logout when browser window is closed or page is refreshed
   useEffect(() => {
     const handleBeforeUnload = () => {
       if (isConnected) {
+        // Set flag for refresh detection
         sessionStorage.setItem('wallet-refresh-logout', 'true')
+        
+        // Disconnect wallet immediately
+        try {
+          disconnect()
+        } catch (error) {
+          console.error('Error disconnecting on window close:', error)
+        }
       }
     }
 
@@ -89,7 +97,7 @@ export function SecurityProvider({ children }: SecurityProviderProps) {
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload)
     }
-  }, [isConnected])
+  }, [isConnected, disconnect])
 
   return <>{children}</>
 }
