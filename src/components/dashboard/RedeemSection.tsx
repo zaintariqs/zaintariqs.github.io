@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useAccount, useSignMessage } from 'wagmi'
+import { useState, useEffect, useRef } from 'react'
+import { useAccount, useSignMessage, usePublicClient } from 'wagmi'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client'
 export function RedeemSection() {
   const { address } = useAccount()
   const { signMessageAsync } = useSignMessage()
+  const publicClient = usePublicClient()
   const { toast } = useToast()
   const [formData, setFormData] = useState({
     amount: '',
@@ -23,8 +24,10 @@ export function RedeemSection() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [redemptionId, setRedemptionId] = useState<string | null>(null)
   const [transactionHash, setTransactionHash] = useState<string | null>(null)
+  const monitoringIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   const burnAddress = '0x000000000000000000000000000000000000dEaD'
+  const PKRSC_TOKEN_ADDRESS = '0x1f192CB7B36d7acfBBdCA1E0C1d697361508F9D5'
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -37,6 +40,99 @@ export function RedeemSection() {
       description: "Address copied to clipboard",
     })
   }
+
+  const startMonitoringBurnTransaction = async (redemptionIdToMonitor: string) => {
+    if (!address || !publicClient) return
+
+    // Poll blockchain every 10 seconds to check for transactions to burn address
+    monitoringIntervalRef.current = setInterval(async () => {
+      try {
+        // Get the latest block
+        const latestBlock = await publicClient.getBlockNumber()
+        
+        // Check last 100 blocks for Transfer events to burn address from user's wallet
+        const fromBlock = latestBlock - 100n
+        
+        // ERC20 Transfer event signature: Transfer(address,address,uint256)
+        const logs = await publicClient.getLogs({
+          address: PKRSC_TOKEN_ADDRESS as `0x${string}`,
+          event: {
+            type: 'event',
+            name: 'Transfer',
+            inputs: [
+              { type: 'address', indexed: true, name: 'from' },
+              { type: 'address', indexed: true, name: 'to' },
+              { type: 'uint256', indexed: false, name: 'value' }
+            ]
+          },
+          args: {
+            from: address as `0x${string}`,
+            to: burnAddress as `0x${string}`
+          },
+          fromBlock,
+          toBlock: 'latest'
+        })
+
+        if (logs.length > 0) {
+          // Found a burn transaction!
+          const txHash = logs[0].transactionHash
+          
+          // Stop monitoring
+          if (monitoringIntervalRef.current) {
+            clearInterval(monitoringIntervalRef.current)
+            monitoringIntervalRef.current = null
+          }
+          
+          setTransactionHash(txHash)
+          
+          // Generate signature for update request
+          const updateTimestamp = Date.now()
+          const updateMessage = `PKRSC Redemption Update\nWallet: ${address}\nTimestamp: ${updateTimestamp}`
+          const updateSignature = await signMessageAsync({ 
+            account: address,
+            message: updateMessage 
+          })
+          
+          // Update redemption status via edge function with real transaction hash
+          const updateResponse = await fetch(
+            'https://jdjreuxhvzmzockuduyq.supabase.co/functions/v1/redemptions',
+            {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-wallet-address': address,
+                'x-wallet-signature': updateSignature,
+                'x-signature-message': btoa(updateMessage),
+              },
+              body: JSON.stringify({
+                redemptionId: redemptionIdToMonitor,
+                transactionHash: txHash,
+                status: 'burn_confirmed',
+              }),
+            }
+          )
+
+          if (updateResponse.ok) {
+            toast({
+              title: "Burn Transaction Detected!",
+              description: "Your tokens have been burned. Bank transfer will be processed soon.",
+            })
+          }
+        }
+      } catch (error) {
+        console.error('Error monitoring burn transaction:', error)
+      }
+    }, 10000) // Check every 10 seconds
+  }
+
+  // Cleanup monitoring on unmount
+  useEffect(() => {
+    return () => {
+      if (monitoringIntervalRef.current) {
+        clearInterval(monitoringIntervalRef.current)
+      }
+    }
+  }, [])
 
   const handleSubmitRedemption = async () => {
     if (!formData.amount || !formData.bankName || !formData.accountNumber || !formData.accountTitle) {
@@ -103,38 +199,8 @@ export function RedeemSection() {
         description: "Please send PKRSC tokens to the burn address below",
       })
 
-      // Simulate transaction hash after some time (in real app, this would come from blockchain monitoring)
-      setTimeout(async () => {
-        const mockTxHash = `0x${Math.random().toString(16).substr(2, 64)}`
-        setTransactionHash(mockTxHash)
-        
-        // Generate new signature for update request
-        const updateTimestamp = Date.now()
-        const updateMessage = `PKRSC Redemption Update\nWallet: ${address}\nTimestamp: ${updateTimestamp}`
-        const updateSignature = await signMessageAsync({ 
-          account: address,
-          message: updateMessage 
-        })
-        
-        // Update redemption status via edge function with authentication
-        await fetch(
-          'https://jdjreuxhvzmzockuduyq.supabase.co/functions/v1/redemptions',
-          {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-wallet-address': address,
-              'x-wallet-signature': updateSignature,
-              'x-signature-message': btoa(updateMessage), // Base64 encode
-            },
-            body: JSON.stringify({
-              redemptionId: data.id,
-              transactionHash: mockTxHash,
-              status: 'burn_confirmed',
-            }),
-          }
-        )
-      }, 5000)
+      // Start monitoring blockchain for burn transaction
+      startMonitoringBurnTransaction(data.id)
 
     } catch (error) {
       console.error('Error creating redemption:', error)
