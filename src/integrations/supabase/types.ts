@@ -232,15 +232,16 @@ export type Database = {
       }
     }
     Views: {
-      market_maker_status: {
-        Row: {
-          last_trade_at: string | null
-          status: Database["public"]["Enums"]["bot_status"] | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
+      get_market_maker_status: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          last_trade_at: string
+          status: Database["public"]["Enums"]["bot_status"]
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
