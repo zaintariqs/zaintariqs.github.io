@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useDisconnect, useAccount, useConnections } from 'wagmi'
 import { useToast } from '@/hooks/use-toast'
+import { useInactivityLogout } from '@/hooks/use-inactivity-logout'
 
 interface SecurityProviderProps {
   children: React.ReactNode
@@ -11,6 +12,9 @@ export function SecurityProvider({ children }: SecurityProviderProps) {
   const { isConnected } = useAccount()
   const { toast } = useToast()
   const connections = useConnections()
+  
+  // Enable automatic logout after 5 minutes of inactivity
+  useInactivityLogout()
   const hasRunSecurityCheck = useRef(false)
 
   // Check for refresh logout flag on mount
