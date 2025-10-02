@@ -9,6 +9,9 @@ verify_jwt = true
 [functions.verify-admin]
 verify_jwt = false
 
+[functions.verify-admin-wallet]
+verify_jwt = false
+
 [functions.get-market-maker-config]
 verify_jwt = false
 

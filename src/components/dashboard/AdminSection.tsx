@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast'
 import { parseUnits, formatUnits } from 'viem'
 import { supportedChains } from '@/lib/web3-config'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Cell, Pie } from 'recharts'
+import { supabase } from '@/integrations/supabase/client'
 
 const MASTER_MINTER_ADDRESS = '0x5be080f81552c2495B288c04D2B64b9F7A4A9F3F'
 const PKRSC_CONTRACT_ADDRESS = '0x1f192CB7B36d7acfBBdCA1E0C1d697361508F9D5'
@@ -148,12 +149,48 @@ export function AdminSection() {
   // Chart colors
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8']
 
-  // Check if current user is admin
-  const isAdmin = address?.toLowerCase() === MASTER_MINTER_ADDRESS.toLowerCase()
+  // Server-side admin verification
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [isCheckingAdmin, setIsCheckingAdmin] = useState(true)
 
   const { isLoading: isConfirming } = useWaitForTransactionReceipt({
     hash,
   })
+
+  // Verify admin status on mount
+  useEffect(() => {
+    const verifyAdmin = async () => {
+      if (!address) {
+        setIsAdmin(false)
+        setIsCheckingAdmin(false)
+        return
+      }
+
+      try {
+        console.log('[AdminSection] Verifying admin status for:', address)
+        const { data, error } = await supabase.functions.invoke('verify-admin-wallet', {
+          headers: {
+            'x-wallet-address': address
+          }
+        })
+
+        if (error) {
+          console.error('[AdminSection] Admin verification error:', error)
+          setIsAdmin(false)
+        } else {
+          console.log('[AdminSection] Admin verification result:', data)
+          setIsAdmin(data?.isAdmin || false)
+        }
+      } catch (error) {
+        console.error('[AdminSection] Failed to verify admin:', error)
+        setIsAdmin(false)
+      } finally {
+        setIsCheckingAdmin(false)
+      }
+    }
+
+    verifyAdmin()
+  }, [address])
 
   useEffect(() => {
     // Load data from localStorage
@@ -206,6 +243,18 @@ export function AdminSection() {
       title: "Bank Reserves Updated",
       description: `Bank reserves set to ${bankReserves} PKR`,
     })
+  }
+
+  if (isCheckingAdmin) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-center">
+            <div className="text-muted-foreground">Verifying admin privileges...</div>
+          </div>
+        </CardContent>
+      </Card>
+    )
   }
 
   if (!isAdmin) {

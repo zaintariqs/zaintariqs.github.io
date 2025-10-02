@@ -19,6 +19,65 @@ function isValidEthAddress(address: string): boolean {
   return /^0x[a-fA-F0-9]{40}$/.test(address)
 }
 
+// Pakistani banks list for validation
+const PAKISTANI_BANKS = [
+  'Allied Bank Limited',
+  'Askari Bank',
+  'Bank Alfalah',
+  'Bank Al Habib',
+  'Dubai Islamic Bank',
+  'Faysal Bank',
+  'Habib Bank Limited',
+  'Habib Metropolitan Bank',
+  'JS Bank',
+  'MCB Bank Limited',
+  'Meezan Bank',
+  'National Bank of Pakistan',
+  'Samba Bank',
+  'Silk Bank',
+  'Soneri Bank',
+  'Standard Chartered Bank',
+  'Summit Bank',
+  'United Bank Limited',
+  'Other'
+]
+
+// Comprehensive input validation
+function validateBankDetails(bankName: string, accountNumber: string, accountTitle: string): { valid: boolean; error?: string } {
+  // Validate bank name
+  if (!bankName || bankName.trim().length === 0) {
+    return { valid: false, error: 'Bank name is required' }
+  }
+  if (bankName.length > 100) {
+    return { valid: false, error: 'Bank name must be less than 100 characters' }
+  }
+  if (!PAKISTANI_BANKS.includes(bankName) && bankName !== 'Other') {
+    return { valid: false, error: 'Please select a valid Pakistani bank' }
+  }
+  
+  // Validate account number (numeric, 10-24 digits typical for Pakistani banks)
+  if (!accountNumber || accountNumber.trim().length === 0) {
+    return { valid: false, error: 'Account number is required' }
+  }
+  const accountNumberClean = accountNumber.replace(/[\s-]/g, '') // Remove spaces and hyphens
+  if (!/^\d{10,24}$/.test(accountNumberClean)) {
+    return { valid: false, error: 'Account number must be 10-24 digits' }
+  }
+  
+  // Validate account title (alphanumeric with limited special chars)
+  if (!accountTitle || accountTitle.trim().length === 0) {
+    return { valid: false, error: 'Account title is required' }
+  }
+  if (accountTitle.length < 3 || accountTitle.length > 100) {
+    return { valid: false, error: 'Account title must be between 3 and 100 characters' }
+  }
+  if (!/^[a-zA-Z0-9\s.,'-]+$/.test(accountTitle)) {
+    return { valid: false, error: 'Account title contains invalid characters. Only letters, numbers, spaces, and basic punctuation allowed' }
+  }
+  
+  return { valid: true }
+}
+
 // Sanitize input to prevent SQL injection and XSS
 function sanitizeString(input: string): string {
   return input.trim().substring(0, 255) // Limit length
@@ -118,11 +177,17 @@ serve(async (req) => {
       )
     }
     
-    // Log authenticated access for audit trail
-    await supabase.from('admin_actions').insert({
+    // Log access for audit trail (non-blocking)
+    supabase.from('admin_actions').insert({
       action_type: `redemption_${req.method.toLowerCase()}_access`,
       wallet_address: walletAddressHeader.toLowerCase(),
-      details: { timestamp: new Date().toISOString(), method: req.method }
+      details: { 
+        timestamp: new Date().toISOString(), 
+        method: req.method,
+        success: true
+      }
+    }).then(({ error }) => {
+      if (error) console.warn('[redemptions] Failed to log audit trail:', error)
     })
     
     if (req.method === 'POST') {
@@ -169,9 +234,11 @@ serve(async (req) => {
       }
 
       // Validate and sanitize bank details
-      if (!body.bankName || !body.accountNumber || !body.accountTitle) {
+      const validation = validateBankDetails(body.bankName, body.accountNumber, body.accountTitle)
+      if (!validation.valid) {
+        console.warn('Invalid bank details:', validation.error, 'for wallet:', body.walletAddress)
         return new Response(
-          JSON.stringify({ error: 'All bank details are required' }),
+          JSON.stringify({ error: validation.error }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
@@ -192,14 +259,34 @@ serve(async (req) => {
         .single()
 
       if (error) {
-        console.error('Error creating redemption:', error)
+        console.error('[redemptions] Error creating redemption:', error)
+        // Log failure for audit
+        await supabase.from('admin_actions').insert({
+          action_type: 'redemption_creation_failed',
+          wallet_address: body.walletAddress.toLowerCase(),
+          details: { 
+            error: error.message,
+            timestamp: new Date().toISOString()
+          }
+        })
         return new Response(
           JSON.stringify({ error: 'Failed to create redemption request' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
       
-      console.log('Redemption created successfully:', data.id, 'for wallet:', body.walletAddress)
+      // Log success for audit
+      await supabase.from('admin_actions').insert({
+        action_type: 'redemption_created',
+        wallet_address: body.walletAddress.toLowerCase(),
+        details: { 
+          redemptionId: data.id,
+          amount: body.pkrscAmount,
+          timestamp: new Date().toISOString()
+        }
+      })
+      
+      console.log('[redemptions] Redemption created successfully:', data.id, 'for wallet:', body.walletAddress)
 
       return new Response(
         JSON.stringify({ data }),
