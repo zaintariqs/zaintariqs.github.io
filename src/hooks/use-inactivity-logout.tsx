@@ -11,36 +11,51 @@ export function useInactivityLogout() {
   const { toast } = useToast();
   const timeoutRef = useRef<NodeJS.Timeout>();
   const warningTimeoutRef = useRef<NodeJS.Timeout>();
+  const disconnectRef = useRef(disconnect);
+  const toastRef = useRef(toast);
+
+  // Keep refs up to date
+  useEffect(() => {
+    disconnectRef.current = disconnect;
+    toastRef.current = toast;
+  }, [disconnect, toast]);
 
   const clearTimers = useCallback(() => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
+      timeoutRef.current = undefined;
     }
     if (warningTimeoutRef.current) {
       clearTimeout(warningTimeoutRef.current);
+      warningTimeoutRef.current = undefined;
     }
   }, []);
 
   const handleLogout = useCallback(() => {
-    disconnect();
-    toast({
+    console.log('[Inactivity Logout] Logging out due to inactivity');
+    clearTimers();
+    disconnectRef.current();
+    toastRef.current({
       title: "Session Expired",
       description: "You've been logged out due to inactivity.",
       variant: "destructive",
     });
-  }, [disconnect, toast]);
+  }, [clearTimers]);
 
   const showWarning = useCallback(() => {
-    toast({
+    console.log('[Inactivity Logout] Showing inactivity warning');
+    toastRef.current({
       title: "Inactivity Warning",
       description: "You will be logged out in 30 seconds due to inactivity.",
     });
-  }, [toast]);
+  }, []);
 
   const resetTimer = useCallback(() => {
     if (!isConnected) return;
 
     clearTimers();
+
+    console.log('[Inactivity Logout] Timer reset - will logout in 5 minutes');
 
     // Set warning timer (show warning 30 seconds before logout)
     warningTimeoutRef.current = setTimeout(() => {
@@ -55,9 +70,12 @@ export function useInactivityLogout() {
 
   useEffect(() => {
     if (!isConnected) {
+      console.log('[Inactivity Logout] User not connected, clearing timers');
       clearTimers();
       return;
     }
+
+    console.log('[Inactivity Logout] Setting up inactivity detection');
 
     // List of events that indicate user activity
     const events = [
@@ -69,9 +87,28 @@ export function useInactivityLogout() {
       'click',
     ];
 
+    // Throttle mousemove to avoid excessive resets
+    let mouseMoveTimeout: NodeJS.Timeout;
+    const throttledMouseMove = () => {
+      if (!mouseMoveTimeout) {
+        mouseMoveTimeout = setTimeout(() => {
+          resetTimer();
+          mouseMoveTimeout = undefined as any;
+        }, 1000); // Throttle to once per second
+      }
+    };
+
     // Reset timer on any user activity
+    const handleActivity = (event: Event) => {
+      if (event.type === 'mousemove') {
+        throttledMouseMove();
+      } else {
+        resetTimer();
+      }
+    };
+
     events.forEach((event) => {
-      document.addEventListener(event, resetTimer);
+      document.addEventListener(event, handleActivity, { passive: true });
     });
 
     // Initialize timer
@@ -79,9 +116,13 @@ export function useInactivityLogout() {
 
     // Cleanup
     return () => {
+      console.log('[Inactivity Logout] Cleaning up inactivity detection');
       events.forEach((event) => {
-        document.removeEventListener(event, resetTimer);
+        document.removeEventListener(event, handleActivity);
       });
+      if (mouseMoveTimeout) {
+        clearTimeout(mouseMoveTimeout);
+      }
       clearTimers();
     };
   }, [isConnected, resetTimer, clearTimers]);
