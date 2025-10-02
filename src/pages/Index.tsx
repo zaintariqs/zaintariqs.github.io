@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom'
 import PKRHeader from "@/components/PKRHeader";
 import PKRHeroSection from "@/components/PKRHeroSection";
 import PKRFeaturesSection from "@/components/PKRFeaturesSection";
+import TransactionHistory from "@/components/TransactionHistory";
 import PKRFooter from "@/components/PKRFooter";
 
 const Index = () => {
@@ -19,6 +20,7 @@ const Index = () => {
       <main>
         <PKRHeroSection />
         <PKRFeaturesSection />
+        <TransactionHistory />
       </main>
       <PKRFooter />
     </div>
