@@ -78,7 +78,7 @@ export function RedeemSection() {
             'Content-Type': 'application/json',
             'x-wallet-address': address,
             'x-wallet-signature': signature,
-            'x-signature-message': message,
+            'x-signature-message': btoa(message), // Base64 encode to avoid header validation issues
           },
           body: JSON.stringify({
             walletAddress: address,
@@ -125,7 +125,7 @@ export function RedeemSection() {
               'Content-Type': 'application/json',
               'x-wallet-address': address,
               'x-wallet-signature': updateSignature,
-              'x-signature-message': updateMessage,
+              'x-signature-message': btoa(updateMessage), // Base64 encode
             },
             body: JSON.stringify({
               redemptionId: data.id,

@@ -131,7 +131,8 @@ serve(async (req) => {
     // Get authentication headers
     const walletAddressHeader = req.headers.get('x-wallet-address')
     const signatureHeader = req.headers.get('x-wallet-signature')
-    const messageHeader = req.headers.get('x-signature-message')
+    const messageHeaderEncoded = req.headers.get('x-signature-message')
+    const messageHeader = messageHeaderEncoded ? atob(messageHeaderEncoded) : null // Decode base64
     
     // Verify wallet signature for authentication
     if (!walletAddressHeader || !signatureHeader || !messageHeader) {
