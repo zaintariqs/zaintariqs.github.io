@@ -4,7 +4,7 @@ project_id = "jdjreuxhvzmzockuduyq"
 verify_jwt = true
 
 [functions.redemptions]
-verify_jwt = true
+verify_jwt = false
 
 [functions.verify-admin]
 verify_jwt = false
