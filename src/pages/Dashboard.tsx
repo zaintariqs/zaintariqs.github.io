@@ -8,6 +8,9 @@ import { UniswapSection } from '@/components/dashboard/UniswapSection'
 import { RedeemSection } from '@/components/dashboard/RedeemSection'
 import { AdminSection } from '@/components/dashboard/AdminSection'
 import { MarketMakerSection } from '@/components/dashboard/MarketMakerSection'
+import { MyDeposits } from '@/components/dashboard/MyDeposits'
+import { MyRedemptions } from '@/components/dashboard/MyRedemptions'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Navigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 
@@ -86,25 +89,57 @@ export default function Dashboard() {
             </p>
           </div>
 
+          <BalanceCard />
+
           {isAdmin ? (
-            // Top-down layout for admin
+            // Admin view with admin sections at top
             <div className="space-y-8">
-              <BalanceCard />
               <AdminSection />
               <MarketMakerSection />
               <UniswapSection />
+              
+              <Tabs defaultValue="deposits" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="deposits">My Deposits</TabsTrigger>
+                  <TabsTrigger value="redemptions">My Redemptions</TabsTrigger>
+                </TabsList>
+                <TabsContent value="deposits" className="mt-6">
+                  <MyDeposits />
+                </TabsContent>
+                <TabsContent value="redemptions" className="mt-6">
+                  <MyRedemptions />
+                </TabsContent>
+              </Tabs>
             </div>
           ) : (
-            // Grid layout for regular users
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <div className="lg:col-span-1">
-                <BalanceCard />
-              </div>
-              <div className="lg:col-span-2 space-y-8">
-                <TopUpSection />
-                <RedeemSection />
-                <UniswapSection />
-              </div>
+            // Regular user view with tabs
+            <div className="space-y-8">
+              <Tabs defaultValue="topup" className="w-full">
+                <TabsList className="grid w-full grid-cols-4">
+                  <TabsTrigger value="topup">Top-up</TabsTrigger>
+                  <TabsTrigger value="redeem">Redeem</TabsTrigger>
+                  <TabsTrigger value="deposits">My Deposits</TabsTrigger>
+                  <TabsTrigger value="redemptions">My Redemptions</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="topup" className="mt-6">
+                  <TopUpSection />
+                </TabsContent>
+                
+                <TabsContent value="redeem" className="mt-6">
+                  <RedeemSection />
+                </TabsContent>
+                
+                <TabsContent value="deposits" className="mt-6">
+                  <MyDeposits />
+                </TabsContent>
+                
+                <TabsContent value="redemptions" className="mt-6">
+                  <MyRedemptions />
+                </TabsContent>
+              </Tabs>
+
+              <UniswapSection />
             </div>
           )}
         </div>

@@ -9,6 +9,9 @@ verify_jwt = false
 [functions.verify-admin]
 verify_jwt = false
 
+[functions.deposits]
+verify_jwt = false
+
 [functions.verify-admin-wallet]
 verify_jwt = false
 

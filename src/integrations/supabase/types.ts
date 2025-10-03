@@ -89,6 +89,45 @@ export type Database = {
         }
         Relationships: []
       }
+      deposits: {
+        Row: {
+          amount_pkr: number
+          created_at: string
+          id: string
+          payment_method: string
+          phone_number: string
+          rejection_reason: string | null
+          status: string
+          transaction_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_pkr: number
+          created_at?: string
+          id?: string
+          payment_method: string
+          phone_number: string
+          rejection_reason?: string | null
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_pkr?: number
+          created_at?: string
+          id?: string
+          payment_method?: string
+          phone_number?: string
+          rejection_reason?: string | null
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       market_maker_config: {
         Row: {
           created_at: string

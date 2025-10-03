@@ -296,7 +296,7 @@ serve(async (req) => {
       // Get redemptions for authenticated wallet only
       const { data, error } = await supabase
         .from('redemptions')
-        .select('id, pkrsc_amount, status, created_at, updated_at, burn_address, transaction_hash')
+        .select('id, pkrsc_amount, status, created_at, updated_at, burn_address, transaction_hash, bank_name, account_number, account_title')
         .eq('user_id', walletAddressHeader.toLowerCase())
         .order('created_at', { ascending: false })
 

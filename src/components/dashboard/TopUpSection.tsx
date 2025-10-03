@@ -26,16 +26,43 @@ export function TopUpSection() {
 
     setIsProcessing(true)
     
-    // Simulate payment processing
-    setTimeout(() => {
+    try {
+      const response = await fetch(
+        'https://jdjreuxhvzmzockuduyq.supabase.co/functions/v1/deposits',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-wallet-address': window.ethereum?.selectedAddress || '',
+          },
+          body: JSON.stringify({
+            amount: parseFloat(amount),
+            paymentMethod: method,
+            phoneNumber: phoneNumber,
+          }),
+        }
+      )
+
+      if (!response.ok) {
+        throw new Error('Failed to create deposit request')
+      }
+
       toast({
-        title: "Payment Initiated",
-        description: `${method === 'easypaisa' ? 'EasyPaisa' : 'JazzCash'} payment of PKR ${amount} initiated. You'll receive PKRSC tokens shortly.`,
+        title: "Deposit Request Created",
+        description: `${method === 'easypaisa' ? 'EasyPaisa' : 'JazzCash'} payment of PKR ${amount} initiated. Check "My Deposits" tab for status.`,
       })
-      setIsProcessing(false)
       setAmount('')
       setPhoneNumber('')
-    }, 2000)
+    } catch (error) {
+      console.error('Error creating deposit:', error)
+      toast({
+        title: "Error",
+        description: "Failed to create deposit request",
+        variant: "destructive",
+      })
+    } finally {
+      setIsProcessing(false)
+    }
   }
 
   return (
