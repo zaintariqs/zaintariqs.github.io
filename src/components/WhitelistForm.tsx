@@ -87,15 +87,8 @@ export function WhitelistForm() {
   }
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader>
-        <CardTitle>Apply for Whitelist</CardTitle>
-        <CardDescription>
-          Submit your wallet address for approval to access PKRSC services
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="w-full">
+      <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="walletAddress">Wallet Address</Label>
             <Input
@@ -129,11 +122,10 @@ export function WhitelistForm() {
                 Submitting...
               </>
             ) : (
-              'Submit Request'
+          'Submit Request'
             )}
           </Button>
         </form>
-      </CardContent>
-    </Card>
+    </div>
   )
 }

@@ -1,21 +1,27 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Menu, X, MessageCircle, Globe } from "lucide-react";
+import { Menu, X, UserCheck, Globe } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { translations } from "@/translations";
 import { WalletConnect } from "@/components/WalletConnect";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { WhitelistForm } from "@/components/WhitelistForm";
 
 const PKRHeader = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isWhitelistOpen, setIsWhitelistOpen] = useState(false);
   const { language, setLanguage, isUrdu } = useLanguage();
   const t = translations[language];
   const location = useLocation();
   const isDashboard = location.pathname === '/dashboard';
-
-  const handleWhatsAppContact = () => {
-    window.open("https://wa.me/905314390365", "_blank");
-  };
 
   const toggleLanguage = () => {
     setLanguage(language === 'en' ? 'ur' : 'en');
@@ -47,7 +53,7 @@ const PKRHeader = () => {
           </nav>
         )}
 
-        {/* Wallet Connect, Contact Button & Language Toggle */}
+        {/* Wallet Connect, Whitelist Button & Language Toggle */}
         <div className={`hidden md:flex items-center ${isUrdu ? 'space-x-reverse space-x-4' : 'space-x-4'}`}>
           <WalletConnect />
           <Button
@@ -59,13 +65,23 @@ const PKRHeader = () => {
             <Globe className="h-4 w-4 mr-2" />
             {language === 'en' ? 'اردو' : 'EN'}
           </Button>
-          <Button 
-            onClick={handleWhatsAppContact}
-            className="bg-crypto-green hover:bg-crypto-green/90 text-white"
-          >
-            <MessageCircle className="h-4 w-4 mr-2" />
-            {t.contactUs}
-          </Button>
+          <Dialog open={isWhitelistOpen} onOpenChange={setIsWhitelistOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-crypto-green hover:bg-crypto-green/90 text-white">
+                <UserCheck className="h-4 w-4 mr-2" />
+                Get Whitelisted
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>Apply for Whitelist</DialogTitle>
+                <DialogDescription>
+                  To access PKRSC services, submit your wallet address and email for approval.
+                </DialogDescription>
+              </DialogHeader>
+              <WhitelistForm />
+            </DialogContent>
+          </Dialog>
         </div>
 
         {/* Mobile Menu Button */}
@@ -113,16 +129,23 @@ const PKRHeader = () => {
                 {language === 'en' ? 'اردو' : 'EN'}
               </Button>
             </div>
-            <Button 
-              onClick={() => {
-                handleWhatsAppContact();
-                setIsMenuOpen(false);
-              }}
-              className="w-full bg-crypto-green hover:bg-crypto-green/90 text-white"
-            >
-              <MessageCircle className="h-4 w-4 mr-2" />
-              {t.contactUs}
-            </Button>
+            <Dialog open={isWhitelistOpen} onOpenChange={setIsWhitelistOpen}>
+              <DialogTrigger asChild>
+                <Button className="w-full bg-crypto-green hover:bg-crypto-green/90 text-white">
+                  <UserCheck className="h-4 w-4 mr-2" />
+                  Get Whitelisted
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[500px]">
+                <DialogHeader>
+                  <DialogTitle>Apply for Whitelist</DialogTitle>
+                  <DialogDescription>
+                    To access PKRSC services, submit your wallet address and email for approval.
+                  </DialogDescription>
+                </DialogHeader>
+                <WhitelistForm />
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
       )}
