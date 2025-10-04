@@ -20,3 +20,12 @@ verify_jwt = false
 
 [functions.update-market-maker-config]
 verify_jwt = false
+
+[functions.whitelist-requests]
+verify_jwt = false
+
+[functions.approve-whitelist]
+verify_jwt = false
+
+[functions.check-whitelist]
+verify_jwt = false

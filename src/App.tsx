@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { Web3Provider } from "@/providers/Web3Provider";
 import { SecurityProvider } from "@/components/SecurityProvider";
+import { WhitelistCheck } from "@/components/WhitelistCheck";
 import Index from "./pages/Index";
 import Browse from "./pages/Browse";
 import Security from "./pages/Security";
@@ -28,7 +29,11 @@ const AppContent = () => {
         <Route path="/browse" element={<Browse />} />
         <Route path="/security" element={<Security />} />
         <Route path="/learn-more" element={<LearnMore />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/dashboard" element={
+          <WhitelistCheck>
+            <Dashboard />
+          </WhitelistCheck>
+        } />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>

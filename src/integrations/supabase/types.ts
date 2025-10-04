@@ -269,6 +269,45 @@ export type Database = {
         }
         Relationships: []
       }
+      whitelist_requests: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          rejection_reason: string | null
+          requested_at: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+          wallet_address: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          rejection_reason?: string | null
+          requested_at?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          wallet_address: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          rejection_reason?: string | null
+          requested_at?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          wallet_address?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -294,6 +333,10 @@ export type Database = {
       }
       is_wallet_owner: {
         Args: { wallet_address: string }
+        Returns: boolean
+      }
+      is_wallet_whitelisted: {
+        Args: { wallet_addr: string }
         Returns: boolean
       }
     }

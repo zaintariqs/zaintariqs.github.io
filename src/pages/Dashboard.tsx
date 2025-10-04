@@ -10,6 +10,7 @@ import { AdminSection } from '@/components/dashboard/AdminSection'
 import { MarketMakerSection } from '@/components/dashboard/MarketMakerSection'
 import { MyDeposits } from '@/components/dashboard/MyDeposits'
 import { MyRedemptions } from '@/components/dashboard/MyRedemptions'
+import { WhitelistingRequests } from '@/components/dashboard/WhitelistingRequests'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Navigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
@@ -98,11 +99,15 @@ export default function Dashboard() {
               <MarketMakerSection />
               <UniswapSection />
               
-              <Tabs defaultValue="deposits" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
+              <Tabs defaultValue="whitelisting" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="whitelisting">Whitelisting Requests</TabsTrigger>
                   <TabsTrigger value="deposits">My Deposits</TabsTrigger>
                   <TabsTrigger value="redemptions">My Redemptions</TabsTrigger>
                 </TabsList>
+                <TabsContent value="whitelisting" className="mt-6">
+                  <WhitelistingRequests />
+                </TabsContent>
                 <TabsContent value="deposits" className="mt-6">
                   <MyDeposits />
                 </TabsContent>
