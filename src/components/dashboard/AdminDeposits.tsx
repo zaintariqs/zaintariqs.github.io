@@ -37,7 +37,6 @@ export function AdminDeposits() {
   const [selectedDeposit, setSelectedDeposit] = useState<Deposit | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [actionType, setActionType] = useState<'approve' | 'reject'>('approve')
-  const [mintTxHash, setMintTxHash] = useState('')
   const [rejectionReason, setRejectionReason] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -78,22 +77,12 @@ export function AdminDeposits() {
   const openDialog = (deposit: Deposit, type: 'approve' | 'reject' | 'view') => {
     setSelectedDeposit(deposit)
     setActionType(type as 'approve' | 'reject')
-    setMintTxHash('')
     setRejectionReason('')
     setDialogOpen(true)
   }
 
   const handleSubmit = async () => {
     if (!selectedDeposit || !address) return
-
-    if (actionType === 'approve' && !mintTxHash.trim()) {
-      toast({
-        title: "Error",
-        description: "Mint transaction hash is required",
-        variant: "destructive",
-      })
-      return
-    }
 
     if (actionType === 'reject' && !rejectionReason.trim()) {
       toast({
@@ -118,7 +107,6 @@ export function AdminDeposits() {
           body: JSON.stringify({
             depositId: selectedDeposit.id,
             action: actionType,
-            mintTxHash: actionType === 'approve' ? mintTxHash : undefined,
             rejectionReason: actionType === 'reject' ? rejectionReason : undefined,
           }),
         }
@@ -324,23 +312,21 @@ export function AdminDeposits() {
                       <ExternalLink className="h-3 w-3" />
                     </a>
                   </div>
-                )}
-              </>
+            )}
+          </>
             )}
             {actionType === 'approve' ? (
               <div className="space-y-2">
-                <Label htmlFor="mintTxHash">Mint Transaction Hash</Label>
-                <Input
-                  id="mintTxHash"
-                  placeholder="Enter PKRSC mint transaction hash (0x...)"
-                  value={mintTxHash}
-                  onChange={(e) => setMintTxHash(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Mint {selectedDeposit?.amount_pkr} PKRSC to {selectedDeposit?.user_id}
-                </p>
+                <div className="bg-muted/50 rounded-lg p-3">
+                  <p className="text-sm font-medium">This will automatically:</p>
+                  <ul className="text-sm text-muted-foreground mt-2 space-y-1 list-disc list-inside">
+                    <li>Mint {selectedDeposit?.amount_pkr} PKRSC tokens</li>
+                    <li>Send them to {selectedDeposit?.user_id?.slice(0, 6)}...{selectedDeposit?.user_id?.slice(-4)}</li>
+                    <li>Record the transaction hash</li>
+                  </ul>
+                </div>
               </div>
-            ) : (
+            ) : actionType === 'reject' ? (
               <div className="space-y-2">
                 <Label htmlFor="rejectionReason">Rejection Reason</Label>
                 <Textarea
@@ -351,7 +337,7 @@ export function AdminDeposits() {
                   rows={4}
                 />
               </div>
-            )}
+            ) : null}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={isSubmitting}>

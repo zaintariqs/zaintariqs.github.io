@@ -23,6 +23,7 @@ interface Deposit {
   receipt_url?: string
   submitted_at?: string
   rejection_reason?: string
+  mint_transaction_hash?: string
   created_at: string
   updated_at: string
 }
@@ -235,12 +236,18 @@ export function MyDeposits() {
                     </TableCell>
                     <TableCell>{getStatusBadge(deposit.status)}</TableCell>
                     <TableCell>
-                      {deposit.status === 'completed' && deposit.transaction_id && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-mono text-muted-foreground">
-                            {deposit.transaction_id.slice(0, 8)}...
-                          </span>
-                          <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                      {deposit.status === 'completed' && deposit.mint_transaction_hash && (
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground">Mint TX:</p>
+                          <a
+                            href={`https://basescan.org/tx/${deposit.mint_transaction_hash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs font-mono text-primary hover:underline flex items-center gap-1"
+                          >
+                            {deposit.mint_transaction_hash.slice(0, 10)}...{deposit.mint_transaction_hash.slice(-8)}
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
                         </div>
                       )}
                       {(deposit.status === 'rejected' || deposit.status === 'cancelled') && deposit.rejection_reason && (
