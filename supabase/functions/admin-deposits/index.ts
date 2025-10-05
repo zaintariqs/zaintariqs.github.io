@@ -26,16 +26,23 @@ serve(async (req) => {
       )
     }
 
-    // Verify admin status
-    const { data: adminData, error: adminError } = await supabase
-      .from('admin_wallets')
-      .select('is_active')
-      .ilike('wallet_address', walletAddress)
-      .eq('is_active', true)
-      .maybeSingle()
-
-    if (adminError || !adminData) {
-      console.warn('Non-admin attempted to access admin deposits:', walletAddress, adminError)
+    // Verify admin status with enhanced logging
+    const { data: isAdmin, error: adminError } = await supabase
+      .rpc('is_admin_wallet', { wallet_addr: walletAddress })
+    
+    // Log admin authentication attempt
+    await supabase.from('admin_actions').insert({
+      action_type: isAdmin ? 'admin_auth_success' : 'admin_auth_failed',
+      wallet_address: walletAddress.toLowerCase(),
+      details: { 
+        timestamp: new Date().toISOString(),
+        endpoint: 'admin-deposits',
+        success: !!isAdmin
+      }
+    })
+    
+    if (adminError || !isAdmin) {
+      console.error('Admin verification failed for wallet:', walletAddress, adminError)
       return new Response(
         JSON.stringify({ error: 'Unauthorized: Admin access required' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

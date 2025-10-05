@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useAccount } from 'wagmi'
+import { useAccount, useSignMessage } from 'wagmi'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -30,6 +30,7 @@ interface Deposit {
 export function MyDeposits() {
   const { address } = useAccount()
   const { toast } = useToast()
+  const { signMessageAsync } = useSignMessage()
   const [deposits, setDeposits] = useState<Deposit[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -109,6 +110,13 @@ export function MyDeposits() {
         .from('deposit-receipts')
         .getPublicUrl(fileName)
 
+      // Sign message to prove wallet ownership
+      const message = `Submit proof for deposit ${selectedDeposit.id} with transaction ${transactionId} at ${new Date().toISOString()}`
+      const signature = await signMessageAsync({ 
+        message,
+        account: address
+      })
+
       // Submit proof via edge function
       const response = await fetch(
         'https://jdjreuxhvzmzockuduyq.supabase.co/functions/v1/deposits',
@@ -117,6 +125,8 @@ export function MyDeposits() {
           headers: {
             'Content-Type': 'application/json',
             'x-wallet-address': address,
+            'x-wallet-signature': signature,
+            'x-signature-message': btoa(message),
           },
           body: JSON.stringify({
             depositId: selectedDeposit.id,

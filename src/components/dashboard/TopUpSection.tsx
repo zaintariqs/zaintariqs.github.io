@@ -7,12 +7,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { CreditCard, Smartphone, ArrowRight } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { useAccount, useSignMessage } from 'wagmi'
 
 export function TopUpSection() {
   const [amount, setAmount] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
   const { toast } = useToast()
+  const { address } = useAccount()
+  const { signMessageAsync } = useSignMessage()
 
   const handleTopUp = async (method: 'easypaisa' | 'jazzcash') => {
     if (!amount || !phoneNumber) {
@@ -23,17 +26,35 @@ export function TopUpSection() {
       })
       return
     }
+    
+    if (!address) {
+      toast({
+        title: "Wallet Not Connected",
+        description: "Please connect your wallet to create a deposit",
+        variant: "destructive"
+      })
+      return
+    }
 
     setIsProcessing(true)
     
     try {
+      // Sign message to prove wallet ownership
+      const message = `Create deposit request for ${parseFloat(amount)} PKR via ${method} at ${new Date().toISOString()}`
+      const signature = await signMessageAsync({ 
+        message,
+        account: address
+      })
+      
       const response = await fetch(
         'https://jdjreuxhvzmzockuduyq.supabase.co/functions/v1/deposits',
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-wallet-address': window.ethereum?.selectedAddress || '',
+            'x-wallet-address': address,
+            'x-wallet-signature': signature,
+            'x-signature-message': btoa(message),
           },
           body: JSON.stringify({
             amount: parseFloat(amount),

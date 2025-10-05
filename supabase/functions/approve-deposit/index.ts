@@ -19,7 +19,6 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const marketMakerPrivateKey = Deno.env.get('MARKET_MAKER_PRIVATE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     const walletAddress = req.headers.get('x-wallet-address')
@@ -31,17 +30,25 @@ serve(async (req) => {
       )
     }
 
-    // Verify admin status
-    const { data: adminCheck } = await supabase
-      .from('admin_wallets')
-      .select('id')
-      .eq('wallet_address', walletAddress.toLowerCase())
-      .eq('is_active', true)
-      .single()
-
-    if (!adminCheck) {
+    // Verify admin status with enhanced logging
+    const { data: isAdmin, error: adminError } = await supabase
+      .rpc('is_admin_wallet', { wallet_addr: walletAddress })
+    
+    // Log admin authentication attempt
+    await supabase.from('admin_actions').insert({
+      action_type: isAdmin ? 'admin_auth_success' : 'admin_auth_failed',
+      wallet_address: walletAddress.toLowerCase(),
+      details: { 
+        timestamp: new Date().toISOString(),
+        endpoint: 'approve-deposit',
+        success: !!isAdmin
+      }
+    })
+    
+    if (adminError || !isAdmin) {
+      console.error('Admin verification failed for wallet:', walletAddress, adminError)
       return new Response(
-        JSON.stringify({ error: 'Unauthorized - Admin only' }),
+        JSON.stringify({ error: 'Unauthorized: Admin access required' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
