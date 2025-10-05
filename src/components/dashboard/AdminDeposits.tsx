@@ -226,7 +226,7 @@ export function AdminDeposits() {
                       <TableCell>{deposit.phone_number}</TableCell>
                       <TableCell>{getStatusBadge(deposit.status)}</TableCell>
                       <TableCell>
-                        {deposit.status === 'pending' && (
+                        {(deposit.status === 'pending' || deposit.status === 'processing') && (
                           <div className="flex gap-2">
                             <Button
                               size="sm"
@@ -275,24 +275,38 @@ export function AdminDeposits() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             {selectedDeposit && (
-              <div className="bg-muted/50 rounded-lg p-3 space-y-1">
-                <p className="text-sm">User: {selectedDeposit.user_id}</p>
-                <p className="text-sm">Amount: PKR {selectedDeposit.amount_pkr}</p>
-                {selectedDeposit.user_transaction_id && (
-                  <p className="text-sm">User TX ID: {selectedDeposit.user_transaction_id}</p>
-                )}
+              <>
+                <div className="bg-muted/50 rounded-lg p-3 space-y-1">
+                  <p className="text-sm">User: {selectedDeposit.user_id}</p>
+                  <p className="text-sm">Amount: PKR {selectedDeposit.amount_pkr}</p>
+                  <p className="text-sm">Payment Method: {selectedDeposit.payment_method === 'easypaisa' ? 'EasyPaisa' : 'JazzCash'}</p>
+                  <p className="text-sm">Phone: {selectedDeposit.phone_number}</p>
+                  {selectedDeposit.user_transaction_id && (
+                    <p className="text-sm font-medium">User TX ID: {selectedDeposit.user_transaction_id}</p>
+                  )}
+                </div>
                 {selectedDeposit.receipt_url && (
-                  <a
-                    href={selectedDeposit.receipt_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-primary hover:underline flex items-center gap-2"
-                  >
-                    View Receipt
-                    <ExternalLink className="h-3 w-3" />
-                  </a>
+                  <div className="space-y-2">
+                    <Label>Payment Proof</Label>
+                    <div className="border rounded-lg overflow-hidden">
+                      <img 
+                        src={selectedDeposit.receipt_url} 
+                        alt="Payment Receipt" 
+                        className="w-full h-auto max-h-96 object-contain bg-muted"
+                      />
+                    </div>
+                    <a
+                      href={selectedDeposit.receipt_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-primary hover:underline flex items-center gap-1"
+                    >
+                      Open in new tab
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
                 )}
-              </div>
+              </>
             )}
             {actionType === 'approve' ? (
               <div className="space-y-2">
