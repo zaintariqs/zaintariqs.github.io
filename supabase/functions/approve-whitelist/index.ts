@@ -1,13 +1,14 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { Resend } from "npm:resend@2.0.0";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-wallet-address",
-};
+import { corsHeaders, responseHeaders } from '../_shared/cors.ts';
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+
+// Get the from email from environment or use default
+// IMPORTANT: For production, set FROM_EMAIL to an email from your verified domain
+// Example: "PKRSC <noreply@yourdomain.com>"
+const FROM_EMAIL = Deno.env.get("FROM_EMAIL") || "PKRSC <onboarding@resend.dev>";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -26,7 +27,7 @@ serve(async (req) => {
       if (!walletAddress) {
         return new Response(
           JSON.stringify({ error: "Wallet address required" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 400, headers: responseHeaders }
         );
       }
 
@@ -37,14 +38,14 @@ serve(async (req) => {
       if (!adminCheck) {
         return new Response(
           JSON.stringify({ error: "Unauthorized - Admin access required" }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 403, headers: responseHeaders }
         );
       }
 
       if (!requestId || !action || !["approve", "reject"].includes(action)) {
         return new Response(
           JSON.stringify({ error: "Invalid request parameters" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 400, headers: responseHeaders }
         );
       }
 
@@ -58,7 +59,7 @@ serve(async (req) => {
       if (fetchError || !request) {
         return new Response(
           JSON.stringify({ error: "Whitelist request not found" }),
-          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 404, headers: responseHeaders }
         );
       }
 
@@ -78,7 +79,7 @@ serve(async (req) => {
         console.error("Error updating whitelist request:", updateError);
         return new Response(
           JSON.stringify({ error: updateError.message }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 500, headers: responseHeaders }
         );
       }
 
@@ -109,17 +110,52 @@ serve(async (req) => {
       }
 
       try {
+        console.log(`Attempting to send email to: ${request.email}`);
+        console.log(`Using from address: ${FROM_EMAIL}`);
+        
         const emailResponse = await resend.emails.send({
-          from: "PKRSC <onboarding@resend.dev>",
+          from: FROM_EMAIL,
           to: [request.email],
           subject: emailSubject,
           html: emailHtml,
         });
 
-        console.log("Email sent successfully:", emailResponse);
-      } catch (emailError) {
-        console.error("Error sending email:", emailError);
-        // Don't fail the request if email fails
+        console.log("Email sent successfully:", JSON.stringify(emailResponse));
+        
+        // Log successful email in admin_actions for tracking
+        await supabase.from("admin_actions").insert({
+          action_type: 'email_sent_whitelist',
+          wallet_address: walletAddress,
+          details: {
+            request_id: requestId,
+            email: request.email,
+            email_id: emailResponse.id,
+            action: action
+          },
+        });
+        
+      } catch (emailError: any) {
+        console.error("❌ Error sending email:", {
+          error: emailError.message,
+          statusCode: emailError.statusCode,
+          name: emailError.name,
+          to: request.email,
+          from: FROM_EMAIL,
+        });
+        
+        // Log failed email attempt
+        await supabase.from("admin_actions").insert({
+          action_type: 'email_failed_whitelist',
+          wallet_address: walletAddress,
+          details: {
+            request_id: requestId,
+            email: request.email,
+            error: emailError.message,
+            action: action
+          },
+        });
+        
+        // Don't fail the request if email fails, but include warning in response
       }
 
       // Log admin action
@@ -138,20 +174,20 @@ serve(async (req) => {
           message: `Whitelist request ${action}d successfully`,
           status: newStatus
         }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: responseHeaders }
       );
     }
 
     return new Response(
       JSON.stringify({ error: "Method not allowed" }),
-      { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 405, headers: responseHeaders }
     );
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in approve-whitelist function:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: responseHeaders }
     );
   }
 });
