@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react'
 import { useAccount } from 'wagmi'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Banknote, TrendingUp } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { supabase } from '@/integrations/supabase/client'
@@ -20,6 +23,9 @@ export function BankReserves() {
   const [reserves, setReserves] = useState<BankReserve[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isUpdating, setIsUpdating] = useState(false)
+  const [manualAmount, setManualAmount] = useState('')
+  const [updateMode, setUpdateMode] = useState<'set' | 'adjust'>('set')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const fetchReserves = async () => {
     if (!address) return
@@ -91,6 +97,55 @@ export function BankReserves() {
     )
   }
 
+  const handleManualUpdate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!manualAmount || isNaN(Number(manualAmount))) {
+      toast({
+        title: "Invalid Amount",
+        description: "Please enter a valid number",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsSubmitting(true)
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session) {
+        throw new Error('Not authenticated')
+      }
+
+      const { data, error } = await supabase.functions.invoke('update-bank-reserves', {
+        body: {
+          mode: updateMode,
+          amount: Number(manualAmount)
+        }
+      })
+
+      if (error) throw error
+
+      toast({
+        title: "Success",
+        description: data.message || "Bank reserves updated successfully",
+      })
+
+      setManualAmount('')
+      fetchReserves()
+    } catch (error) {
+      console.error('Error updating bank reserves:', error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update bank reserves",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   const pkrReserve = reserves.find(r => r.reserve_type === 'pkr')
 
   return (
@@ -139,6 +194,55 @@ export function BankReserves() {
               <strong>Note:</strong> PKR reserves automatically increase when deposits are approved (+) and decrease when redemptions are completed (-).
               This represents the physical PKR backing the PKRSC tokens in circulation.
             </p>
+          </div>
+
+          <div className="border-t border-border pt-4">
+            <h4 className="text-sm font-semibold mb-3">Manual Reserve Update</h4>
+            <form onSubmit={handleManualUpdate} className="space-y-4">
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={updateMode === 'set' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setUpdateMode('set')}
+                >
+                  Set Amount
+                </Button>
+                <Button
+                  type="button"
+                  variant={updateMode === 'adjust' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setUpdateMode('adjust')}
+                >
+                  Adjust Amount
+                </Button>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="manual-amount">
+                  {updateMode === 'set' ? 'New Amount (PKR)' : 'Adjustment Amount (PKR)'}
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="manual-amount"
+                    type="number"
+                    step="0.01"
+                    placeholder={updateMode === 'set' ? 'Enter new total amount' : 'Enter adjustment (+/-)'}
+                    value={manualAmount}
+                    onChange={(e) => setManualAmount(e.target.value)}
+                    disabled={isSubmitting}
+                  />
+                  <Button type="submit" disabled={isSubmitting || !manualAmount}>
+                    {isSubmitting ? 'Updating...' : 'Update'}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {updateMode === 'set' 
+                    ? 'Set the total PKR reserve to a specific amount'
+                    : 'Add or subtract from the current reserve (use negative for subtract)'}
+                </p>
+              </div>
+            </form>
           </div>
         </div>
       </CardContent>
