@@ -7,26 +7,53 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  console.log("Delete whitelist function called:", req.method);
+  
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    console.log("Initializing Supabase client");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error("Missing environment variables");
+      return new Response(
+        JSON.stringify({ error: "Server configuration error" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     if (req.method !== "DELETE") {
+      console.log("Invalid method:", req.method);
       return new Response(
         JSON.stringify({ error: "Method not allowed" }),
         { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
+    console.log("Reading request body");
     const walletAddress = req.headers.get("x-wallet-address");
-    const { requestId } = await req.json();
+    let requestId;
+    
+    try {
+      const body = await req.json();
+      requestId = body.requestId;
+      console.log("Request data:", { walletAddress, requestId });
+    } catch (e) {
+      console.error("Error parsing request body:", e);
+      return new Response(
+        JSON.stringify({ error: "Invalid request body" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     if (!walletAddress) {
+      console.log("Missing wallet address");
       return new Response(
         JSON.stringify({ error: "Wallet address required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -34,6 +61,7 @@ serve(async (req) => {
     }
 
     if (!requestId) {
+      console.log("Missing request ID");
       return new Response(
         JSON.stringify({ error: "Request ID required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -41,13 +69,22 @@ serve(async (req) => {
     }
 
     // Verify admin status
-    const { data: isAdmin } = await supabase
+    console.log("Verifying admin status for:", walletAddress);
+    const { data: isAdmin, error: adminError } = await supabase
       .rpc("is_admin_wallet", { wallet_addr: walletAddress });
+
+    if (adminError) {
+      console.error("Error verifying admin:", adminError);
+      return new Response(
+        JSON.stringify({ error: "Error verifying admin status" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     if (!isAdmin) {
       console.log(`Unauthorized delete attempt by ${walletAddress}`);
       return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
+        JSON.stringify({ error: "Unauthorized - admin access required" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -69,11 +106,16 @@ serve(async (req) => {
     }
 
     // Log the action
-    await supabase.from("admin_actions").insert({
+    console.log("Logging admin action");
+    const { error: logError } = await supabase.from("admin_actions").insert({
       action_type: "whitelist_deleted",
       wallet_address: walletAddress,
       details: { request_id: requestId, timestamp: new Date().toISOString() },
     });
+
+    if (logError) {
+      console.error("Error logging action:", logError);
+    }
 
     console.log(`Whitelist request ${requestId} deleted successfully`);
 
@@ -82,9 +124,9 @@ serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("Error in delete-whitelist function:", error);
+    console.error("Unhandled error in delete-whitelist function:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error?.message || "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
