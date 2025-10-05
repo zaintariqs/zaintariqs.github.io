@@ -250,22 +250,59 @@ export function RedeemSection() {
       <CardContent className="space-y-6">
         {!redemptionId ? (
           <>
-            {/* Amount Input */}
-            <div className="space-y-2">
-              <Label htmlFor="amount">Amount (PKRSC)</Label>
-              <Input
-                id="amount"
-                type="number"
-                placeholder="0.00"
-                value={formData.amount}
-                onChange={(e) => handleInputChange('amount', e.target.value)}
-                min="1"
-                step="0.01"
+            {/* Mode Toggle */}
+            <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+              <div className="space-y-0.5">
+                <Label htmlFor="use-existing-burn" className="text-base font-medium">
+                  I already burned PKRSC tokens
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Use this if your previous redemption was cancelled due to incorrect bank details
+                </p>
+              </div>
+              <Switch
+                id="use-existing-burn"
+                checked={useExistingBurn}
+                onCheckedChange={setUseExistingBurn}
               />
-              <p className="text-xs text-muted-foreground">
-                Minimum redemption: 100 PKRSC
-              </p>
             </div>
+
+            {useExistingBurn ? (
+              <>
+                {/* Burn Transaction Hash Input */}
+                <div className="space-y-2">
+                  <Label htmlFor="burnTxHash">Burn Transaction Hash</Label>
+                  <Input
+                    id="burnTxHash"
+                    placeholder="0x..."
+                    value={burnTxHash}
+                    onChange={(e) => setBurnTxHash(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Enter the transaction hash from your previous burn transaction
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Amount Input */}
+                <div className="space-y-2">
+                  <Label htmlFor="amount">Amount (PKRSC)</Label>
+                  <Input
+                    id="amount"
+                    type="number"
+                    placeholder="0.00"
+                    value={formData.amount}
+                    onChange={(e) => handleInputChange('amount', e.target.value)}
+                    min="1"
+                    step="0.01"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Minimum redemption: 100 PKRSC
+                  </p>
+                </div>
+              </>
+            )}
 
             {/* Bank Details */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -325,7 +362,7 @@ export function RedeemSection() {
               disabled={isSubmitting}
               className="w-full"
             >
-              {isSubmitting ? "Creating Request..." : "Create Redemption Request"}
+              {isSubmitting ? "Processing..." : useExistingBurn ? "Submit Redemption with Existing Burn" : "Create Redemption Request"}
             </Button>
           </>
         ) : (
