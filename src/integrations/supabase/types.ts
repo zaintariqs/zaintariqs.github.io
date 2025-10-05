@@ -94,37 +94,55 @@ export type Database = {
           amount_pkr: number
           created_at: string
           id: string
+          mint_transaction_hash: string | null
           payment_method: string
           phone_number: string
+          receipt_url: string | null
           rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
           status: string
+          submitted_at: string | null
           transaction_id: string | null
           updated_at: string
           user_id: string
+          user_transaction_id: string | null
         }
         Insert: {
           amount_pkr: number
           created_at?: string
           id?: string
+          mint_transaction_hash?: string | null
           payment_method: string
           phone_number: string
+          receipt_url?: string | null
           rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           status?: string
+          submitted_at?: string | null
           transaction_id?: string | null
           updated_at?: string
           user_id: string
+          user_transaction_id?: string | null
         }
         Update: {
           amount_pkr?: number
           created_at?: string
           id?: string
+          mint_transaction_hash?: string | null
           payment_method?: string
           phone_number?: string
+          receipt_url?: string | null
           rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           status?: string
+          submitted_at?: string | null
           transaction_id?: string | null
           updated_at?: string
           user_id?: string
+          user_transaction_id?: string | null
         }
         Relationships: []
       }

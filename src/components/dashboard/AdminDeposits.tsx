@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { CreditCard, Check, X } from 'lucide-react'
+import { CreditCard, Check, X, ExternalLink } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
 interface Deposit {
@@ -20,6 +20,10 @@ interface Deposit {
   phone_number: string
   status: string
   transaction_id?: string
+  user_transaction_id?: string
+  receipt_url?: string
+  submitted_at?: string
+  mint_transaction_hash?: string
   rejection_reason?: string
   created_at: string
   updated_at: string
@@ -32,8 +36,8 @@ export function AdminDeposits() {
   const [isLoading, setIsLoading] = useState(true)
   const [selectedDeposit, setSelectedDeposit] = useState<Deposit | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [actionType, setActionType] = useState<'complete' | 'reject'>('complete')
-  const [transactionId, setTransactionId] = useState('')
+  const [actionType, setActionType] = useState<'approve' | 'reject'>('approve')
+  const [mintTxHash, setMintTxHash] = useState('')
   const [rejectionReason, setRejectionReason] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -71,10 +75,10 @@ export function AdminDeposits() {
     fetchDeposits()
   }, [address])
 
-  const openDialog = (deposit: Deposit, type: 'complete' | 'reject') => {
+  const openDialog = (deposit: Deposit, type: 'approve' | 'reject') => {
     setSelectedDeposit(deposit)
     setActionType(type)
-    setTransactionId('')
+    setMintTxHash('')
     setRejectionReason('')
     setDialogOpen(true)
   }
@@ -82,10 +86,10 @@ export function AdminDeposits() {
   const handleSubmit = async () => {
     if (!selectedDeposit || !address) return
 
-    if (actionType === 'complete' && !transactionId.trim()) {
+    if (actionType === 'approve' && !mintTxHash.trim()) {
       toast({
         title: "Error",
-        description: "Transaction ID is required",
+        description: "Mint transaction hash is required",
         variant: "destructive",
       })
       return
@@ -104,27 +108,27 @@ export function AdminDeposits() {
 
     try {
       const response = await fetch(
-        'https://jdjreuxhvzmzockuduyq.supabase.co/functions/v1/admin-deposits',
+        'https://jdjreuxhvzmzockuduyq.supabase.co/functions/v1/approve-deposit',
         {
-          method: 'PATCH',
+          method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'x-wallet-address': address,
           },
           body: JSON.stringify({
             depositId: selectedDeposit.id,
-            status: actionType === 'complete' ? 'completed' : 'rejected',
-            transactionId: actionType === 'complete' ? transactionId : undefined,
+            action: actionType,
+            mintTxHash: actionType === 'approve' ? mintTxHash : undefined,
             rejectionReason: actionType === 'reject' ? rejectionReason : undefined,
           }),
         }
       )
 
-      if (!response.ok) throw new Error('Failed to update deposit')
+      if (!response.ok) throw new Error(`Failed to ${actionType} deposit`)
 
       toast({
         title: "Success",
-        description: `Deposit ${actionType === 'complete' ? 'completed' : 'rejected'} successfully`,
+        description: `Deposit ${actionType === 'approve' ? 'approved' : 'rejected'} successfully`,
       })
 
       setDialogOpen(false)
@@ -227,10 +231,10 @@ export function AdminDeposits() {
                             <Button
                               size="sm"
                               variant="default"
-                              onClick={() => openDialog(deposit, 'complete')}
+                              onClick={() => openDialog(deposit, 'approve')}
                             >
                               <Check className="h-4 w-4 mr-1" />
-                              Complete
+                              Approve
                             </Button>
                             <Button
                               size="sm"
@@ -266,19 +270,42 @@ export function AdminDeposits() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {actionType === 'complete' ? 'Complete Deposit' : 'Reject Deposit'}
+              {actionType === 'approve' ? 'Approve Deposit & Mint Tokens' : 'Reject Deposit'}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            {actionType === 'complete' ? (
+            {selectedDeposit && (
+              <div className="bg-muted/50 rounded-lg p-3 space-y-1">
+                <p className="text-sm">User: {selectedDeposit.user_id}</p>
+                <p className="text-sm">Amount: PKR {selectedDeposit.amount_pkr}</p>
+                {selectedDeposit.user_transaction_id && (
+                  <p className="text-sm">User TX ID: {selectedDeposit.user_transaction_id}</p>
+                )}
+                {selectedDeposit.receipt_url && (
+                  <a
+                    href={selectedDeposit.receipt_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-primary hover:underline flex items-center gap-2"
+                  >
+                    View Receipt
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
+              </div>
+            )}
+            {actionType === 'approve' ? (
               <div className="space-y-2">
-                <Label htmlFor="transactionId">Transaction ID</Label>
+                <Label htmlFor="mintTxHash">Mint Transaction Hash</Label>
                 <Input
-                  id="transactionId"
-                  placeholder="Enter bank transaction ID"
-                  value={transactionId}
-                  onChange={(e) => setTransactionId(e.target.value)}
+                  id="mintTxHash"
+                  placeholder="Enter PKRSC mint transaction hash (0x...)"
+                  value={mintTxHash}
+                  onChange={(e) => setMintTxHash(e.target.value)}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Mint {selectedDeposit?.amount_pkr} PKRSC to {selectedDeposit?.user_id}
+                </p>
               </div>
             ) : (
               <div className="space-y-2">

@@ -2,10 +2,15 @@ import { useEffect, useState } from 'react'
 import { useAccount } from 'wagmi'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
-import { CreditCard, ExternalLink } from 'lucide-react'
+import { CreditCard, ExternalLink, Upload } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { supabase } from '@/integrations/supabase/client'
 
 interface Deposit {
   id: string
@@ -14,6 +19,9 @@ interface Deposit {
   phone_number: string
   status: string
   transaction_id?: string
+  user_transaction_id?: string
+  receipt_url?: string
+  submitted_at?: string
   rejection_reason?: string
   created_at: string
   updated_at: string
@@ -24,42 +32,123 @@ export function MyDeposits() {
   const { toast } = useToast()
   const [deposits, setDeposits] = useState<Deposit[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [selectedDeposit, setSelectedDeposit] = useState<Deposit | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [transactionId, setTransactionId] = useState('')
+  const [receiptFile, setReceiptFile] = useState<File | null>(null)
+
+  const fetchDeposits = async () => {
+    if (!address) return
+
+    try {
+      const response = await fetch(
+        'https://jdjreuxhvzmzockuduyq.supabase.co/functions/v1/deposits',
+        {
+          method: 'GET',
+          headers: {
+            'x-wallet-address': address,
+          },
+        }
+      )
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch deposits')
+      }
+
+      const { data } = await response.json()
+      setDeposits(data || [])
+    } catch (error) {
+      console.error('Error fetching deposits:', error)
+      toast({
+        title: "Error",
+        description: "Failed to load deposit history",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   useEffect(() => {
-    const fetchDeposits = async () => {
-      if (!address) return
-
-      try {
-        const response = await fetch(
-          'https://jdjreuxhvzmzockuduyq.supabase.co/functions/v1/deposits',
-          {
-            method: 'GET',
-            headers: {
-              'x-wallet-address': address,
-            },
-          }
-        )
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch deposits')
-        }
-
-        const { data } = await response.json()
-        setDeposits(data || [])
-      } catch (error) {
-        console.error('Error fetching deposits:', error)
-        toast({
-          title: "Error",
-          description: "Failed to load deposit history",
-          variant: "destructive",
-        })
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
     fetchDeposits()
   }, [address, toast])
+
+  const handleSubmitProof = (deposit: Deposit) => {
+    setSelectedDeposit(deposit)
+    setTransactionId('')
+    setReceiptFile(null)
+    setDialogOpen(true)
+  }
+
+  const handleUploadProof = async () => {
+    if (!selectedDeposit || !transactionId || !receiptFile || !address) {
+      toast({
+        title: "Missing Information",
+        description: "Please provide both transaction ID and receipt",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsSubmitting(true)
+
+    try {
+      // Upload receipt to storage
+      const fileExt = receiptFile.name.split('.').pop()
+      const fileName = `${address}/${selectedDeposit.id}-${Date.now()}.${fileExt}`
+      
+      const { error: uploadError } = await supabase.storage
+        .from('deposit-receipts')
+        .upload(fileName, receiptFile)
+
+      if (uploadError) throw uploadError
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('deposit-receipts')
+        .getPublicUrl(fileName)
+
+      // Submit proof via edge function
+      const response = await fetch(
+        'https://jdjreuxhvzmzockuduyq.supabase.co/functions/v1/deposits',
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-wallet-address': address,
+          },
+          body: JSON.stringify({
+            depositId: selectedDeposit.id,
+            transactionId,
+            receiptUrl: publicUrl,
+          }),
+        }
+      )
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to submit proof')
+      }
+
+      toast({
+        title: "Success",
+        description: "Transaction proof submitted for review",
+      })
+
+      setDialogOpen(false)
+      fetchDeposits()
+    } catch (error) {
+      console.error('Error submitting proof:', error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to submit proof",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline", className: string }> = {
@@ -121,6 +210,7 @@ export function MyDeposits() {
                   <TableHead>Method</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Details</TableHead>
+                  <TableHead>Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -148,6 +238,23 @@ export function MyDeposits() {
                           {deposit.rejection_reason}
                         </div>
                       )}
+                      {deposit.submitted_at && (
+                        <div className="text-xs text-muted-foreground">
+                          Proof submitted
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {deposit.status === 'pending' && !deposit.submitted_at && (
+                        <Button
+                          size="sm"
+                          onClick={() => handleSubmitProof(deposit)}
+                          className="w-full"
+                        >
+                          <Upload className="h-3 w-3 mr-2" />
+                          Submit Proof
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -156,6 +263,55 @@ export function MyDeposits() {
           </div>
         )}
       </CardContent>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Submit Payment Proof</DialogTitle>
+          </DialogHeader>
+          {selectedDeposit && (
+            <div className="space-y-4 py-4">
+              <div className="bg-muted/50 rounded-lg p-3 space-y-1">
+                <p className="text-sm font-medium">Amount: PKR {selectedDeposit.amount_pkr}</p>
+                <p className="text-xs text-muted-foreground">
+                  Payment Method: {selectedDeposit.payment_method === 'easypaisa' ? 'EasyPaisa' : 'JazzCash'}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="transaction-id">Transaction ID</Label>
+                <Input
+                  id="transaction-id"
+                  placeholder="Enter your transaction ID"
+                  value={transactionId}
+                  onChange={(e) => setTransactionId(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="receipt">Payment Receipt</Label>
+                <Input
+                  id="receipt"
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={(e) => setReceiptFile(e.target.files?.[0] || null)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Upload a screenshot or photo of your payment receipt
+                </p>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={isSubmitting}>
+              Cancel
+            </Button>
+            <Button onClick={handleUploadProof} disabled={isSubmitting}>
+              {isSubmitting ? 'Uploading...' : 'Submit Proof'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   )
 }
