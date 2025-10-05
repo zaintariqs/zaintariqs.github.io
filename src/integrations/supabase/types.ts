@@ -208,7 +208,9 @@ export type Database = {
           account_number: string
           account_title: string
           bank_name: string
+          bank_transaction_id: string | null
           burn_address: string
+          cancellation_reason: string | null
           created_at: string
           id: string
           pkrsc_amount: number
@@ -221,7 +223,9 @@ export type Database = {
           account_number: string
           account_title: string
           bank_name: string
+          bank_transaction_id?: string | null
           burn_address?: string
+          cancellation_reason?: string | null
           created_at?: string
           id?: string
           pkrsc_amount: number
@@ -234,7 +238,9 @@ export type Database = {
           account_number?: string
           account_title?: string
           bank_name?: string
+          bank_transaction_id?: string | null
           burn_address?: string
+          cancellation_reason?: string | null
           created_at?: string
           id?: string
           pkrsc_amount?: number
