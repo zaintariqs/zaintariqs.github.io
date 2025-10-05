@@ -15,6 +15,7 @@ import { supportedChains } from '@/lib/web3-config'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Cell, Pie } from 'recharts'
 import { supabase } from '@/integrations/supabase/client'
 import { BankReserves } from './BankReserves'
+import { AdminWalletManagement } from './AdminWalletManagement'
 
 const MASTER_MINTER_ADDRESS = '0x5be080f81552c2495B288c04D2B64b9F7A4A9F3F'
 const PKRSC_CONTRACT_ADDRESS = '0x1f192CB7B36d7acfBBdCA1E0C1d697361508F9D5'
@@ -1049,6 +1050,10 @@ ${Object.entries(blacklistedAddresses.reduce((acc, entry) => {
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* Admin Wallet Management */}
+      <AdminWalletManagement />
+
       </CardContent>
     </Card>
   )

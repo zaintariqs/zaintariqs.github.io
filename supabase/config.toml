@@ -3,6 +3,9 @@ project_id = "jdjreuxhvzmzockuduyq"
 [functions.market-maker]
 verify_jwt = true
 
+[functions.manage-admin-wallets]
+verify_jwt = false
+
 [functions.redemptions]
 verify_jwt = false
 

@@ -76,6 +76,28 @@ Deno.serve(async (req) => {
 
     console.log('Admin verified:', walletAddress)
 
+    // Check for suspicious activity (circuit breaker)
+    const { data: recentFailures } = await supabase
+      .from('market_maker_transactions')
+      .select('*')
+      .eq('status', 'failed')
+      .gte('created_at', new Date(Date.now() - 3600000).toISOString()) // Last hour
+      .order('created_at', { ascending: false })
+
+    if (recentFailures && recentFailures.length >= 3) {
+      console.error('Circuit breaker triggered: Too many recent failures')
+      await supabase.from('admin_actions').insert({
+        wallet_address: walletAddress,
+        action_type: 'MARKET_MAKER_CIRCUIT_BREAKER',
+        details: { reason: 'Too many failed transactions in last hour', failures: recentFailures.length }
+      })
+      
+      return new Response(
+        JSON.stringify({ error: 'Market maker circuit breaker activated due to recent failures' }),
+        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     // Fetch bot configuration
     const { data: config, error: configError } = await supabase
       .from('market_maker_config')
@@ -250,6 +272,20 @@ Deno.serve(async (req) => {
         last_trade_at: new Date().toISOString()
       }).eq('id', config.id)
 
+      // Log successful trade to admin actions for monitoring
+      await supabase.from('admin_actions').insert({
+        wallet_address: walletAddress,
+        action_type: 'MARKET_MAKER_TRADE',
+        details: {
+          action,
+          txHash,
+          amountUsdt: tradeAmountUsdt,
+          amountPkrsc: amountPkrsc,
+          price: currentPrice,
+          success: true
+        }
+      })
+
       return new Response(JSON.stringify({ 
         success: true,
         action,
@@ -278,6 +314,18 @@ Deno.serve(async (req) => {
       await supabase.from('market_maker_config').update({
         status: 'error'
       }).eq('id', config.id)
+
+      // Alert admins of failure
+      await supabase.from('admin_actions').insert({
+        wallet_address: walletAddress,
+        action_type: 'MARKET_MAKER_TRADE_FAILED',
+        details: {
+          error: tradeError instanceof Error ? tradeError.message : 'Unknown error',
+          action: shouldBuy ? 'BUY' : 'SELL',
+          amountUsdt: tradeAmountUsdt,
+          price: currentPrice
+        }
+      })
 
       throw tradeError
     }

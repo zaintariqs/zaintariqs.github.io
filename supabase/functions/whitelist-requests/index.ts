@@ -6,6 +6,33 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-wallet-address",
 };
 
+// Rate limiting configuration
+const RATE_LIMIT_MS = 60000; // 1 minute
+const rateLimitMap = new Map<string, number>();
+
+function checkRateLimit(identifier: string): boolean {
+  const now = Date.now();
+  const lastRequest = rateLimitMap.get(identifier);
+  
+  if (lastRequest && now - lastRequest < RATE_LIMIT_MS) {
+    return false;
+  }
+  
+  rateLimitMap.set(identifier, now);
+  
+  // Clean up old entries
+  if (rateLimitMap.size > 10000) {
+    const cutoff = now - RATE_LIMIT_MS * 2;
+    for (const [key, timestamp] of rateLimitMap.entries()) {
+      if (timestamp < cutoff) {
+        rateLimitMap.delete(key);
+      }
+    }
+  }
+  
+  return true;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -66,6 +93,18 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({ error: "Wallet address and email are required" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Rate limiting by wallet address and IP
+      const clientIp = req.headers.get("x-forwarded-for") || "unknown";
+      const rateLimitKey = `${walletAddress.toLowerCase()}-${clientIp}`;
+      
+      if (!checkRateLimit(rateLimitKey)) {
+        console.log(`Rate limit exceeded for ${rateLimitKey}`);
+        return new Response(
+          JSON.stringify({ error: "Too many requests. Please try again in 1 minute." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 

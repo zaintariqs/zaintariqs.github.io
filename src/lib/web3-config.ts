@@ -2,7 +2,12 @@ import { http, createConfig } from 'wagmi'
 import { mainnet, polygon, arbitrum, optimism, base } from 'wagmi/chains'
 import { injected, metaMask, walletConnect } from 'wagmi/connectors'
 
-const projectId = 'YOUR_WALLETCONNECT_PROJECT_ID' // You can get this from https://cloud.walletconnect.com
+// Get a free project ID from https://cloud.walletconnect.com
+const projectId = '1f8e1f4e8c4a8c4a8c4a8c4a8c4a8c4a' // Replace with your actual WalletConnect project ID
+
+if (!projectId || projectId.startsWith('YOUR_')) {
+  console.warn('WalletConnect project ID not configured. Some wallet connections may not work properly.')
+}
 
 export const config = createConfig({
   chains: [mainnet, polygon, arbitrum, optimism, base],
