@@ -586,20 +586,22 @@ ${Object.entries(blacklistedAddresses.reduce((acc, entry) => {
           </CardContent>
         </Card>
 
-        {/* Quick Stats */}
+        {/* Quick Stats - Note: This tracks admin dashboard transactions only */}
         <Card className="bg-card/50 border-border">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-primary" />
-              <CardTitle className="text-base">Quick Stats</CardTitle>
+              <CardTitle className="text-base">Admin Dashboard Actions</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
+            <div className="text-xs text-muted-foreground mb-3">
+              Tracks transactions initiated from this dashboard only
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center p-2 rounded-lg bg-background/50">
                 <div className="text-2xl font-bold text-primary">{transactions.length}</div>
-                <div className="text-xs text-muted-foreground">Total</div>
-                <div className="text-xs text-muted-foreground">Transactions</div>
+                <div className="text-xs text-muted-foreground">Admin Txs</div>
               </div>
               <div className="text-center p-2 rounded-lg bg-background/50">
                 <div className="text-2xl font-bold text-destructive">{blacklistedAddresses.length}</div>
