@@ -181,18 +181,30 @@ export function WhitelistingRequests() {
     if (!address) return
 
     const confirmed = window.confirm(
-      `Are you sure you want to delete the whitelist request for ${request.email}?`
+      `Are you sure you want to delete the whitelist request for ${request.email}? This will permanently remove them from the system.`
     )
     if (!confirmed) return
 
     setProcessingId(request.id)
     try {
-      const { error } = await supabase
-        .from('whitelist_requests')
-        .delete()
-        .eq('id', request.id)
+      const response = await fetch(
+        'https://jdjreuxhvzmzockuduyq.supabase.co/functions/v1/delete-whitelist',
+        {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-wallet-address': address,
+          },
+          body: JSON.stringify({
+            requestId: request.id,
+          }),
+        }
+      )
 
-      if (error) throw error
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to delete request')
+      }
 
       toast({
         title: "Success",
@@ -204,7 +216,7 @@ export function WhitelistingRequests() {
       console.error('Error deleting request:', error)
       toast({
         title: "Error",
-        description: error.message || 'Failed to delete whitelist request',
+        description: error.message,
         variant: "destructive"
       })
     } finally {
