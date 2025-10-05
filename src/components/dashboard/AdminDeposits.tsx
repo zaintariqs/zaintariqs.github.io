@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { CreditCard, Check, X, ExternalLink } from 'lucide-react'
+import { CreditCard, Check, X, ExternalLink, Eye } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
 interface Deposit {
@@ -75,9 +75,9 @@ export function AdminDeposits() {
     fetchDeposits()
   }, [address])
 
-  const openDialog = (deposit: Deposit, type: 'approve' | 'reject') => {
+  const openDialog = (deposit: Deposit, type: 'approve' | 'reject' | 'view') => {
     setSelectedDeposit(deposit)
-    setActionType(type)
+    setActionType(type as 'approve' | 'reject')
     setMintTxHash('')
     setRejectionReason('')
     setDialogOpen(true)
@@ -226,36 +226,51 @@ export function AdminDeposits() {
                       <TableCell>{deposit.phone_number}</TableCell>
                       <TableCell>{getStatusBadge(deposit.status)}</TableCell>
                       <TableCell>
-                        {(deposit.status === 'pending' || deposit.status === 'processing') && (
-                          <div className="flex gap-2">
+                        <div className="flex flex-col gap-2">
+                          {deposit.receipt_url && (
                             <Button
                               size="sm"
-                              variant="default"
-                              onClick={() => openDialog(deposit, 'approve')}
+                              variant="outline"
+                              onClick={() => openDialog(deposit, 'view')}
+                              className="w-full"
                             >
-                              <Check className="h-4 w-4 mr-1" />
-                              Approve
+                              <Eye className="h-4 w-4 mr-1" />
+                              View Proof
                             </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => openDialog(deposit, 'reject')}
-                            >
-                              <X className="h-4 w-4 mr-1" />
-                              Reject
-                            </Button>
-                          </div>
-                        )}
-                        {deposit.status === 'completed' && deposit.transaction_id && (
-                          <span className="text-xs text-muted-foreground font-mono">
-                            {deposit.transaction_id}
-                          </span>
-                        )}
-                        {deposit.status === 'rejected' && deposit.rejection_reason && (
-                          <span className="text-xs text-muted-foreground">
-                            {deposit.rejection_reason}
-                          </span>
-                        )}
+                          )}
+                          {(deposit.status === 'pending' || deposit.status === 'processing') && (
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="default"
+                                onClick={() => openDialog(deposit, 'approve')}
+                                className="flex-1"
+                              >
+                                <Check className="h-4 w-4 mr-1" />
+                                Approve
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => openDialog(deposit, 'reject')}
+                                className="flex-1"
+                              >
+                                <X className="h-4 w-4 mr-1" />
+                                Reject
+                              </Button>
+                            </div>
+                          )}
+                          {deposit.status === 'completed' && deposit.transaction_id && (
+                            <span className="text-xs text-muted-foreground font-mono">
+                              {deposit.transaction_id}
+                            </span>
+                          )}
+                          {deposit.status === 'rejected' && deposit.rejection_reason && (
+                            <span className="text-xs text-muted-foreground">
+                              {deposit.rejection_reason}
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -270,7 +285,11 @@ export function AdminDeposits() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {actionType === 'approve' ? 'Approve Deposit & Mint Tokens' : 'Reject Deposit'}
+              {actionType === 'approve' 
+                ? 'Approve Deposit & Mint Tokens' 
+                : actionType === 'reject' 
+                ? 'Reject Deposit'
+                : 'View Payment Proof'}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -336,11 +355,13 @@ export function AdminDeposits() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={isSubmitting}>
-              Cancel
+              {actionType === 'approve' || actionType === 'reject' ? 'Cancel' : 'Close'}
             </Button>
-            <Button onClick={handleSubmit} disabled={isSubmitting}>
-              {isSubmitting ? 'Submitting...' : 'Submit'}
-            </Button>
+            {(actionType === 'approve' || actionType === 'reject') && (
+              <Button onClick={handleSubmit} disabled={isSubmitting}>
+                {isSubmitting ? 'Submitting...' : 'Submit'}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
