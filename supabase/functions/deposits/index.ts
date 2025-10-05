@@ -33,7 +33,7 @@ serve(async (req) => {
       const { data, error } = await supabase
         .from('deposits')
         .select('*')
-        .eq('user_id', walletAddress)
+        .eq('user_id', walletAddress.toLowerCase())
         .order('created_at', { ascending: false })
 
       if (error) {
@@ -67,7 +67,7 @@ serve(async (req) => {
       const { data, error } = await supabase
         .from('deposits')
         .insert({
-          user_id: walletAddress,
+          user_id: walletAddress.toLowerCase(),
           amount_pkr: amount,
           payment_method: paymentMethod,
           phone_number: phoneNumber,
