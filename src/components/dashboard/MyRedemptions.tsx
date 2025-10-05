@@ -12,6 +12,7 @@ interface Redemption {
   pkrsc_amount: number
   status: string
   transaction_hash?: string
+  bank_transaction_id?: string
   bank_name: string
   account_number: string
   account_title: string
@@ -136,7 +137,8 @@ export function MyRedemptions() {
                   <TableHead>Amount</TableHead>
                   <TableHead>Bank</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Transaction</TableHead>
+                  <TableHead>Burn TX</TableHead>
+                  <TableHead>Bank TX ID</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -156,7 +158,7 @@ export function MyRedemptions() {
                     </TableCell>
                     <TableCell>{getStatusBadge(redemption.status)}</TableCell>
                     <TableCell>
-                      {redemption.status === 'completed' && redemption.transaction_hash && (
+                      {redemption.transaction_hash && (
                         <a
                           href={`https://basescan.org/tx/${redemption.transaction_hash}`}
                           target="_blank"
@@ -169,18 +171,17 @@ export function MyRedemptions() {
                           <ExternalLink className="h-3 w-3" />
                         </a>
                       )}
-                      {['burn_confirmed', 'processing_transfer'].includes(redemption.status) && redemption.transaction_hash && (
-                        <a
-                          href={`https://basescan.org/tx/${redemption.transaction_hash}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 text-muted-foreground hover:text-primary"
-                        >
-                          <span className="text-xs font-mono">
-                            {redemption.transaction_hash.slice(0, 8)}...
-                          </span>
-                          <ExternalLink className="h-3 w-3" />
-                        </a>
+                    </TableCell>
+                    <TableCell>
+                      {redemption.status === 'completed' && redemption.bank_transaction_id && (
+                        <span className="text-sm font-mono text-green-600 dark:text-green-400">
+                          {redemption.bank_transaction_id}
+                        </span>
+                      )}
+                      {redemption.status === 'rejected' && redemption.cancellation_reason && (
+                        <span className="text-xs text-muted-foreground">
+                          {redemption.cancellation_reason}
+                        </span>
                       )}
                     </TableCell>
                   </TableRow>
