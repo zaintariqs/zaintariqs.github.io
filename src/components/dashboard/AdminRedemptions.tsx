@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { Banknote, Check, X, ExternalLink } from 'lucide-react'
+import { RefreshCw, Banknote, Check, X, ExternalLink } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
 interface Redemption {
@@ -211,10 +211,21 @@ export function AdminRedemptions() {
     <>
       <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Banknote className="h-5 w-5 text-primary" />
-            All Redemptions
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Banknote className="h-5 w-5 text-primary" />
+              All Redemptions
+            </CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchRedemptions()}
+              disabled={isLoading}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {redemptions.length === 0 ? (
@@ -334,14 +345,13 @@ export function AdminRedemptions() {
                   <Label htmlFor="burnTransactionHash">Burned PKRSC Transaction Hash</Label>
                   <Input
                     id="burnTransactionHash"
-                    placeholder="0x..."
+                    placeholder="0x... (enter manually if not auto-filled)"
                     value={burnTransactionHash}
                     onChange={(e) => setBurnTransactionHash(e.target.value)}
-                    readOnly
-                    className="bg-muted"
+                    className={!burnTransactionHash ? 'border-yellow-500' : ''}
                   />
                   <p className="text-xs text-muted-foreground">
-                    {burnTransactionHash ? 'Auto-filled from redemption request' : 'No burn transaction found'}
+                    {burnTransactionHash ? 'Auto-filled from redemption request' : 'Transaction hash not found - please enter manually'}
                   </p>
                 </div>
                 <div className="space-y-2">
