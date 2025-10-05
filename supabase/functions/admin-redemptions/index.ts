@@ -84,7 +84,7 @@ serve(async (req) => {
         )
       }
 
-      const validStatuses = ['pending', 'waiting_for_burn', 'burn_confirmed', 'processing_transfer', 'completed', 'rejected']
+      const validStatuses = ['pending', 'waiting_for_burn', 'burn_confirmed', 'processing_transfer', 'completed', 'cancelled']
       if (!validStatuses.includes(status)) {
         return new Response(
           JSON.stringify({ error: 'Invalid status' }),
@@ -100,9 +100,9 @@ serve(async (req) => {
         )
       }
 
-      if (status === 'rejected' && !cancellationReason) {
+      if (status === 'cancelled' && !cancellationReason) {
         return new Response(
-          JSON.stringify({ error: 'Cancellation reason required when rejecting redemptions' }),
+          JSON.stringify({ error: 'Cancellation reason required when cancelling redemptions' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }

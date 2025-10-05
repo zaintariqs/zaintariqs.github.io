@@ -70,7 +70,6 @@ export function MyRedemptions() {
       burn_confirmed: 'Burn Confirmed',
       processing_transfer: 'Processing Transfer',
       completed: 'Completed',
-      rejected: 'Rejected',
       cancelled: 'Cancelled'
     }
 
@@ -80,7 +79,6 @@ export function MyRedemptions() {
       burn_confirmed: { variant: "secondary", className: "bg-blue-500/10 text-blue-500 border-blue-500/20" },
       processing_transfer: { variant: "secondary", className: "bg-blue-500/10 text-blue-500 border-blue-500/20" },
       completed: { variant: "default", className: "bg-green-500/10 text-green-500 border-green-500/20" },
-      rejected: { variant: "destructive", className: "" },
       cancelled: { variant: "outline", className: "" },
     }
 
@@ -178,7 +176,7 @@ export function MyRedemptions() {
                           {redemption.bank_transaction_id}
                         </span>
                       )}
-                      {redemption.status === 'rejected' && redemption.cancellation_reason && (
+                      {redemption.status === 'cancelled' && redemption.cancellation_reason && (
                         <span className="text-xs text-muted-foreground">
                           {redemption.cancellation_reason}
                         </span>

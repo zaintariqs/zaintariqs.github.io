@@ -127,13 +127,13 @@ export function AdminRedemptions() {
             'Content-Type': 'application/json',
             'x-wallet-address': address,
           },
-          body: JSON.stringify({
-            redemptionId: selectedRedemption.id,
-            status: actionType === 'complete' ? 'completed' : 'rejected',
-            bankTransactionId: actionType === 'complete' ? bankTransactionId : undefined,
-            cancellationReason: actionType === 'cancel' ? cancellationReason : undefined,
-            burnTransactionHash: actionType === 'cancel' ? burnTransactionHash : undefined,
-          }),
+            body: JSON.stringify({
+              redemptionId: selectedRedemption.id,
+              status: actionType === 'complete' ? 'completed' : 'cancelled',
+              bankTransactionId: actionType === 'complete' ? bankTransactionId : undefined,
+              cancellationReason: actionType === 'cancel' ? cancellationReason : undefined,
+              burnTransactionHash: actionType === 'cancel' ? burnTransactionHash : undefined,
+            }),
         }
       )
 
@@ -159,23 +159,23 @@ export function AdminRedemptions() {
   }
 
   const getStatusBadge = (status: string) => {
-    const statusLabels: Record<string, string> = {
-      pending: 'Pending',
-      waiting_for_burn: 'Waiting for Burn',
-      burn_confirmed: 'Burn Confirmed',
-      processing_transfer: 'Processing Transfer',
-      completed: 'Completed',
-      rejected: 'Rejected'
-    }
+      const statusLabels: Record<string, string> = {
+        pending: 'Pending',
+        waiting_for_burn: 'Waiting for Burn',
+        burn_confirmed: 'Burn Confirmed',
+        processing_transfer: 'Processing Transfer',
+        completed: 'Completed',
+        cancelled: 'Cancelled'
+      }
 
-    const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline", className: string }> = {
-      pending: { variant: "secondary", className: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" },
-      waiting_for_burn: { variant: "secondary", className: "bg-orange-500/10 text-orange-500 border-orange-500/20" },
-      burn_confirmed: { variant: "secondary", className: "bg-blue-500/10 text-blue-500 border-blue-500/20" },
-      processing_transfer: { variant: "secondary", className: "bg-blue-500/10 text-blue-500 border-blue-500/20" },
-      completed: { variant: "default", className: "bg-green-500/10 text-green-500 border-green-500/20" },
-      rejected: { variant: "destructive", className: "bg-red-500/10 text-red-500 border-red-500/20" },
-    }
+      const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline", className: string }> = {
+        pending: { variant: "secondary", className: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" },
+        waiting_for_burn: { variant: "secondary", className: "bg-orange-500/10 text-orange-500 border-orange-500/20" },
+        burn_confirmed: { variant: "secondary", className: "bg-blue-500/10 text-blue-500 border-blue-500/20" },
+        processing_transfer: { variant: "secondary", className: "bg-blue-500/10 text-blue-500 border-blue-500/20" },
+        completed: { variant: "default", className: "bg-green-500/10 text-green-500 border-green-500/20" },
+        cancelled: { variant: "destructive", className: "bg-red-500/10 text-red-500 border-red-500/20" },
+      }
 
     const config = variants[status] || variants.pending
     const label = statusLabels[status] || status.charAt(0).toUpperCase() + status.slice(1)
@@ -306,7 +306,7 @@ export function AdminRedemptions() {
                             {redemption.bank_transaction_id}
                           </span>
                         )}
-                        {redemption.status === 'rejected' && redemption.cancellation_reason && (
+                        {redemption.status === 'cancelled' && redemption.cancellation_reason && (
                           <span className="text-xs text-muted-foreground">
                             {redemption.cancellation_reason}
                           </span>
