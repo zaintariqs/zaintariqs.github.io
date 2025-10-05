@@ -106,6 +106,12 @@ export function MyRedemptions() {
       r => r.transaction_hash === redemption.transaction_hash
     )
 
+    // Don't allow resubmit if any redemption with this hash is already completed
+    const hasCompletedRedemption = sameHashRedemptions.some(r => r.status === 'completed')
+    if (hasCompletedRedemption) {
+      return false
+    }
+
     // Sort by created_at descending (most recent first)
     const sortedByDate = sameHashRedemptions.sort(
       (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -361,7 +367,9 @@ export function MyRedemptions() {
                             </Button>
                           ) : redemption.transaction_hash && (
                             <p className="text-xs text-muted-foreground italic">
-                              Resubmitted (see newer entry)
+                              {redemptions.some(r => r.transaction_hash === redemption.transaction_hash && r.status === 'completed')
+                                ? 'Completed (see completed entry)'
+                                : 'Resubmitted (see newer entry)'}
                             </p>
                           )}
                         </div>
