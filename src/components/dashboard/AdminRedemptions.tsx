@@ -270,7 +270,7 @@ export function AdminRedemptions() {
                         )}
                       </TableCell>
                       <TableCell>
-                        {redemption.status === 'pending' && (
+                        {['pending', 'burn_confirmed', 'waiting_for_burn'].includes(redemption.status) && (
                           <div className="flex gap-2">
                             <Button
                               size="sm"
