@@ -4,7 +4,6 @@ import { parseUnits } from 'viem'
 import { base } from 'wagmi/chains'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -40,8 +39,6 @@ export function RedeemSection() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [pendingTxHash, setPendingTxHash] = useState<string | null>(null)
   const [redemptionId, setRedemptionId] = useState<string | null>(null)
-  const [useExistingBurn, setUseExistingBurn] = useState(false)
-  const [burnTxHash, setBurnTxHash] = useState('')
 
   const burnAddress = '0x000000000000000000000000000000000000dEaD'
   const PKRSC_TOKEN_ADDRESS = '0x1f192CB7B36d7acfBBdCA1E0C1d697361508F9D5'
@@ -111,11 +108,10 @@ export function RedeemSection() {
   }, [isTxConfirmed, pendingTxHash, redemptionId, address, signMessageAsync, toast])
 
   const handleSubmitRedemption = async () => {
-    // Validate inputs depending on mode
-    if (!formData.bankName || !formData.accountNumber || !formData.accountTitle || (!useExistingBurn && !formData.amount) || (useExistingBurn && !burnTxHash)) {
+    if (!formData.amount || !formData.bankName || !formData.accountNumber || !formData.accountTitle) {
       toast({
         title: "Missing Information",
-        description: useExistingBurn ? "Please provide bank details and the burn transaction hash" : "Please provide amount and bank details",
+        description: "Please fill in all required fields",
         variant: "destructive",
       })
       return
@@ -142,20 +138,6 @@ export function RedeemSection() {
         message 
       })
       
-      // Build request body
-      const requestBody: any = {
-        walletAddress: address,
-        bankName: formData.bankName,
-        accountNumber: formData.accountNumber,
-        accountTitle: formData.accountTitle,
-      }
-
-      if (useExistingBurn) {
-        requestBody.existingBurnTx = burnTxHash
-      } else {
-        requestBody.pkrscAmount = parseFloat(formData.amount)
-      }
-
       // Call the secure edge function with cryptographic proof of wallet ownership
       const response = await fetch(
         'https://jdjreuxhvzmzockuduyq.supabase.co/functions/v1/redemptions',
@@ -167,7 +149,13 @@ export function RedeemSection() {
             'x-wallet-signature': signature,
             'x-signature-message': btoa(message),
           },
-          body: JSON.stringify(requestBody),
+          body: JSON.stringify({
+            walletAddress: address,
+            pkrscAmount: parseFloat(formData.amount),
+            bankName: formData.bankName,
+            accountNumber: formData.accountNumber,
+            accountTitle: formData.accountTitle,
+          }),
         }
       )
 
@@ -179,32 +167,27 @@ export function RedeemSection() {
       const { data } = await response.json()
       setRedemptionId(data.id)
 
-      if (useExistingBurn) {
-        setPendingTxHash(burnTxHash as `0x${string}`)
-        toast({ title: 'Redemption Created', description: 'Existing burn verified. We will process your bank transfer soon.' })
-      } else {
-        toast({
-          title: "Redemption Request Created",
-          description: "Initiating burn transaction...",
-        })
+      toast({
+        title: "Redemption Request Created",
+        description: "Initiating burn transaction...",
+      })
 
-        // Automatically execute the burn transaction
-        const txHash = await writeContractAsync({
-          address: PKRSC_TOKEN_ADDRESS as `0x${string}`,
-          abi: ERC20_ABI,
-          functionName: 'transfer',
-          args: [burnAddress as `0x${string}`, parseUnits(formData.amount, 6)],
-          account: address,
-          chain: base,
-        })
+      // Automatically execute the burn transaction
+      const txHash = await writeContractAsync({
+        address: PKRSC_TOKEN_ADDRESS as `0x${string}`,
+        abi: ERC20_ABI,
+        functionName: 'transfer',
+        args: [burnAddress as `0x${string}`, parseUnits(formData.amount, 6)],
+        account: address,
+        chain: base,
+      })
 
-        setPendingTxHash(txHash)
-        
-        toast({
-          title: "Transaction Submitted",
-          description: "Waiting for confirmation on the blockchain...",
-        })
-      }
+      setPendingTxHash(txHash)
+      
+      toast({
+        title: "Transaction Submitted",
+        description: "Waiting for confirmation on the blockchain...",
+      })
 
     } catch (error) {
       console.error('Error creating redemption:', error)
@@ -250,59 +233,22 @@ export function RedeemSection() {
       <CardContent className="space-y-6">
         {!redemptionId ? (
           <>
-            {/* Mode Toggle */}
-            <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-              <div className="space-y-0.5">
-                <Label htmlFor="use-existing-burn" className="text-base font-medium">
-                  I already burned PKRSC tokens
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Use this if your previous redemption was cancelled due to incorrect bank details
-                </p>
-              </div>
-              <Switch
-                id="use-existing-burn"
-                checked={useExistingBurn}
-                onCheckedChange={setUseExistingBurn}
+            {/* Amount Input */}
+            <div className="space-y-2">
+              <Label htmlFor="amount">Amount (PKRSC)</Label>
+              <Input
+                id="amount"
+                type="number"
+                placeholder="0.00"
+                value={formData.amount}
+                onChange={(e) => handleInputChange('amount', e.target.value)}
+                min="1"
+                step="0.01"
               />
+              <p className="text-xs text-muted-foreground">
+                Minimum redemption: 100 PKRSC
+              </p>
             </div>
-
-            {useExistingBurn ? (
-              <>
-                {/* Burn Transaction Hash Input */}
-                <div className="space-y-2">
-                  <Label htmlFor="burnTxHash">Burn Transaction Hash</Label>
-                  <Input
-                    id="burnTxHash"
-                    placeholder="0x..."
-                    value={burnTxHash}
-                    onChange={(e) => setBurnTxHash(e.target.value)}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Enter the transaction hash from your previous burn transaction
-                  </p>
-                </div>
-              </>
-            ) : (
-              <>
-                {/* Amount Input */}
-                <div className="space-y-2">
-                  <Label htmlFor="amount">Amount (PKRSC)</Label>
-                  <Input
-                    id="amount"
-                    type="number"
-                    placeholder="0.00"
-                    value={formData.amount}
-                    onChange={(e) => handleInputChange('amount', e.target.value)}
-                    min="1"
-                    step="0.01"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Minimum redemption: 100 PKRSC
-                  </p>
-                </div>
-              </>
-            )}
 
             {/* Bank Details */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -362,7 +308,7 @@ export function RedeemSection() {
               disabled={isSubmitting}
               className="w-full"
             >
-              {isSubmitting ? "Processing..." : useExistingBurn ? "Submit Redemption with Existing Burn" : "Create Redemption Request"}
+              {isSubmitting ? "Creating Request..." : "Create Redemption Request"}
             </Button>
           </>
         ) : (

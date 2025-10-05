@@ -1,10 +1,15 @@
 import { useEffect, useState } from 'react'
-import { useAccount } from 'wagmi'
+import { useAccount, useSignMessage } from 'wagmi'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Banknote, ExternalLink } from 'lucide-react'
+import { Banknote, ExternalLink, RefreshCcw } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
 interface Redemption {
@@ -23,9 +28,147 @@ interface Redemption {
 
 export function MyRedemptions() {
   const { address } = useAccount()
+  const { signMessageAsync } = useSignMessage()
   const { toast } = useToast()
   const [redemptions, setRedemptions] = useState<Redemption[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [selectedRedemption, setSelectedRedemption] = useState<Redemption | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [formData, setFormData] = useState({
+    bankName: '',
+    accountNumber: '',
+    accountTitle: ''
+  })
+
+  const pakistaniBanks = [
+    'HBL Bank',
+    'UBL Bank',
+    'Meezan Bank',
+    'Bank Alfalah',
+    'MCB Bank',
+    'Faysal Bank',
+    'Standard Chartered',
+    'Habib Metro Bank',
+    'Soneri Bank',
+    'Bank Al Habib',
+    'JS Bank',
+    'Askari Bank',
+    'BOP Bank',
+    'NBP Bank',
+    'Allied Bank'
+  ]
+
+  useEffect(() => {
+    fetchRedemptions()
+  }, [address, toast])
+
+  const fetchRedemptions = async () => {
+    if (!address) return
+
+    try {
+      const response = await fetch(
+        'https://jdjreuxhvzmzockuduyq.supabase.co/functions/v1/redemptions',
+        {
+          method: 'GET',
+          headers: {
+            'x-wallet-address': address,
+          },
+        }
+      )
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch redemptions')
+      }
+
+      const { data } = await response.json()
+      setRedemptions(data || [])
+    } catch (error) {
+      console.error('Error fetching redemptions:', error)
+      toast({
+        title: "Error",
+        description: "Failed to load redemption history",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleResubmit = (redemption: Redemption) => {
+    setSelectedRedemption(redemption)
+    setFormData({
+      bankName: '',
+      accountNumber: '',
+      accountTitle: ''
+    })
+    setDialogOpen(true)
+  }
+
+  const handleSubmitResubmission = async () => {
+    if (!formData.bankName || !formData.accountNumber || !formData.accountTitle || !selectedRedemption || !address) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all bank details",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsSubmitting(true)
+
+    try {
+      const timestamp = Date.now()
+      const message = `PKRSC Redemption Authentication\nWallet: ${address}\nTimestamp: ${timestamp}`
+      
+      const signature = await signMessageAsync({ 
+        account: address,
+        message 
+      })
+
+      const response = await fetch(
+        'https://jdjreuxhvzmzockuduyq.supabase.co/functions/v1/redemptions',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-wallet-address': address,
+            'x-wallet-signature': signature,
+            'x-signature-message': btoa(message),
+          },
+          body: JSON.stringify({
+            walletAddress: address,
+            existingBurnTx: selectedRedemption.transaction_hash,
+            bankName: formData.bankName,
+            accountNumber: formData.accountNumber,
+            accountTitle: formData.accountTitle,
+          }),
+        }
+      )
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to create redemption')
+      }
+
+      toast({
+        title: "Success",
+        description: "Redemption request submitted with corrected bank details",
+      })
+
+      setDialogOpen(false)
+      fetchRedemptions()
+    } catch (error) {
+      console.error('Error resubmitting redemption:', error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to submit redemption",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   useEffect(() => {
     const fetchRedemptions = async () => {
@@ -176,10 +319,25 @@ export function MyRedemptions() {
                           {redemption.bank_transaction_id}
                         </span>
                       )}
-                      {redemption.status === 'cancelled' && redemption.cancellation_reason && (
-                        <span className="text-xs text-muted-foreground">
-                          {redemption.cancellation_reason}
-                        </span>
+                      {redemption.status === 'cancelled' && (
+                        <div className="space-y-2">
+                          {redemption.cancellation_reason && (
+                            <p className="text-xs text-muted-foreground">
+                              {redemption.cancellation_reason}
+                            </p>
+                          )}
+                          {redemption.transaction_hash && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleResubmit(redemption)}
+                              className="w-full"
+                            >
+                              <RefreshCcw className="h-3 w-3 mr-2" />
+                              Resubmit with Correct Details
+                            </Button>
+                          )}
+                        </div>
                       )}
                     </TableCell>
                   </TableRow>
@@ -189,6 +347,74 @@ export function MyRedemptions() {
           </div>
         )}
       </CardContent>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Resubmit Redemption with Correct Bank Details</DialogTitle>
+          </DialogHeader>
+          {selectedRedemption && (
+            <div className="space-y-4 py-4">
+              <div className="bg-muted/50 rounded-lg p-3 space-y-1">
+                <p className="text-sm font-medium">Amount: {selectedRedemption.pkrsc_amount} PKRSC</p>
+                <p className="text-xs text-muted-foreground">
+                  Burn TX: {selectedRedemption.transaction_hash?.slice(0, 10)}...
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Your tokens are already burned. Just provide correct bank details.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="resubmit-bankName">Bank Name</Label>
+                <Select 
+                  value={formData.bankName} 
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, bankName: value }))}
+                >
+                  <SelectTrigger id="resubmit-bankName">
+                    <SelectValue placeholder="Select your bank" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {pakistaniBanks.map((bank) => (
+                      <SelectItem key={bank} value={bank}>
+                        {bank}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="resubmit-accountNumber">Account Number</Label>
+                <Input
+                  id="resubmit-accountNumber"
+                  placeholder="Enter account number"
+                  value={formData.accountNumber}
+                  onChange={(e) => setFormData(prev => ({ ...prev, accountNumber: e.target.value }))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="resubmit-accountTitle">Account Title</Label>
+                <Input
+                  id="resubmit-accountTitle"
+                  placeholder="Enter account holder name"
+                  value={formData.accountTitle}
+                  onChange={(e) => setFormData(prev => ({ ...prev, accountTitle: e.target.value }))}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={isSubmitting}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmitResubmission} disabled={isSubmitting}>
+              {isSubmitting ? 'Submitting...' : 'Submit Redemption'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   )
 }
