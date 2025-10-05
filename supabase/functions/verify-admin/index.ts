@@ -1,9 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { corsHeaders, responseHeaders } from '../_shared/cors.ts'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -20,7 +16,7 @@ Deno.serve(async (req) => {
     if (!walletAddress || typeof walletAddress !== 'string') {
       return new Response(
         JSON.stringify({ error: 'Invalid wallet address' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: responseHeaders }
       )
     }
 
@@ -28,7 +24,7 @@ Deno.serve(async (req) => {
     if (!/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
       return new Response(
         JSON.stringify({ error: 'Invalid Ethereum address format' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: responseHeaders }
       )
     }
 
@@ -43,7 +39,7 @@ Deno.serve(async (req) => {
       console.error('Error checking admin status:', error)
       return new Response(
         JSON.stringify({ error: 'Failed to verify admin status' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: responseHeaders }
       )
     }
 
@@ -51,13 +47,13 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({ isAdmin: data === true }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: responseHeaders }
     )
   } catch (error) {
     console.error('Error in verify-admin function:', error)
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: responseHeaders }
     )
   }
 })

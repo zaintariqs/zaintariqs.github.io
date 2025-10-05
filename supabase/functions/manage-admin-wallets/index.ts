@@ -1,9 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { corsHeaders, responseHeaders } from '../_shared/cors.ts'
 
 interface AdminManagementRequest {
   requestingWallet: string;
@@ -27,14 +23,14 @@ Deno.serve(async (req) => {
     if (!requestingWallet || !targetWallet || !action) {
       return new Response(
         JSON.stringify({ error: 'Missing required fields' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: responseHeaders }
       )
     }
 
     if (!['add', 'revoke'].includes(action)) {
       return new Response(
         JSON.stringify({ error: 'Invalid action. Must be "add" or "revoke"' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: responseHeaders }
       )
     }
 
@@ -53,7 +49,7 @@ Deno.serve(async (req) => {
       
       return new Response(
         JSON.stringify({ error: 'Unauthorized: Admin access required' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 403, headers: responseHeaders }
       )
     }
 
@@ -72,7 +68,7 @@ Deno.serve(async (req) => {
         if (existingAdmin.is_active) {
           return new Response(
             JSON.stringify({ error: 'This wallet is already an admin' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 400, headers: responseHeaders }
           )
         } else {
           // Reactivate deactivated admin
@@ -114,7 +110,7 @@ Deno.serve(async (req) => {
         if (error.code === 'PGRST116') {
           return new Response(
             JSON.stringify({ error: 'Admin wallet not found' }),
-            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 404, headers: responseHeaders }
           )
         }
         throw error
@@ -141,14 +137,14 @@ Deno.serve(async (req) => {
         message: `Admin privileges ${action === 'add' ? 'granted to' : 'revoked from'} ${targetWallet}`,
         result 
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: responseHeaders }
     )
 
   } catch (error) {
     console.error('Error in manage-admin-wallets function:', error)
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: responseHeaders }
     )
   }
 })

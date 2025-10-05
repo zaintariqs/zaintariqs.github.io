@@ -7,6 +7,22 @@ export const corsHeaders = {
   'Access-Control-Max-Age': '86400',
 }
 
+// Security headers to prevent clickjacking and other attacks
+export const securityHeaders = {
+  'X-Frame-Options': 'DENY',
+  'X-Content-Type-Options': 'nosniff',
+  'X-XSS-Protection': '1; mode=block',
+  'Content-Security-Policy': "frame-ancestors 'none'",
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+}
+
+// Combined headers for responses
+export const responseHeaders = {
+  ...corsHeaders,
+  ...securityHeaders,
+  'Content-Type': 'application/json',
+}
+
 // Generic error messages for production (don't leak implementation details)
 export function getErrorMessage(error: unknown, isDevelopment = false): string {
   if (isDevelopment) {
