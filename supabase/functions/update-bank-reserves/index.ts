@@ -21,21 +21,10 @@ Deno.serve(async (req) => {
       }
     )
 
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      throw new Error('Missing authorization header')
-    }
+    const { walletAddress, mode, amount } = await req.json()
 
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token)
-
-    if (authError || !user) {
-      throw new Error('Unauthorized')
-    }
-
-    const walletAddress = user.user_metadata?.wallet_address
     if (!walletAddress) {
-      throw new Error('Wallet address not found')
+      throw new Error('Wallet address is required')
     }
 
     // Verify admin status
@@ -50,8 +39,6 @@ Deno.serve(async (req) => {
       console.error('Admin verification failed:', adminError)
       throw new Error('Unauthorized: Admin access required')
     }
-
-    const { mode, amount } = await req.json()
 
     if (!mode || !amount || isNaN(Number(amount))) {
       throw new Error('Invalid input: mode and valid amount are required')

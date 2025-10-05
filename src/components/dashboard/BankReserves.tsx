@@ -100,6 +100,15 @@ export function BankReserves() {
   const handleManualUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
     
+    if (!address) {
+      toast({
+        title: "Wallet Not Connected",
+        description: "Please connect your wallet first",
+        variant: "destructive",
+      })
+      return
+    }
+    
     if (!manualAmount || isNaN(Number(manualAmount))) {
       toast({
         title: "Invalid Amount",
@@ -112,14 +121,9 @@ export function BankReserves() {
     setIsSubmitting(true)
 
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      if (!session) {
-        throw new Error('Not authenticated')
-      }
-
       const { data, error } = await supabase.functions.invoke('update-bank-reserves', {
         body: {
+          walletAddress: address,
           mode: updateMode,
           amount: Number(manualAmount)
         }
