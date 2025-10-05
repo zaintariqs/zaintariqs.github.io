@@ -88,13 +88,24 @@ serve(async (req) => {
       let emailHtml = "";
 
       if (action === "approve") {
-        emailSubject = "Your PKRSC Whitelist Request has been Approved";
+        emailSubject = "Welcome to PKRSC! 🎉";
         emailHtml = `
-          <h1>Welcome to PKRSC!</h1>
-          <p>Great news! Your whitelist request has been approved.</p>
-          <p><strong>Wallet Address:</strong> ${request.wallet_address}</p>
-          <p>You can now connect your wallet and start using our services.</p>
-          <p>Best regards,<br>The PKRSC Team</p>
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h1 style="color: #00875A;">Welcome Onboard!</h1>
+            <p>Congratulations! Your whitelist request has been approved.</p>
+            <p><strong>Wallet Address:</strong> <code style="background: #f4f4f4; padding: 4px 8px; border-radius: 4px;">${request.wallet_address}</code></p>
+            <p>You're now part of the PKRSC community and can start using our services. Connect your wallet to get started!</p>
+            <div style="margin: 30px 0; padding: 20px; background: #f9f9f9; border-left: 4px solid #00875A; border-radius: 4px;">
+              <p style="margin: 0;"><strong>Next Steps:</strong></p>
+              <ol style="margin: 10px 0;">
+                <li>Visit our platform</li>
+                <li>Connect your approved wallet</li>
+                <li>Start exploring PKRSC features</li>
+              </ol>
+            </div>
+            <p>If you have any questions, feel free to reach out to our support team.</p>
+            <p style="margin-top: 30px;">Best regards,<br><strong>Team PKRSC</strong></p>
+          </div>
         `;
       } else {
         emailSubject = "Your PKRSC Whitelist Request Update";
