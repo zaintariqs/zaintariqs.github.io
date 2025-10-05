@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Menu, X, UserCheck, Globe } from "lucide-react";
+import { Menu, X, UserCheck } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { translations } from "@/translations";
@@ -23,9 +23,6 @@ const PKRHeader = () => {
   const location = useLocation();
   const isDashboard = location.pathname === '/dashboard';
 
-  const toggleLanguage = () => {
-    setLanguage(language === 'en' ? 'ur' : 'en');
-  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-crypto-gray bg-crypto-dark/95 backdrop-blur supports-[backdrop-filter]:bg-crypto-dark/80">
@@ -53,18 +50,9 @@ const PKRHeader = () => {
           </nav>
         )}
 
-        {/* Wallet Connect, Whitelist Button & Language Toggle */}
+        {/* Wallet Connect & Whitelist Button */}
         <div className={`hidden md:flex items-center ${isUrdu ? 'space-x-reverse space-x-4' : 'space-x-4'}`}>
           <WalletConnect />
-          <Button
-            onClick={toggleLanguage}
-            variant="ghost"
-            size="sm"
-            className="text-gray-300 hover:text-crypto-green"
-          >
-            <Globe className="h-4 w-4 mr-2" />
-            {language === 'en' ? 'اردو' : 'EN'}
-          </Button>
           <Dialog open={isWhitelistOpen} onOpenChange={setIsWhitelistOpen}>
             <DialogTrigger asChild>
               <Button className="bg-crypto-green hover:bg-crypto-green/90 text-white">
@@ -115,20 +103,6 @@ const PKRHeader = () => {
                 </Link>
               </>
             )}
-            <div className="flex items-center space-x-2">
-              <Button
-                onClick={() => {
-                  toggleLanguage();
-                  setIsMenuOpen(false);
-                }}
-                variant="ghost"
-                size="sm"
-                className="text-gray-300 hover:text-crypto-green"
-              >
-                <Globe className="h-4 w-4 mr-2" />
-                {language === 'en' ? 'اردو' : 'EN'}
-              </Button>
-            </div>
             <Dialog open={isWhitelistOpen} onOpenChange={setIsWhitelistOpen}>
               <DialogTrigger asChild>
                 <Button className="w-full bg-crypto-green hover:bg-crypto-green/90 text-white">
