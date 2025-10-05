@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAccount, useSignMessage, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
 import { parseUnits } from 'viem'
 import { base } from 'wagmi/chains'
@@ -53,10 +53,12 @@ export function RedeemSection() {
   }
 
   // Update backend when transaction is confirmed
-  useState(() => {
+  useEffect(() => {
     if (isTxConfirmed && pendingTxHash && redemptionId && address) {
       const updateRedemption = async () => {
         try {
+          console.log('Transaction confirmed, updating redemption:', redemptionId, 'with hash:', pendingTxHash)
+          
           const updateTimestamp = Date.now()
           const updateMessage = `PKRSC Redemption Update\nWallet: ${address}\nTimestamp: ${updateTimestamp}`
           const updateSignature = await signMessageAsync({ 
@@ -64,7 +66,7 @@ export function RedeemSection() {
             message: updateMessage 
           })
           
-          await fetch(
+          const response = await fetch(
             'https://jdjreuxhvzmzockuduyq.supabase.co/functions/v1/redemptions',
             {
               method: 'PATCH',
@@ -82,17 +84,28 @@ export function RedeemSection() {
             }
           )
 
-          toast({
-            title: "Burn Transaction Confirmed!",
-            description: "Your tokens have been burned. Bank transfer will be processed soon.",
-          })
+          if (response.ok) {
+            console.log('Redemption updated successfully')
+            toast({
+              title: "Burn Transaction Confirmed!",
+              description: "Your tokens have been burned. Bank transfer will be processed soon.",
+            })
+          } else {
+            const errorData = await response.json()
+            console.error('Failed to update redemption:', errorData)
+          }
         } catch (error) {
           console.error('Error updating redemption:', error)
+          toast({
+            title: "Update Error",
+            description: "Failed to update redemption status. Please contact support.",
+            variant: "destructive"
+          })
         }
       }
       updateRedemption()
     }
-  })
+  }, [isTxConfirmed, pendingTxHash, redemptionId, address, signMessageAsync, toast])
 
   const handleSubmitRedemption = async () => {
     if (!formData.amount || !formData.bankName || !formData.accountNumber || !formData.accountTitle) {
