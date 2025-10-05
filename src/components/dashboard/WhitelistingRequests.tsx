@@ -187,6 +187,8 @@ export function WhitelistingRequests() {
 
     setProcessingId(request.id)
     try {
+      console.log('Attempting to delete whitelist request:', request.id)
+      
       const response = await fetch(
         'https://jdjreuxhvzmzockuduyq.supabase.co/functions/v1/delete-whitelist',
         {
@@ -201,10 +203,23 @@ export function WhitelistingRequests() {
         }
       )
 
+      console.log('Delete response status:', response.status)
+
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to delete request')
+        const errorText = await response.text()
+        console.error('Delete error response:', errorText)
+        let errorMessage = 'Failed to delete request'
+        try {
+          const errorJson = JSON.parse(errorText)
+          errorMessage = errorJson.error || errorMessage
+        } catch (e) {
+          errorMessage = errorText || errorMessage
+        }
+        throw new Error(errorMessage)
       }
+
+      const result = await response.json()
+      console.log('Delete successful:', result)
 
       toast({
         title: "Success",
@@ -216,7 +231,7 @@ export function WhitelistingRequests() {
       console.error('Error deleting request:', error)
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || 'Failed to delete request. The function may still be deploying - please try again in a moment.',
         variant: "destructive"
       })
     } finally {
