@@ -95,6 +95,29 @@ export function MyRedemptions() {
     }
   }
 
+  // Check if this is the most recent cancelled redemption for this burn tx hash
+  const canResubmit = (redemption: Redemption): boolean => {
+    if (redemption.status !== 'cancelled' || !redemption.transaction_hash) {
+      return false
+    }
+
+    // Find all redemptions with the same burn transaction hash
+    const sameHashRedemptions = redemptions.filter(
+      r => r.transaction_hash === redemption.transaction_hash
+    )
+
+    // Sort by created_at descending (most recent first)
+    const sortedByDate = sameHashRedemptions.sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )
+
+    // Find the most recent cancelled one
+    const mostRecentCancelled = sortedByDate.find(r => r.status === 'cancelled')
+
+    // Only allow resubmit if this is the most recent cancelled redemption
+    return mostRecentCancelled?.id === redemption.id
+  }
+
   const handleResubmit = (redemption: Redemption) => {
     setSelectedRedemption(redemption)
     setFormData({
@@ -326,7 +349,7 @@ export function MyRedemptions() {
                               {redemption.cancellation_reason}
                             </p>
                           )}
-                          {redemption.transaction_hash && (
+                          {canResubmit(redemption) ? (
                             <Button
                               size="sm"
                               variant="outline"
@@ -336,6 +359,10 @@ export function MyRedemptions() {
                               <RefreshCcw className="h-3 w-3 mr-2" />
                               Resubmit with Correct Details
                             </Button>
+                          ) : redemption.transaction_hash && (
+                            <p className="text-xs text-muted-foreground italic">
+                              Resubmitted (see newer entry)
+                            </p>
                           )}
                         </div>
                       )}
