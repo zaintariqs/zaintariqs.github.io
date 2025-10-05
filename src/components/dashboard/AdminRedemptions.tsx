@@ -78,7 +78,7 @@ export function AdminRedemptions() {
     setSelectedRedemption(redemption)
     setActionType(type)
     setBankTransactionId('')
-    setBurnTransactionHash('')
+    setBurnTransactionHash(redemption.transaction_hash || '')
     setCancellationReason('')
     setDialogOpen(true)
   }
@@ -337,9 +337,11 @@ export function AdminRedemptions() {
                     placeholder="0x..."
                     value={burnTransactionHash}
                     onChange={(e) => setBurnTransactionHash(e.target.value)}
+                    readOnly
+                    className="bg-muted"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Required to verify the user has already burned their PKRSC tokens
+                    {burnTransactionHash ? 'Auto-filled from redemption request' : 'No burn transaction found'}
                   </p>
                 </div>
                 <div className="space-y-2">
