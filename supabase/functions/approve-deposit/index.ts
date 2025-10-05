@@ -174,6 +174,19 @@ serve(async (req) => {
         )
       }
 
+      // Update PKR bank reserves
+      const { error: reserveError } = await supabase.rpc('update_pkr_reserves', {
+        amount_change: deposit.amount_pkr,
+        updated_by_wallet: walletAddress.toLowerCase()
+      })
+
+      if (reserveError) {
+        console.error('Error updating PKR reserves:', reserveError)
+        // Log but don't fail the approval
+      } else {
+        console.log(`Updated PKR reserves: +${deposit.amount_pkr}`)
+      }
+
       // Log admin action
       await supabase.from('admin_actions').insert({
         action_type: 'deposit_approved',
@@ -183,6 +196,7 @@ serve(async (req) => {
           userId: deposit.user_id,
           amount: deposit.amount_pkr,
           mintTxHash,
+          reserveUpdated: !reserveError,
           timestamp: new Date().toISOString()
         }
       })

@@ -62,6 +62,33 @@ export type Database = {
         }
         Relationships: []
       }
+      bank_reserves: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          last_updated: string
+          reserve_type: string
+          updated_by: string | null
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          id?: string
+          last_updated?: string
+          reserve_type: string
+          updated_by?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          last_updated?: string
+          reserve_type?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       blacklisted_addresses: {
         Row: {
           blacklisted_at: string
@@ -362,6 +389,10 @@ export type Database = {
       is_wallet_whitelisted: {
         Args: { wallet_addr: string }
         Returns: boolean
+      }
+      update_pkr_reserves: {
+        Args: { amount_change: number; updated_by_wallet: string }
+        Returns: undefined
       }
     }
     Enums: {

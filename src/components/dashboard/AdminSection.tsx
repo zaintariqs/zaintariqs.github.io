@@ -14,6 +14,7 @@ import { parseUnits, formatUnits } from 'viem'
 import { supportedChains } from '@/lib/web3-config'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Cell, Pie } from 'recharts'
 import { supabase } from '@/integrations/supabase/client'
+import { BankReserves } from './BankReserves'
 
 const MASTER_MINTER_ADDRESS = '0x5be080f81552c2495B288c04D2B64b9F7A4A9F3F'
 const PKRSC_CONTRACT_ADDRESS = '0x1f192CB7B36d7acfBBdCA1E0C1d697361508F9D5'
@@ -140,7 +141,6 @@ export function AdminSection() {
   const [blacklistReason, setBlacklistReason] = useState<BlacklistReason>('fraud')
   const [blacklistDescription, setBlacklistDescription] = useState('')
   const [unblacklistAddress, setUnblacklistAddress] = useState('')
-  const [bankReserves, setBankReserves] = useState('0')
   
   // Local storage for tracking
   const [blacklistedAddresses, setBlacklistedAddresses] = useState<BlacklistEntry[]>([])
@@ -203,11 +203,6 @@ export function AdminSection() {
     if (storedTx) {
       setTransactions(JSON.parse(storedTx))
     }
-
-    const storedReserves = localStorage.getItem('pkrsc-bank-reserves')
-    if (storedReserves) {
-      setBankReserves(storedReserves)
-    }
   }, [])
 
   const saveBlacklistEntry = (entry: BlacklistEntry) => {
@@ -235,14 +230,6 @@ export function AdminSection() {
     const updated = [tx, ...transactions]
     setTransactions(updated)
     localStorage.setItem('pkrsc-transactions', JSON.stringify(updated))
-  }
-
-  const updateBankReserves = () => {
-    localStorage.setItem('pkrsc-bank-reserves', bankReserves)
-    toast({
-      title: "Bank Reserves Updated",
-      description: `Bank reserves set to ${bankReserves} PKR`,
-    })
   }
 
   if (isCheckingAdmin) {
@@ -451,7 +438,6 @@ Admin: ${MASTER_MINTER_ADDRESS}
 === TREASURY OVERVIEW ===
 Total Supply: ${totalSupply ? formatUnits(totalSupply, tokenDecimals) : 'Loading...'} PKRSC
 Treasury Balance: ${treasuryBalance ? formatUnits(treasuryBalance, tokenDecimals) : 'Loading...'} PKRSC
-Bank Reserves: ${bankReserves} PKR
 Blacklisted Addresses: ${blacklistedAddresses.length}
 
 === TRANSACTION HISTORY ===
@@ -569,6 +555,9 @@ ${Object.entries(blacklistedAddresses.reduce((acc, entry) => {
       </CardHeader>
       <CardContent className="space-y-6">
 
+      {/* Bank Reserves - Now fetching from database */}
+      <BankReserves />
+
       {/* Overview Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* PKR Reserve Overview */}
@@ -593,40 +582,6 @@ ${Object.entries(blacklistedAddresses.reduce((acc, entry) => {
                 {treasuryBalance ? `${Number(formatUnits(treasuryBalance, tokenDecimals)).toLocaleString()}` : 'Loading...'}
               </div>
               <div className="text-xs text-muted-foreground">PKRSC</div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Bank Reserves */}
-        <Card className="bg-card/50 border-border">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <Landmark className="h-4 w-4 text-primary" />
-              <CardTitle className="text-base">Bank Reserves</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Current Reserves</Label>
-              <div className="text-2xl font-bold text-foreground">
-                {Number(bankReserves).toLocaleString()}
-              </div>
-              <div className="text-xs text-muted-foreground">PKR</div>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">Update Amount</Label>
-              <div className="flex gap-2">
-                <Input
-                  type="number"
-                  placeholder="PKR amount"
-                  value={bankReserves}
-                  onChange={(e) => setBankReserves(e.target.value)}
-                  className="text-sm h-9"
-                />
-                <Button onClick={updateBankReserves} variant="outline" size="sm" className="shrink-0">
-                  Update
-                </Button>
-              </div>
             </div>
           </CardContent>
         </Card>
