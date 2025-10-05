@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAccount } from "wagmi";
 import { Button } from "@/components/ui/button";
 import { Menu, X, UserCheck } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
@@ -18,6 +19,7 @@ import { WhitelistForm } from "@/components/WhitelistForm";
 const PKRHeader = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isWhitelistOpen, setIsWhitelistOpen] = useState(false);
+  const { address } = useAccount();
   const { language, setLanguage, isUrdu } = useLanguage();
   const t = translations[language];
   const location = useLocation();
@@ -53,23 +55,25 @@ const PKRHeader = () => {
         {/* Wallet Connect & Whitelist Button */}
         <div className={`hidden md:flex items-center ${isUrdu ? 'space-x-reverse space-x-4' : 'space-x-4'}`}>
           <WalletConnect />
-          <Dialog open={isWhitelistOpen} onOpenChange={setIsWhitelistOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-crypto-green hover:bg-crypto-green/90 text-white">
-                <UserCheck className="h-4 w-4 mr-2" />
-                Get Whitelisted
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle>Apply for Whitelist</DialogTitle>
-                <DialogDescription>
-                  To access PKRSC services, submit your wallet address and email for approval.
-                </DialogDescription>
-              </DialogHeader>
-              <WhitelistForm />
-            </DialogContent>
-          </Dialog>
+          {!address && (
+            <Dialog open={isWhitelistOpen} onOpenChange={setIsWhitelistOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-crypto-green hover:bg-crypto-green/90 text-white">
+                  <UserCheck className="h-4 w-4 mr-2" />
+                  Get Whitelisted
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[500px]">
+                <DialogHeader>
+                  <DialogTitle>Apply for Whitelist</DialogTitle>
+                  <DialogDescription>
+                    To access PKRSC services, submit your wallet address and email for approval.
+                  </DialogDescription>
+                </DialogHeader>
+                <WhitelistForm />
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
 
         {/* Mobile Menu Button */}
@@ -103,23 +107,25 @@ const PKRHeader = () => {
                 </Link>
               </>
             )}
-            <Dialog open={isWhitelistOpen} onOpenChange={setIsWhitelistOpen}>
-              <DialogTrigger asChild>
-                <Button className="w-full bg-crypto-green hover:bg-crypto-green/90 text-white">
-                  <UserCheck className="h-4 w-4 mr-2" />
-                  Get Whitelisted
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
-                  <DialogTitle>Apply for Whitelist</DialogTitle>
-                  <DialogDescription>
-                    To access PKRSC services, submit your wallet address and email for approval.
-                  </DialogDescription>
-                </DialogHeader>
-                <WhitelistForm />
-              </DialogContent>
-            </Dialog>
+            {!address && (
+              <Dialog open={isWhitelistOpen} onOpenChange={setIsWhitelistOpen}>
+                <DialogTrigger asChild>
+                  <Button className="w-full bg-crypto-green hover:bg-crypto-green/90 text-white">
+                    <UserCheck className="h-4 w-4 mr-2" />
+                    Get Whitelisted
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[500px]">
+                  <DialogHeader>
+                    <DialogTitle>Apply for Whitelist</DialogTitle>
+                    <DialogDescription>
+                      To access PKRSC services, submit your wallet address and email for approval.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <WhitelistForm />
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
         </div>
       )}
