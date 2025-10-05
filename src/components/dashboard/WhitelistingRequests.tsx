@@ -192,7 +192,7 @@ export function WhitelistingRequests() {
       const response = await fetch(
         'https://jdjreuxhvzmzockuduyq.supabase.co/functions/v1/delete-whitelist',
         {
-          method: 'DELETE',
+          method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'x-wallet-address': address,
