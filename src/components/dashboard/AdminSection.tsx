@@ -129,7 +129,7 @@ export function AdminSection() {
     args: [MASTER_MINTER_ADDRESS as `0x${string}`],
   })
   
-  const tokenDecimals = decimals || 6
+  const tokenDecimals = typeof decimals === 'number' ? decimals : Number((decimals as any) ?? 6)
   
   // State for admin functions
   const [mintTo, setMintTo] = useState('')
