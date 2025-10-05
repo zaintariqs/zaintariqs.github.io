@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Shield, Coins, Flame, Ban, AlertTriangle, TrendingUp, Download, DollarSign, BarChart3, Landmark, PieChart as PieChartIcon } from 'lucide-react'
+import { Shield, Coins, Flame, Ban, AlertTriangle, TrendingUp, Download, DollarSign, BarChart3, Landmark, PieChart as PieChartIcon, Copy, ExternalLink } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { parseUnits, formatUnits } from 'viem'
 import { supportedChains } from '@/lib/web3-config'
@@ -153,7 +153,7 @@ export function AdminSection() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [isCheckingAdmin, setIsCheckingAdmin] = useState(true)
 
-  const { isLoading: isConfirming } = useWaitForTransactionReceipt({
+  const { isLoading: isConfirming, isSuccess: isConfirmed, data: txReceipt } = useWaitForTransactionReceipt({
     hash,
   })
 
@@ -733,6 +733,45 @@ ${Object.entries(blacklistedAddresses.reduce((acc, entry) => {
               >
                 {isPending || isConfirming ? 'Minting...' : 'Mint Tokens'}
               </Button>
+              
+              {/* Show transaction hash after successful mint */}
+              {isConfirmed && hash && (
+                <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 space-y-2">
+                  <p className="text-sm font-medium text-green-600 dark:text-green-400">
+                    ✓ Mint Successful!
+                  </p>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Transaction Hash:</Label>
+                    <div className="flex items-center gap-2">
+                      <code className="text-xs font-mono bg-background px-2 py-1 rounded flex-1 break-all">
+                        {hash}
+                      </code>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          navigator.clipboard.writeText(hash)
+                          toast({
+                            title: "Copied!",
+                            description: "Transaction hash copied to clipboard",
+                          })
+                        }}
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    <a
+                      href={`https://basescan.org/tx/${hash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                    >
+                      View on BaseScan
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="burn" className="space-y-6">

@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { CreditCard, Check, X, ExternalLink, Eye } from 'lucide-react'
+import { CreditCard, Check, X, ExternalLink, Eye, Copy } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
 interface Deposit {
@@ -296,7 +296,27 @@ export function AdminDeposits() {
             {selectedDeposit && (
               <>
                 <div className="bg-muted/50 rounded-lg p-3 space-y-1">
-                  <p className="text-sm">User: {selectedDeposit.user_id}</p>
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">User Address:</p>
+                    <div className="flex items-center gap-2">
+                      <code className="text-xs font-mono bg-background px-2 py-1 rounded flex-1 break-all">
+                        {selectedDeposit.user_id}
+                      </code>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          navigator.clipboard.writeText(selectedDeposit.user_id)
+                          toast({
+                            title: "Copied!",
+                            description: "Address copied to clipboard",
+                          })
+                        }}
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
                   <p className="text-sm">Amount: PKR {selectedDeposit.amount_pkr}</p>
                   <p className="text-sm">Payment Method: {selectedDeposit.payment_method === 'easypaisa' ? 'EasyPaisa' : 'JazzCash'}</p>
                   <p className="text-sm">Phone: {selectedDeposit.phone_number}</p>
