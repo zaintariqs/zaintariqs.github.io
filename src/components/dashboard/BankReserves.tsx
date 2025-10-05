@@ -31,14 +31,13 @@ export function BankReserves() {
     if (!address) return
 
     try {
-      const { data, error } = await supabase
-        .from('bank_reserves')
-        .select('*')
-        .order('reserve_type')
+      const { data, error } = await supabase.functions.invoke('get-bank-reserves', {
+        body: { walletAddress: address }
+      })
 
       if (error) throw error
 
-      setReserves(data || [])
+      setReserves(data.reserves || [])
     } catch (error) {
       console.error('Error fetching bank reserves:', error)
       toast({
