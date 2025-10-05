@@ -112,6 +112,21 @@ serve(async (req) => {
       if (cancellationReason) updateData.cancellation_reason = cancellationReason
       if (burnTransactionHash) updateData.transaction_hash = burnTransactionHash
 
+      // Get redemption details before updating (for reserve tracking)
+      const { data: redemptionData, error: fetchError } = await supabase
+        .from('redemptions')
+        .select('pkrsc_amount')
+        .eq('id', redemptionId)
+        .single()
+
+      if (fetchError) {
+        console.error('Error fetching redemption:', fetchError)
+        return new Response(
+          JSON.stringify({ error: 'Redemption not found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
       console.log(`Admin ${walletAddress} updating redemption ${redemptionId} to status ${status}`)
 
       const { data, error } = await supabase
@@ -129,6 +144,23 @@ serve(async (req) => {
         )
       }
 
+      // Update PKR reserves when redemption is completed
+      let reserveUpdated = false
+      if (status === 'completed' && redemptionData?.pkrsc_amount) {
+        const { error: reserveError } = await supabase.rpc('update_pkr_reserves', {
+          amount_change: -redemptionData.pkrsc_amount, // Negative to subtract
+          updated_by_wallet: walletAddress.toLowerCase()
+        })
+
+        if (reserveError) {
+          console.error('Error updating PKR reserves:', reserveError)
+          // Log but don't fail the redemption
+        } else {
+          reserveUpdated = true
+          console.log(`Updated PKR reserves: -${redemptionData.pkrsc_amount}`)
+        }
+      }
+
       // Log admin action
       await supabase.from('admin_actions').insert({
         action_type: 'admin_updated_redemption',
@@ -139,6 +171,8 @@ serve(async (req) => {
           bankTransactionId,
           cancellationReason,
           burnTransactionHash,
+          reserveUpdated,
+          amount: redemptionData?.pkrsc_amount,
           timestamp: new Date().toISOString() 
         }
       })

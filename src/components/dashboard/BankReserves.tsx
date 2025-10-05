@@ -129,7 +129,7 @@ export function BankReserves() {
 
           <div className="bg-muted/30 rounded-lg p-4">
             <p className="text-xs text-muted-foreground">
-              <strong>Note:</strong> PKR reserves increase when deposits are approved and decrease when redemptions are completed.
+              <strong>Note:</strong> PKR reserves automatically increase when deposits are approved (+) and decrease when redemptions are completed (-).
               This represents the physical PKR backing the PKRSC tokens in circulation.
             </p>
           </div>
