@@ -78,76 +78,60 @@ serve(async (req) => {
     }
 
     if (action === 'approve') {
-      // Automatically mint PKRSC tokens to user's address
-      let mintTxHash: string
-      
+      if (!mintTxHash) {
+        return new Response(
+          JSON.stringify({ error: 'Mint transaction hash required for approval' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Verify the mint transaction on-chain
       try {
         const { ethers } = await import('https://esm.sh/ethers@6.9.0')
         const provider = new ethers.JsonRpcProvider('https://mainnet.base.org')
-        
-        // Get the admin/minter private key
-        const privateKey = Deno.env.get('MARKET_MAKER_PRIVATE_KEY')
-        if (!privateKey) {
-          throw new Error('Minter private key not configured')
+        const receipt = await provider.getTransactionReceipt(mintTxHash)
+
+        if (!receipt) {
+          return new Response(
+            JSON.stringify({ error: 'Transaction not found. Please wait a moment and try again.' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
         }
-        
-        const wallet = new ethers.Wallet(privateKey, provider)
-        
-        // ERC20 Mint ABI (simplified - assuming the contract has a mint function)
-        const tokenAbi = [
-          'function mint(address to, uint256 amount) public',
-          'function transfer(address to, uint256 amount) public returns (bool)'
-        ]
-        
-        const tokenContract = new ethers.Contract(PKRSC_TOKEN_ADDRESS, tokenAbi, wallet)
-        
-        // Calculate amount in token decimals
-        const amountToMint = ethers.parseUnits(deposit.amount_pkr.toString(), PKRSC_DECIMALS)
-        
-        console.log(`Minting ${deposit.amount_pkr} PKRSC (${amountToMint.toString()} wei) to ${deposit.user_id}`)
-        
-        // Try to mint (if wallet has minting rights)
-        try {
-          const tx = await tokenContract.mint(deposit.user_id, amountToMint, {
-            gasLimit: 200000
-          })
-          
-          console.log(`Mint transaction sent: ${tx.hash}`)
-          const receipt = await tx.wait()
-          
-          if (!receipt || receipt.status !== 1) {
-            throw new Error('Mint transaction failed')
-          }
-          
-          mintTxHash = receipt.hash
-          console.log(`Mint successful: ${mintTxHash}`)
-          
-        } catch (mintError: any) {
-          // If minting fails (e.g., no mint permission), try transfer instead
-          console.log('Mint failed, attempting transfer:', mintError.message)
-          
-          const tx = await tokenContract.transfer(deposit.user_id, amountToMint, {
-            gasLimit: 100000
-          })
-          
-          console.log(`Transfer transaction sent: ${tx.hash}`)
-          const receipt = await tx.wait()
-          
-          if (!receipt || receipt.status !== 1) {
-            throw new Error('Transfer transaction failed')
-          }
-          
-          mintTxHash = receipt.hash
-          console.log(`Transfer successful: ${mintTxHash}`)
+
+        if (receipt.status !== 1) {
+          return new Response(
+            JSON.stringify({ error: 'Mint transaction failed on-chain' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
         }
-        
-      } catch (error: any) {
-        console.error('Error minting tokens:', error)
+
+        // Verify it's a transfer to the user's wallet
+        const TRANSFER_TOPIC = ethers.id('Transfer(address,address,uint256)')
+        const targetLog = receipt.logs.find((log: any) => {
+          if (log.address?.toLowerCase() !== PKRSC_TOKEN_ADDRESS.toLowerCase()) return false
+          if (!log.topics || log.topics.length < 3) return false
+          if (log.topics[0] !== TRANSFER_TOPIC) return false
+          const toTopic = log.topics[2].toLowerCase()
+          const toAddr = '0x' + toTopic.slice(-40)
+          return toAddr.toLowerCase() === deposit.user_id.toLowerCase()
+        })
+
+        if (!targetLog) {
+          return new Response(
+            JSON.stringify({ error: 'Transaction does not mint to user wallet' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+
+        // Parse minted amount
+        const value = ethers.toBigInt(targetLog.data)
+        const mintedAmount = Number(value) / 10 ** PKRSC_DECIMALS
+
+        console.log(`Verified mint: ${mintedAmount} PKRSC to ${deposit.user_id}`)
+      } catch (error) {
+        console.error('Error verifying mint transaction:', error)
         return new Response(
-          JSON.stringify({ 
-            error: 'Failed to mint tokens', 
-            details: error.message 
-          }),
+          JSON.stringify({ error: 'Failed to verify mint transaction on-chain' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
