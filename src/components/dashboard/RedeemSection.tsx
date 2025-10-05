@@ -1,5 +1,7 @@
-import { useState, useEffect, useRef } from 'react'
-import { useAccount, useSignMessage, usePublicClient } from 'wagmi'
+import { useState } from 'react'
+import { useAccount, useSignMessage, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
+import { parseUnits } from 'viem'
+import { base } from 'wagmi/chains'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -10,10 +12,23 @@ import { Banknote, Copy, ArrowDownToLine, Clock, CheckCircle } from 'lucide-reac
 import { useToast } from '@/hooks/use-toast'
 import { supabase } from '@/integrations/supabase/client'
 
+const ERC20_ABI = [
+  {
+    constant: false,
+    inputs: [
+      { name: '_to', type: 'address' },
+      { name: '_value', type: 'uint256' }
+    ],
+    name: 'transfer',
+    outputs: [{ name: '', type: 'bool' }],
+    type: 'function'
+  }
+] as const
+
 export function RedeemSection() {
   const { address } = useAccount()
   const { signMessageAsync } = useSignMessage()
-  const publicClient = usePublicClient()
+  const { writeContractAsync } = useWriteContract()
   const { toast } = useToast()
   const [formData, setFormData] = useState({
     amount: '',
@@ -22,70 +37,26 @@ export function RedeemSection() {
     accountTitle: ''
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [pendingTxHash, setPendingTxHash] = useState<string | null>(null)
   const [redemptionId, setRedemptionId] = useState<string | null>(null)
-  const [transactionHash, setTransactionHash] = useState<string | null>(null)
-  const monitoringIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   const burnAddress = '0x000000000000000000000000000000000000dEaD'
   const PKRSC_TOKEN_ADDRESS = '0x1f192CB7B36d7acfBBdCA1E0C1d697361508F9D5'
+
+  // Monitor transaction confirmation
+  const { isSuccess: isTxConfirmed } = useWaitForTransactionReceipt({
+    hash: pendingTxHash as `0x${string}` | undefined,
+  })
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
-    toast({
-      title: "Copied!",
-      description: "Address copied to clipboard",
-    })
-  }
-
-  const startMonitoringBurnTransaction = async (redemptionIdToMonitor: string) => {
-    if (!address || !publicClient) return
-
-    // Poll blockchain every 10 seconds to check for transactions to burn address
-    monitoringIntervalRef.current = setInterval(async () => {
-      try {
-        // Get the latest block
-        const latestBlock = await publicClient.getBlockNumber()
-        
-        // Check last 100 blocks for Transfer events to burn address from user's wallet
-        const fromBlock = latestBlock - 100n
-        
-        // ERC20 Transfer event signature: Transfer(address,address,uint256)
-        const logs = await publicClient.getLogs({
-          address: PKRSC_TOKEN_ADDRESS as `0x${string}`,
-          event: {
-            type: 'event',
-            name: 'Transfer',
-            inputs: [
-              { type: 'address', indexed: true, name: 'from' },
-              { type: 'address', indexed: true, name: 'to' },
-              { type: 'uint256', indexed: false, name: 'value' }
-            ]
-          },
-          args: {
-            from: address as `0x${string}`,
-            to: burnAddress as `0x${string}`
-          },
-          fromBlock,
-          toBlock: 'latest'
-        })
-
-        if (logs.length > 0) {
-          // Found a burn transaction!
-          const txHash = logs[0].transactionHash
-          
-          // Stop monitoring
-          if (monitoringIntervalRef.current) {
-            clearInterval(monitoringIntervalRef.current)
-            monitoringIntervalRef.current = null
-          }
-          
-          setTransactionHash(txHash)
-          
-          // Generate signature for update request
+  // Update backend when transaction is confirmed
+  useState(() => {
+    if (isTxConfirmed && pendingTxHash && redemptionId && address) {
+      const updateRedemption = async () => {
+        try {
           const updateTimestamp = Date.now()
           const updateMessage = `PKRSC Redemption Update\nWallet: ${address}\nTimestamp: ${updateTimestamp}`
           const updateSignature = await signMessageAsync({ 
@@ -93,8 +64,7 @@ export function RedeemSection() {
             message: updateMessage 
           })
           
-          // Update redemption status via edge function with real transaction hash
-          const updateResponse = await fetch(
+          await fetch(
             'https://jdjreuxhvzmzockuduyq.supabase.co/functions/v1/redemptions',
             {
               method: 'PATCH',
@@ -105,34 +75,24 @@ export function RedeemSection() {
                 'x-signature-message': btoa(updateMessage),
               },
               body: JSON.stringify({
-                redemptionId: redemptionIdToMonitor,
-                transactionHash: txHash,
+                redemptionId,
+                transactionHash: pendingTxHash,
                 status: 'burn_confirmed',
               }),
             }
           )
 
-          if (updateResponse.ok) {
-            toast({
-              title: "Burn Transaction Detected!",
-              description: "Your tokens have been burned. Bank transfer will be processed soon.",
-            })
-          }
+          toast({
+            title: "Burn Transaction Confirmed!",
+            description: "Your tokens have been burned. Bank transfer will be processed soon.",
+          })
+        } catch (error) {
+          console.error('Error updating redemption:', error)
         }
-      } catch (error) {
-        console.error('Error monitoring burn transaction:', error)
       }
-    }, 10000) // Check every 10 seconds
-  }
-
-  // Cleanup monitoring on unmount
-  useEffect(() => {
-    return () => {
-      if (monitoringIntervalRef.current) {
-        clearInterval(monitoringIntervalRef.current)
-      }
+      updateRedemption()
     }
-  }, [])
+  })
 
   const handleSubmitRedemption = async () => {
     if (!formData.amount || !formData.bankName || !formData.accountNumber || !formData.accountTitle) {
@@ -192,15 +152,29 @@ export function RedeemSection() {
       }
 
       const { data } = await response.json()
-
       setRedemptionId(data.id)
+
       toast({
         title: "Redemption Request Created",
-        description: "Please send PKRSC tokens to the burn address below",
+        description: "Initiating burn transaction...",
       })
 
-      // Start monitoring blockchain for burn transaction
-      startMonitoringBurnTransaction(data.id)
+      // Automatically execute the burn transaction
+      const txHash = await writeContractAsync({
+        address: PKRSC_TOKEN_ADDRESS as `0x${string}`,
+        abi: ERC20_ABI,
+        functionName: 'transfer',
+        args: [burnAddress as `0x${string}`, parseUnits(formData.amount, 6)],
+        account: address,
+        chain: base,
+      })
+
+      setPendingTxHash(txHash)
+      
+      toast({
+        title: "Transaction Submitted",
+        description: "Waiting for confirmation on the blockchain...",
+      })
 
     } catch (error) {
       console.error('Error creating redemption:', error)
@@ -326,52 +300,51 @@ export function RedeemSection() {
           </>
         ) : (
           <>
-            {/* Burn Address Section */}
+            {/* Transaction Status */}
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <ArrowDownToLine className="h-5 w-5 text-primary" />
-                <h3 className="font-medium text-card-foreground">Send PKRSC to Burn Address</h3>
-              </div>
-              
-              <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-card-foreground">Burn Address:</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => copyToClipboard(burnAddress)}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="font-mono text-xs break-all bg-background rounded p-2 border">
-                  {burnAddress}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  Send exactly <strong>{formData.amount} PKRSC</strong> to this address
-                </div>
+                <h3 className="font-medium text-card-foreground">Burn Transaction</h3>
               </div>
 
-              {/* Status */}
-              <div className="flex items-center gap-3 p-4 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
-                <Clock className="h-5 w-5 text-yellow-500" />
-                <div>
-                  <p className="font-medium text-sm text-card-foreground">Waiting for Transaction</p>
-                  <p className="text-xs text-muted-foreground">
-                    We're monitoring the burn address for your transaction
-                  </p>
+              {!isTxConfirmed ? (
+                <div className="flex items-center gap-3 p-4 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
+                  <Clock className="h-5 w-5 text-yellow-500" />
+                  <div>
+                    <p className="font-medium text-sm text-card-foreground">Transaction Processing</p>
+                    <p className="text-xs text-muted-foreground">
+                      Waiting for blockchain confirmation...
+                    </p>
+                    {pendingTxHash && (
+                      <a
+                        href={`https://basescan.org/tx/${pendingTxHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-primary hover:underline mt-1 block"
+                      >
+                        View on BaseScan
+                      </a>
+                    )}
+                  </div>
                 </div>
-              </div>
-
-              {/* Transaction Confirmed */}
-              {transactionHash && (
+              ) : (
                 <div className="flex items-center gap-3 p-4 bg-green-500/10 rounded-lg border border-green-500/20">
                   <CheckCircle className="h-5 w-5 text-green-500" />
                   <div className="flex-1">
                     <p className="font-medium text-sm text-card-foreground">Transaction Confirmed</p>
                     <p className="text-xs text-muted-foreground">
-                      Hash: {transactionHash.slice(0, 10)}...
+                      {formData.amount} PKRSC successfully burned
                     </p>
+                    {pendingTxHash && (
+                      <a
+                        href={`https://basescan.org/tx/${pendingTxHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-primary hover:underline mt-1 block"
+                      >
+                        View on BaseScan
+                      </a>
+                    )}
                     <Badge variant="secondary" className="mt-2">
                       Awaiting PKR Transfer to Bank Account
                     </Badge>
