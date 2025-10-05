@@ -19,6 +19,7 @@ export function BankReserves() {
   const { toast } = useToast()
   const [reserves, setReserves] = useState<BankReserve[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isUpdating, setIsUpdating] = useState(false)
 
   const fetchReserves = async () => {
     if (!address) return
@@ -57,8 +58,11 @@ export function BankReserves() {
           schema: 'public',
           table: 'bank_reserves'
         },
-        () => {
+        (payload) => {
+          console.log('Bank reserves updated:', payload)
+          setIsUpdating(true)
           fetchReserves()
+          setTimeout(() => setIsUpdating(false), 2000)
         }
       )
       .subscribe()
@@ -95,6 +99,9 @@ export function BankReserves() {
         <CardTitle className="flex items-center gap-2">
           <Banknote className="h-5 w-5 text-primary" />
           Bank Reserves
+          {isUpdating && (
+            <span className="text-xs text-green-500 animate-pulse">● Updating</span>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent>
