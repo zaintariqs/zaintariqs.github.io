@@ -39,6 +39,11 @@ const PAKISTANI_BANKS = [
   'Allied Bank'
 ]
 
+// PKRSC token details on Base
+const PKRSC_TOKEN_ADDRESS = '0x1f192CB7B36d7acfBBdCA1E0C1d697361508F9D5'
+const BURN_ADDRESS = '0x000000000000000000000000000000000000dEaD'
+const PKRSC_DECIMALS = 6
+
 // Comprehensive input validation
 function validateBankDetails(bankName: string, accountNumber: string, accountTitle: string): { valid: boolean; error?: string } {
   // Validate bank name
@@ -201,7 +206,7 @@ serve(async (req) => {
     })
     
     if (req.method === 'POST') {
-      const body: RedemptionRequest = await req.json()
+      const body: any = await req.json()
       
       // Validate wallet address
       if (!body.walletAddress || !isValidEthAddress(body.walletAddress)) {
@@ -235,14 +240,6 @@ serve(async (req) => {
         )
       }
 
-      // Validate amount
-      if (!body.pkrscAmount || body.pkrscAmount < 100) {
-        return new Response(
-          JSON.stringify({ error: 'Minimum redemption is 100 PKRSC' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-
       // Validate and sanitize bank details
       const validation = validateBankDetails(body.bankName, body.accountNumber, body.accountTitle)
       if (!validation.valid) {
@@ -253,7 +250,112 @@ serve(async (req) => {
         )
       }
 
-      // Insert redemption with service role
+      // Branch: user already burned and provides a transaction hash
+      if (body.existingBurnTx) {
+        const burnTx: string = String(body.existingBurnTx)
+        if (!/^0x[a-fA-F0-9]{64}$/.test(burnTx)) {
+          return new Response(
+            JSON.stringify({ error: 'Invalid transaction hash format' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+
+        try {
+          const { ethers } = await import('https://esm.sh/ethers@6.9.0')
+          const provider = new ethers.JsonRpcProvider('https://mainnet.base.org')
+          const receipt = await provider.getTransactionReceipt(burnTx)
+
+          if (!receipt || receipt.status !== 1) {
+            return new Response(
+              JSON.stringify({ error: 'Transaction not found or not successful' }),
+              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            )
+          }
+
+          // Transfer(address,address,uint256) topic
+          const TRANSFER_TOPIC = ethers.id('Transfer(address,address,uint256)')
+
+          // Find Transfer log for PKRSC token to burn address from this wallet
+          const targetLog = receipt.logs.find((log: any) => {
+            if (log.address?.toLowerCase() !== PKRSC_TOKEN_ADDRESS.toLowerCase()) return false
+            if (!log.topics || log.topics.length < 3) return false
+            if (log.topics[0] !== TRANSFER_TOPIC) return false
+            const fromTopic = log.topics[1].toLowerCase()
+            const toTopic = log.topics[2].toLowerCase()
+            // topics for indexed address are 32-byte left-padded, compare last 40 hex chars
+            const fromAddr = '0x' + fromTopic.slice(-40)
+            const toAddr = '0x' + toTopic.slice(-40)
+            return fromAddr.toLowerCase() === body.walletAddress.toLowerCase() && toAddr.toLowerCase() === BURN_ADDRESS.toLowerCase()
+          })
+
+          if (!targetLog) {
+            return new Response(
+              JSON.stringify({ error: 'Provided transaction is not a PKRSC burn from this wallet' }),
+              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            )
+          }
+
+          // Parse amount from log.data (uint256)
+          const value = ethers.toBigInt(targetLog.data)
+          const amount = Number(value) / 10 ** PKRSC_DECIMALS
+
+          if (!amount || amount < 100) {
+            return new Response(
+              JSON.stringify({ error: 'Burn amount must be at least 100 PKRSC' }),
+              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            )
+          }
+
+          const { data, error } = await supabase
+            .from('redemptions')
+            .insert({
+              user_id: body.walletAddress.toLowerCase(),
+              pkrsc_amount: amount,
+              bank_name: sanitizeString(body.bankName),
+              account_number: sanitizeString(body.accountNumber),
+              account_title: sanitizeString(body.accountTitle),
+              burn_address: BURN_ADDRESS,
+              transaction_hash: burnTx,
+              status: 'burn_confirmed',
+            })
+            .select()
+            .single()
+
+          if (error) {
+            console.error('[redemptions] Error creating redemption (existing burn):', error)
+            return new Response(
+              JSON.stringify({ error: 'Failed to create redemption with existing burn' }),
+              { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            )
+          }
+
+          await supabase.from('admin_actions').insert({
+            action_type: 'redemption_created_from_existing_burn',
+            wallet_address: body.walletAddress.toLowerCase(),
+            details: { redemptionId: data.id, burnTx, amount, timestamp: new Date().toISOString() }
+          })
+
+          return new Response(
+            JSON.stringify({ data }),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        } catch (err) {
+          console.error('Error verifying existing burn tx:', err)
+          return new Response(
+            JSON.stringify({ error: 'Failed to verify burn transaction' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+      }
+
+      // Default flow: user will burn after creating redemption
+      if (!body.pkrscAmount || body.pkrscAmount < 100) {
+        return new Response(
+          JSON.stringify({ error: 'Minimum redemption is 100 PKRSC' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
       const { data, error } = await supabase
         .from('redemptions')
         .insert({
@@ -262,7 +364,7 @@ serve(async (req) => {
           bank_name: sanitizeString(body.bankName),
           account_number: sanitizeString(body.accountNumber),
           account_title: sanitizeString(body.accountTitle),
-          burn_address: '0x000000000000000000000000000000000000dEaD',
+          burn_address: BURN_ADDRESS,
           status: 'pending'
         })
         .select()
