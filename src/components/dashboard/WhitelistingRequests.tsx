@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useToast } from '@/hooks/use-toast'
-import { Loader2, CheckCircle, XCircle, Search } from 'lucide-react'
+import { Loader2, CheckCircle, XCircle, Search, Trash2 } from 'lucide-react'
+import { supabase } from '@/integrations/supabase/client'
 import {
   Dialog,
   DialogContent,
@@ -176,6 +177,41 @@ export function WhitelistingRequests() {
     }
   }
 
+  const handleDelete = async (request: WhitelistRequest) => {
+    if (!address) return
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete the whitelist request for ${request.email}?`
+    )
+    if (!confirmed) return
+
+    setProcessingId(request.id)
+    try {
+      const { error } = await supabase
+        .from('whitelist_requests')
+        .delete()
+        .eq('id', request.id)
+
+      if (error) throw error
+
+      toast({
+        title: "Success",
+        description: "Whitelist request deleted successfully",
+      })
+
+      await fetchRequests()
+    } catch (error: any) {
+      console.error('Error deleting request:', error)
+      toast({
+        title: "Error",
+        description: error.message || 'Failed to delete whitelist request',
+        variant: "destructive"
+      })
+    } finally {
+      setProcessingId(null)
+    }
+  }
+
   const openRejectDialog = (request: WhitelistRequest) => {
     setSelectedRequest(request)
     setShowRejectDialog(true)
@@ -266,35 +302,50 @@ export function WhitelistingRequests() {
                         )}
                       </TableCell>
                       <TableCell>
-                        {request.status === 'pending' && (
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant="default"
-                              onClick={() => handleApprove(request)}
-                              disabled={processingId === request.id}
-                            >
-                              {processingId === request.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <CheckCircle className="h-4 w-4" />
-                              )}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => openRejectDialog(request)}
-                              disabled={processingId === request.id}
-                            >
-                              <XCircle className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        )}
-                        {request.status === 'rejected' && request.rejection_reason && (
-                          <span className="text-xs text-muted-foreground">
-                            {request.rejection_reason}
-                          </span>
-                        )}
+                        <div className="flex gap-2 items-center">
+                          {request.status === 'pending' && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="default"
+                                onClick={() => handleApprove(request)}
+                                disabled={processingId === request.id}
+                              >
+                                {processingId === request.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <CheckCircle className="h-4 w-4" />
+                                )}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => openRejectDialog(request)}
+                                disabled={processingId === request.id}
+                              >
+                                <XCircle className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
+                          {request.status === 'rejected' && request.rejection_reason && (
+                            <span className="text-xs text-muted-foreground mr-2">
+                              {request.rejection_reason}
+                            </span>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDelete(request)}
+                            disabled={processingId === request.id}
+                            className="ml-auto"
+                          >
+                            {processingId === request.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
