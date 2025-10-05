@@ -3,9 +3,10 @@ import { useAccount } from 'wagmi'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useToast } from '@/hooks/use-toast'
-import { Loader2, CheckCircle, XCircle } from 'lucide-react'
+import { Loader2, CheckCircle, XCircle, Search } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -37,6 +38,7 @@ export function WhitelistingRequests() {
   const [showRejectDialog, setShowRejectDialog] = useState(false)
   const [selectedRequest, setSelectedRequest] = useState<WhitelistRequest | null>(null)
   const [rejectionReason, setRejectionReason] = useState('')
+  const [searchEmail, setSearchEmail] = useState('')
 
   const fetchRequests = async () => {
     if (!address) return
@@ -193,6 +195,14 @@ export function WhitelistingRequests() {
     return new Date(dateString).toLocaleString()
   }
 
+  // Filter requests based on email search
+  const filteredRequests = requests.filter((request) => {
+    if (!searchEmail.trim()) return true
+    // Sanitize search input and perform case-insensitive search
+    const sanitizedSearch = searchEmail.trim().toLowerCase()
+    return request.email.toLowerCase().includes(sanitizedSearch)
+  })
+
   if (isLoading) {
     return (
       <Card>
@@ -207,11 +217,25 @@ export function WhitelistingRequests() {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Whitelisting Requests</CardTitle>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <CardTitle>Whitelisting Requests</CardTitle>
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="email"
+                placeholder="Search by email..."
+                value={searchEmail}
+                onChange={(e) => setSearchEmail(e.target.value.slice(0, 255))}
+                className="pl-10"
+              />
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          {requests.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">No whitelist requests found</p>
+          {filteredRequests.length === 0 ? (
+            <p className="text-muted-foreground text-center py-8">
+              {searchEmail ? 'No whitelist requests found matching your search' : 'No whitelist requests found'}
+            </p>
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -226,7 +250,7 @@ export function WhitelistingRequests() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {requests.map((request) => (
+                  {filteredRequests.map((request) => (
                     <TableRow key={request.id}>
                       <TableCell className="font-mono text-xs">
                         {request.wallet_address.slice(0, 6)}...{request.wallet_address.slice(-4)}
