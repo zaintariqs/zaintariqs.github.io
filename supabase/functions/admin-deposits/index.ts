@@ -27,15 +27,15 @@ serve(async (req) => {
     }
 
     // Verify admin status
-    const { data: adminData } = await supabase
+    const { data: adminData, error: adminError } = await supabase
       .from('admin_wallets')
       .select('is_active')
-      .eq('wallet_address', walletAddress.toLowerCase())
+      .ilike('wallet_address', walletAddress)
       .eq('is_active', true)
-      .single()
+      .maybeSingle()
 
-    if (!adminData) {
-      console.warn('Non-admin attempted to access admin deposits:', walletAddress)
+    if (adminError || !adminData) {
+      console.warn('Non-admin attempted to access admin deposits:', walletAddress, adminError)
       return new Response(
         JSON.stringify({ error: 'Unauthorized: Admin access required' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
