@@ -572,14 +572,14 @@ ${Object.entries(blacklistedAddresses.reduce((acc, entry) => {
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground uppercase tracking-wide">Total Supply</Label>
               <div className="text-2xl font-bold text-foreground">
-                {totalSupply ? `${Number(formatUnits(totalSupply, tokenDecimals)).toLocaleString()}` : 'Loading...'}
+                {totalSupply ? formatUnits(totalSupply, tokenDecimals) : 'Loading...'}
               </div>
               <div className="text-xs text-muted-foreground">PKRSC</div>
             </div>
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground uppercase tracking-wide">Treasury Balance</Label>
               <div className="text-2xl font-bold text-primary">
-                {treasuryBalance ? `${Number(formatUnits(treasuryBalance, tokenDecimals)).toLocaleString()}` : 'Loading...'}
+                {treasuryBalance ? formatUnits(treasuryBalance, tokenDecimals) : 'Loading...'}
               </div>
               <div className="text-xs text-muted-foreground">PKRSC</div>
             </div>
