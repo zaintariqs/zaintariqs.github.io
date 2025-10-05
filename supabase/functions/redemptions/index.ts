@@ -131,39 +131,51 @@ serve(async (req) => {
 
     // Get authentication headers
     const walletAddressHeader = req.headers.get('x-wallet-address')
-    const signatureHeader = req.headers.get('x-wallet-signature')
-    const messageHeaderEncoded = req.headers.get('x-signature-message')
-    const messageHeader = messageHeaderEncoded ? atob(messageHeaderEncoded) : null // Decode base64
     
-    // Verify wallet signature for authentication
-    if (!walletAddressHeader || !signatureHeader || !messageHeader) {
-      console.warn('Missing authentication headers')
-      return new Response(
-        JSON.stringify({ error: 'Authentication required: wallet signature missing' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    // GET requests only need wallet address
+    if (req.method === 'GET') {
+      if (!walletAddressHeader) {
+        return new Response(
+          JSON.stringify({ error: 'Wallet address required' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      // Continue to GET handler
+    } else {
+      // POST and PATCH require full signature verification
+      const signatureHeader = req.headers.get('x-wallet-signature')
+      const messageHeaderEncoded = req.headers.get('x-signature-message')
+      const messageHeader = messageHeaderEncoded ? atob(messageHeaderEncoded) : null
+      
+      if (!walletAddressHeader || !signatureHeader || !messageHeader) {
+        console.warn('Missing authentication headers')
+        return new Response(
+          JSON.stringify({ error: 'Authentication required: wallet signature missing' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      
+      if (!isValidEthAddress(walletAddressHeader)) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid wallet address format' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      
+      // Verify the signature proves wallet ownership
+      const isValidSignature = await verifyWalletSignature(
+        walletAddressHeader,
+        signatureHeader,
+        messageHeader
       )
-    }
-    
-    if (!isValidEthAddress(walletAddressHeader)) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid wallet address format' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-    
-    // Verify the signature proves wallet ownership
-    const isValidSignature = await verifyWalletSignature(
-      walletAddressHeader,
-      signatureHeader,
-      messageHeader
-    )
-    
-    if (!isValidSignature) {
-      console.error('Invalid wallet signature for address:', walletAddressHeader)
-      return new Response(
-        JSON.stringify({ error: 'Invalid wallet signature' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      
+      if (!isValidSignature) {
+        console.error('Invalid wallet signature for address:', walletAddressHeader)
+        return new Response(
+          JSON.stringify({ error: 'Invalid wallet signature' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
     }
     
     // Check rate limiting
@@ -293,10 +305,18 @@ serve(async (req) => {
     }
 
     if (req.method === 'GET') {
-      // Get redemptions for authenticated wallet only
+      // GET requests don't require signature - just wallet address for filtering
+      if (!walletAddressHeader || !isValidEthAddress(walletAddressHeader)) {
+        return new Response(
+          JSON.stringify({ error: 'Valid wallet address required' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Get redemptions for the wallet address
       const { data, error } = await supabase
         .from('redemptions')
-        .select('id, pkrsc_amount, status, created_at, updated_at, burn_address, transaction_hash, bank_name, account_number, account_title')
+        .select('id, pkrsc_amount, status, created_at, updated_at, burn_address, transaction_hash, bank_name, account_number, account_title, cancellation_reason')
         .eq('user_id', walletAddressHeader.toLowerCase())
         .order('created_at', { ascending: false })
 

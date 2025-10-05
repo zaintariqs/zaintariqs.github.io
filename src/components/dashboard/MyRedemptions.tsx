@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useAccount, useSignMessage } from 'wagmi'
+import { useAccount } from 'wagmi'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -15,13 +15,13 @@ interface Redemption {
   bank_name: string
   account_number: string
   account_title: string
+  cancellation_reason?: string
   created_at: string
   updated_at: string
 }
 
 export function MyRedemptions() {
   const { address } = useAccount()
-  const { signMessageAsync } = useSignMessage()
   const { toast } = useToast()
   const [redemptions, setRedemptions] = useState<Redemption[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -31,22 +31,12 @@ export function MyRedemptions() {
       if (!address) return
 
       try {
-        // Generate authentication signature
-        const timestamp = Date.now()
-        const message = `PKRSC Fetch Redemptions\nWallet: ${address}\nTimestamp: ${timestamp}`
-        const signature = await signMessageAsync({ 
-          account: address,
-          message 
-        })
-
         const response = await fetch(
           'https://jdjreuxhvzmzockuduyq.supabase.co/functions/v1/redemptions',
           {
             method: 'GET',
             headers: {
               'x-wallet-address': address,
-              'x-wallet-signature': signature,
-              'x-signature-message': btoa(message),
             },
           }
         )
@@ -70,7 +60,7 @@ export function MyRedemptions() {
     }
 
     fetchRedemptions()
-  }, [address, signMessageAsync, toast])
+  }, [address, toast])
 
   const getStatusBadge = (status: string) => {
     const statusLabels: Record<string, string> = {
