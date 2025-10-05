@@ -145,6 +145,10 @@ export function AdminSection() {
   // Local storage for tracking
   const [blacklistedAddresses, setBlacklistedAddresses] = useState<BlacklistEntry[]>([])
   const [transactions, setTransactions] = useState<any[]>([])
+  
+  // User transactions from database
+  const [userDeposits, setUserDeposits] = useState<any[]>([])
+  const [userRedemptions, setUserRedemptions] = useState<any[]>([])
 
   // Chart colors
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8']
@@ -204,6 +208,43 @@ export function AdminSection() {
       setTransactions(JSON.parse(storedTx))
     }
   }, [])
+
+  // Fetch user deposits and redemptions
+  useEffect(() => {
+    const fetchUserTransactions = async () => {
+      if (!address) return
+
+      try {
+        // Fetch all deposits
+        const { data: deposits, error: depositsError } = await supabase.functions.invoke('admin-deposits', {
+          headers: {
+            'x-wallet-address': address
+          }
+        })
+
+        if (!depositsError && deposits?.data) {
+          setUserDeposits(deposits.data)
+        }
+
+        // Fetch all redemptions
+        const { data: redemptions, error: redemptionsError } = await supabase.functions.invoke('admin-redemptions', {
+          headers: {
+            'x-wallet-address': address
+          }
+        })
+
+        if (!redemptionsError && redemptions?.data) {
+          setUserRedemptions(redemptions.data)
+        }
+      } catch (error) {
+        console.error('Error fetching user transactions:', error)
+      }
+    }
+
+    if (isAdmin) {
+      fetchUserTransactions()
+    }
+  }, [address, isAdmin])
 
   const saveBlacklistEntry = (entry: BlacklistEntry) => {
     const updated = [...blacklistedAddresses, entry]
@@ -582,6 +623,45 @@ ${Object.entries(blacklistedAddresses.reduce((acc, entry) => {
                 {treasuryBalance ? formatUnits(treasuryBalance, tokenDecimals) : 'Loading...'}
               </div>
               <div className="text-xs text-muted-foreground">PKRSC</div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* User Transactions Stats */}
+        <Card className="bg-card/50 border-border">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-primary" />
+              <CardTitle className="text-base">User Transactions</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-xs text-muted-foreground mb-3">
+              All deposits & redemptions by users
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center p-2 rounded-lg bg-background/50">
+                <div className="text-2xl font-bold text-primary">{userDeposits.length + userRedemptions.length}</div>
+                <div className="text-xs text-muted-foreground">Total Txs</div>
+              </div>
+              <div className="text-center p-2 rounded-lg bg-background/50">
+                <div className="text-2xl font-bold text-green-500">
+                  {userDeposits.filter(d => d.status === 'approved').length}
+                </div>
+                <div className="text-xs text-muted-foreground">Deposits</div>
+              </div>
+              <div className="text-center p-2 rounded-lg bg-background/50">
+                <div className="text-2xl font-bold text-orange-500">
+                  {userRedemptions.filter(r => r.status === 'completed').length}
+                </div>
+                <div className="text-xs text-muted-foreground">Redemptions</div>
+              </div>
+              <div className="text-center p-2 rounded-lg bg-background/50">
+                <div className="text-2xl font-bold text-blue-500">
+                  {userDeposits.filter(d => d.status === 'pending').length + userRedemptions.filter(r => ['pending', 'burn_confirmed'].includes(r.status)).length}
+                </div>
+                <div className="text-xs text-muted-foreground">Pending</div>
+              </div>
             </div>
           </CardContent>
         </Card>
