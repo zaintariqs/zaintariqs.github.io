@@ -58,13 +58,17 @@ serve(async (req) => {
       .ilike('wallet_address', walletAddress)
       .single()
 
-    // Add to blacklist
+    // Add to blacklist (upsert to handle already blacklisted addresses)
     const { error: blacklistError } = await supabase
       .from('blacklisted_addresses')
-      .insert({
+      .upsert({
         wallet_address: walletAddress.toLowerCase(),
         reason,
-        blacklisted_by: adminWallet.toLowerCase()
+        blacklisted_by: adminWallet.toLowerCase(),
+        is_active: true,
+        blacklisted_at: new Date().toISOString()
+      }, {
+        onConflict: 'wallet_address'
       })
 
     if (blacklistError) {
