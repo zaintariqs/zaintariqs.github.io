@@ -172,7 +172,7 @@ export function UniswapSection() {
 
         {/* Warning */}
         <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-          <div className="text-xs text-destructive-foreground">
+          <div className="text-xs text-black dark:text-white">
             <strong>Risk Warning:</strong> Cryptocurrency trading involves substantial risk. 
             Always verify pool liquidity and slippage before large trades.
           </div>
