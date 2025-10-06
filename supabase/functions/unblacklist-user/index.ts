@@ -62,6 +62,17 @@ serve(async (req) => {
       )
     }
 
+    // Update whitelist_requests status back to "approved"
+    await supabase
+      .from('whitelist_requests')
+      .update({ 
+        status: 'approved',
+        rejection_reason: null,
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: adminWallet.toLowerCase()
+      })
+      .ilike('wallet_address', walletAddress)
+
     // Log admin action
     await supabase.from('admin_actions').insert({
       action_type: 'user_unblacklisted',
