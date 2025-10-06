@@ -54,7 +54,7 @@ export function WalletConnect() {
         if (data?.isBlacklisted) {
           setBlacklistReason(data.reason || 'No reason provided')
           setShowBlacklistDialog(true)
-          disconnect()
+          // Do not auto-disconnect to keep the dialog visible until user closes it
         }
       } catch (error) {
         console.error('Error checking blacklist:', error)
