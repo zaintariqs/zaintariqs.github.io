@@ -193,13 +193,28 @@ export function MarketMakerSection() {
         body: { walletAddress: address }
       })
       
-      if (error) throw error
+      if (error) {
+        // Extract detailed error message from response
+        const errorMsg = (data as any)?.error || error.message || 'Failed to run bot'
+        const errorDetails = (data as any)?.details
+        
+        toast({
+          title: 'Market Maker Error',
+          description: errorDetails ? `${errorMsg}\n${errorDetails}` : errorMsg,
+          variant: 'destructive'
+        })
+        
+        // Refresh config to reflect error status
+        fetchConfig()
+        return
+      }
 
       toast({
         title: 'Bot Executed',
-        description: 'Market maker bot ran successfully'
+        description: data?.message || 'Market maker bot ran successfully'
       })
       fetchTransactions()
+      fetchConfig()
     } catch (error) {
       console.error('Error running bot:', error)
       toast({

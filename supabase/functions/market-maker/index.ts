@@ -139,19 +139,89 @@ Deno.serve(async (req) => {
 
     // Fetch current price from Uniswap (via DEX Screener as fallback)
     let currentPrice = 0
+    let liquidityUsd = 0
     try {
       const priceResponse = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${PKRSC_ADDRESS}`)
       const priceData = await priceResponse.json()
-      const basePool = priceData.pairs?.find((pair: any) => 
+      
+      // Check if any pairs exist
+      if (!priceData.pairs || priceData.pairs.length === 0) {
+        console.error('No liquidity pools found for PKRSC')
+        
+        // Update config to error state
+        await supabase.from('market_maker_config').update({
+          status: 'error'
+        }).eq('id', config.id)
+        
+        // Log the issue
+        await supabase.from('admin_actions').insert({
+          wallet_address: walletAddress,
+          action_type: 'MARKET_MAKER_NO_POOL',
+          details: { 
+            reason: 'No liquidity pool exists for PKRSC on Base',
+            tokenAddress: PKRSC_ADDRESS
+          }
+        })
+        
+        return new Response(JSON.stringify({ 
+          error: 'No liquidity pool found for PKRSC. Please create a PKRSC/USDT pool on Uniswap V3 (Base) first.',
+          details: 'The market maker requires an active liquidity pool to function.'
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+      
+      const basePool = priceData.pairs.find((pair: any) => 
         pair.chainId === 'base' && pair.quoteToken?.symbol === 'USDT'
       )
-      if (basePool) {
-        currentPrice = parseFloat(basePool.priceUsd || '0')
-        console.log('Current PKRSC price:', currentPrice)
+      
+      if (!basePool) {
+        console.error('No PKRSC/USDT pool found on Base')
+        
+        await supabase.from('market_maker_config').update({
+          status: 'error'
+        }).eq('id', config.id)
+        
+        await supabase.from('admin_actions').insert({
+          wallet_address: walletAddress,
+          action_type: 'MARKET_MAKER_NO_POOL',
+          details: { 
+            reason: 'No PKRSC/USDT pool found on Base',
+            availablePools: priceData.pairs.map((p: any) => `${p.baseToken.symbol}/${p.quoteToken.symbol}`)
+          }
+        })
+        
+        return new Response(JSON.stringify({ 
+          error: 'No PKRSC/USDT pool found on Base network',
+          details: 'Please create a PKRSC/USDT liquidity pool on Uniswap V3 Base first.'
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+      
+      currentPrice = parseFloat(basePool.priceUsd || '0')
+      liquidityUsd = parseFloat(basePool.liquidity?.usd || '0')
+      
+      console.log('Current PKRSC price:', currentPrice, 'Liquidity:', liquidityUsd)
+      
+      // Check for minimum liquidity (e.g., $1000)
+      if (liquidityUsd < 1000) {
+        console.warn('Low liquidity warning:', liquidityUsd)
+        await supabase.from('admin_actions').insert({
+          wallet_address: walletAddress,
+          action_type: 'MARKET_MAKER_LOW_LIQUIDITY',
+          details: { liquidityUsd, currentPrice }
+        })
+      }
+      
+      if (currentPrice === 0) {
+        throw new Error('Price data unavailable or invalid')
       }
     } catch (error) {
       console.error('Failed to fetch price:', error)
-      throw new Error('Could not fetch current price')
+      throw new Error('Could not fetch current price: ' + (error instanceof Error ? error.message : 'Unknown error'))
     }
 
     // Calculate price deviation
