@@ -112,24 +112,39 @@ export function AdminSection() {
   const currentChain = supportedChains.find(chain => chain.id === chainId)
   
   // Read contract data
-  const { data: decimals } = useReadContract({
+  const { data: decimals, error: decimalsError } = useReadContract({
     address: PKRSC_CONTRACT_ADDRESS as `0x${string}`,
     abi: pkrscAbi,
     functionName: 'decimals',
   })
   
-  const { data: totalSupply } = useReadContract({
+  const { data: totalSupply, error: totalSupplyError, refetch: refetchTotalSupply } = useReadContract({
     address: PKRSC_CONTRACT_ADDRESS as `0x${string}`,
     abi: pkrscAbi,
     functionName: 'totalSupply',
   })
   
-  const { data: treasuryBalance } = useReadContract({
+  const { data: treasuryBalance, error: treasuryError, refetch: refetchTreasury } = useReadContract({
     address: PKRSC_CONTRACT_ADDRESS as `0x${string}`,
     abi: pkrscAbi,
     functionName: 'balanceOf',
     args: [MASTER_MINTER_ADDRESS as `0x${string}`],
   })
+
+  // Log contract read errors
+  useEffect(() => {
+    if (decimalsError) console.error('Error reading decimals:', decimalsError)
+    if (totalSupplyError) console.error('Error reading totalSupply:', totalSupplyError)
+    if (treasuryError) console.error('Error reading treasury balance:', treasuryError)
+    
+    console.log('Contract reads:', {
+      decimals,
+      totalSupply: totalSupply?.toString(),
+      treasuryBalance: treasuryBalance?.toString(),
+      chainId,
+      address
+    })
+  }, [decimals, totalSupply, treasuryBalance, decimalsError, totalSupplyError, treasuryError, chainId, address])
   
   const tokenDecimals = typeof decimals === 'number' ? decimals : Number((decimals as any) ?? 6)
   

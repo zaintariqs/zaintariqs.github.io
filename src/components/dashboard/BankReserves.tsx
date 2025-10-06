@@ -28,18 +28,26 @@ export function BankReserves() {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const fetchReserves = async () => {
-    if (!address) return
+    if (!address) {
+      console.log('[BankReserves] No wallet address available')
+      return
+    }
+
+    console.log('[BankReserves] Fetching reserves for address:', address)
 
     try {
       const { data, error } = await supabase.functions.invoke('get-bank-reserves', {
         body: { walletAddress: address }
       })
 
+      console.log('[BankReserves] Response:', { data, error })
+
       if (error) throw error
 
       setReserves(data.reserves || [])
+      console.log('[BankReserves] Reserves loaded:', data.reserves)
     } catch (error) {
-      console.error('Error fetching bank reserves:', error)
+      console.error('[BankReserves] Error fetching bank reserves:', error)
       toast({
         title: "Error",
         description: "Failed to load bank reserves",
