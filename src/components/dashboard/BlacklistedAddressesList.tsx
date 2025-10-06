@@ -6,6 +6,7 @@ import { Copy, Check } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { supabase } from '@/integrations/supabase/client'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { useAccount } from 'wagmi'
 
 interface BlacklistedAddress {
   id: string
@@ -22,27 +23,29 @@ export function BlacklistedAddressesList() {
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null)
   const { toast } = useToast()
 
-  useEffect(() => {
-    fetchBlacklistedAddresses()
-  }, [])
+  const { address } = useAccount()
 
-  const fetchBlacklistedAddresses = async () => {
+  useEffect(() => {
+    if (address) {
+      fetchBlacklistedAddresses(address)
+    }
+  }, [address])
+
+  const fetchBlacklistedAddresses = async (walletAddress: string) => {
     try {
       setLoading(true)
-      const { data, error } = await supabase
-        .from('blacklisted_addresses')
-        .select('*')
-        .eq('is_active', true)
-        .order('blacklisted_at', { ascending: false })
+      const { data, error } = await supabase.functions.invoke('list-blacklisted', {
+        body: { walletAddress }
+      })
 
       if (error) throw error
-      setBlacklistedAddresses(data || [])
+      setBlacklistedAddresses(data?.addresses || [])
     } catch (error) {
       console.error('Error fetching blacklisted addresses:', error)
       toast({
-        title: "Error",
-        description: "Failed to fetch blacklisted addresses",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to fetch blacklisted addresses',
+        variant: 'destructive',
       })
     } finally {
       setLoading(false)
