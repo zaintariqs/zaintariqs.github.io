@@ -274,13 +274,25 @@ export function MarketMakerSection() {
           </div>
         )}
 
+        {/* Live Forex Rate Info */}
+        <div className="p-4 bg-crypto-green/10 border border-crypto-green/20 rounded-lg">
+          <div className="flex items-center gap-2 mb-2">
+            <TrendingUp className="h-4 w-4 text-crypto-green" />
+            <span className="font-medium text-sm">Live Forex Integration</span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Bot automatically fetches live USD/PKR rates from forex APIs and maintains PKRSC price at 1 PKRSC = 1 PKR value.
+            The target price below is only used as a fallback if the forex API is unavailable.
+          </p>
+        </div>
+
         {/* Configuration */}
         <div className="space-y-4">
           <h3 className="font-semibold text-card-foreground">Configuration</h3>
           
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="targetPrice">Target Price (USD)</Label>
+              <Label htmlFor="targetPrice">Fallback Target Price (USD)</Label>
               <Input
                 id="targetPrice"
                 type="number"
@@ -288,6 +300,7 @@ export function MarketMakerSection() {
                 value={targetPrice}
                 onChange={(e) => setTargetPrice(e.target.value)}
               />
+              <p className="text-xs text-muted-foreground">Used only if forex API fails</p>
             </div>
 
             <div className="space-y-2">

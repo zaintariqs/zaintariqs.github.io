@@ -137,6 +137,28 @@ Deno.serve(async (req) => {
 
     console.log('Bot wallet address:', wallet.address)
 
+    // Fetch live USD/PKR exchange rate
+    let usdToPkr = parseFloat(config.target_price) // Fallback to config
+    try {
+      const forexResponse = await fetch('https://api.exchangerate-api.com/v4/latest/USD')
+      const forexData = await forexResponse.json()
+      if (forexData.rates && forexData.rates.PKR) {
+        usdToPkr = forexData.rates.PKR
+        console.log(`Live USD/PKR rate: 1 USD = ${usdToPkr} PKR`)
+        
+        // Log the rate fetch for monitoring
+        await supabase.from('admin_actions').insert({
+          wallet_address: walletAddress,
+          action_type: 'MARKET_MAKER_FOREX_RATE',
+          details: { usdToPkr, source: 'exchangerate-api.com' }
+        })
+      } else {
+        console.warn('Failed to fetch PKR rate, using config target:', usdToPkr)
+      }
+    } catch (error) {
+      console.warn('Forex API error, using config target:', error)
+    }
+
     // Fetch current price from Uniswap (via DEX Screener as fallback)
     let currentPrice = 0
     let liquidityUsd = 0
@@ -224,12 +246,15 @@ Deno.serve(async (req) => {
       throw new Error('Could not fetch current price: ' + (error instanceof Error ? error.message : 'Unknown error'))
     }
 
-    // Calculate price deviation
-    const targetPrice = parseFloat(config.target_price)
+    // Calculate price deviation using live forex rate
+    // Since 1 PKRSC = 1 PKR, and we have USD/PKR rate, 
+    // target price in USD = 1 / usdToPkr
+    const targetPrice = 1 / usdToPkr
     const threshold = parseFloat(config.price_threshold)
     const deviation = (currentPrice - targetPrice) / targetPrice
 
-    console.log(`Target: $${targetPrice}, Current: $${currentPrice}, Deviation: ${(deviation * 100).toFixed(2)}%`)
+    console.log(`Live Rate: 1 USD = ${usdToPkr} PKR`)
+    console.log(`Target: $${targetPrice.toFixed(6)}, Current: $${currentPrice.toFixed(6)}, Deviation: ${(deviation * 100).toFixed(2)}%`)
 
     // Determine if we need to trade
     let shouldBuy = false
