@@ -1,6 +1,4 @@
-import { Button } from "@/components/ui/button";
 import { Shield, TrendingUp, Zap } from "lucide-react";
-import { Link } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { translations } from "@/translations";
 
@@ -85,16 +83,6 @@ const PKRHeroSection = () => {
             </div>
           </div>
 
-          {/* CTA Buttons */}
-          <div className={`flex flex-col sm:flex-row gap-4 ${isUrdu ? 'sm:flex-row-reverse' : ''}`}>
-            <Button 
-              size="lg"
-              className="bg-gradient-crypto text-white hover:bg-gradient-rainbow shadow-crypto border-0 px-8 py-4 text-lg font-semibold"
-              asChild
-            >
-              <Link to="/learn-more">{t.learnMore}</Link>
-            </Button>
-          </div>
 
           {/* Features Preview - Refined */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-16 w-full max-w-6xl">
