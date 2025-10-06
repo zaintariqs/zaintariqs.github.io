@@ -88,12 +88,13 @@ serve(async (req) => {
         reviewed_at: new Date().toISOString(),
         reviewed_by: adminWallet.toLowerCase()
       })
-      .ilike('wallet_address', walletAddress)
+      .eq('wallet_address', walletAddress.toLowerCase())
+      .select('id')
 
     if (updateError) {
       console.error('Error updating whitelist status:', updateError)
     } else {
-      console.log('Whitelist status updated for:', walletAddress, 'rows affected:', updateData)
+      console.log('Whitelist status updated for:', walletAddress.toLowerCase(), 'rows affected:', updateData?.length ?? 0)
     }
 
     // Send email notification if email exists

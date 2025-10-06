@@ -63,7 +63,9 @@ serve(async (req) => {
     }
 
     // Update whitelist_requests status back to "approved"
-    await supabase
+
+    // Update whitelist_requests status back to "approved"
+    const { error: updateError, data: updateData } = await supabase
       .from('whitelist_requests')
       .update({ 
         status: 'approved',
@@ -71,17 +73,14 @@ serve(async (req) => {
         reviewed_at: new Date().toISOString(),
         reviewed_by: adminWallet.toLowerCase()
       })
-      .ilike('wallet_address', walletAddress)
+      .eq('wallet_address', walletAddress.toLowerCase())
+      .select('id')
 
-    // Log admin action
-    await supabase.from('admin_actions').insert({
-      action_type: 'user_unblacklisted',
-      wallet_address: adminWallet.toLowerCase(),
-      details: { 
-        unblacklistedAddress: walletAddress.toLowerCase(),
-        timestamp: new Date().toISOString()
-      }
-    })
+    if (updateError) {
+      console.error('Error updating whitelist status on unblacklist:', updateError)
+    } else {
+      console.log('Whitelist status reset for:', walletAddress.toLowerCase(), 'rows affected:', updateData?.length ?? 0)
+    }
 
     return new Response(
       JSON.stringify({ success: true }),
