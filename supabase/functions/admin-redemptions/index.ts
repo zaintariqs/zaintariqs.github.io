@@ -1,5 +1,9 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { Resend } from 'npm:resend@2.0.0'
+
+const resend = new Resend(Deno.env.get('RESEND_API_KEY'))
+const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'team@pkrsc.org'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -176,6 +180,125 @@ serve(async (req) => {
           timestamp: new Date().toISOString() 
         }
       })
+
+      // Send email notification
+      const { data: whitelistData } = await supabase
+        .from('whitelist_requests')
+        .select('email')
+        .ilike('wallet_address', data.user_id)
+        .single()
+
+      if (whitelistData?.email) {
+        try {
+          if (status === 'completed') {
+            // Success email
+            await resend.emails.send({
+              from: FROM_EMAIL,
+              to: [whitelistData.email],
+              subject: 'PKRSC Redemption Completed',
+              html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                  <h2 style="color: #059669;">Redemption Successful!</h2>
+                  
+                  <p>Dear User,</p>
+                  
+                  <p>Your PKRSC redemption has been successfully completed and funds have been transferred to your bank account.</p>
+                  
+                  <div style="background-color: #f0fdf4; border-left: 4px solid #059669; padding: 16px; margin: 20px 0;">
+                    <strong>Redemption Details:</strong><br><br>
+                    <strong>PKRSC Amount Redeemed:</strong> ${data.pkrsc_amount} PKRSC<br>
+                    <strong>PKR Amount:</strong> ${data.pkrsc_amount} PKR<br>
+                    <strong>Your Wallet:</strong> ${data.user_id}
+                  </div>
+                  
+                  ${burnTransactionHash ? `
+                    <div style="background-color: #f9fafb; padding: 16px; border-radius: 8px; margin: 20px 0;">
+                      <strong>Burn Transaction:</strong><br>
+                      <a href="https://basescan.org/tx/${burnTransactionHash}" style="color: #2563eb; word-break: break-all;">
+                        ${burnTransactionHash}
+                      </a>
+                    </div>
+                  ` : ''}
+                  
+                  ${bankTransactionId ? `
+                    <div style="background-color: #f9fafb; padding: 16px; border-radius: 8px; margin: 20px 0;">
+                      <strong>Bank Transaction ID:</strong> ${bankTransactionId}
+                    </div>
+                  ` : ''}
+                  
+                  <div style="background-color: #f0fdf4; padding: 16px; border-radius: 8px; margin: 20px 0;">
+                    <strong>Bank Account Details:</strong><br>
+                    <strong>Bank:</strong> ${data.bank_name}<br>
+                    <strong>Account:</strong> ${data.account_number}<br>
+                    <strong>Title:</strong> ${data.account_title}
+                  </div>
+                  
+                  <p>Please allow 1-2 business days for the funds to appear in your bank account.</p>
+                  
+                  <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+                  
+                  <p style="color: #6b7280; font-size: 12px;">
+                    If you have any questions, contact us at <a href="mailto:team@pkrsc.org">team@pkrsc.org</a>
+                  </p>
+                </div>
+              `,
+            })
+            console.log(`Redemption success email sent to ${whitelistData.email}`)
+          } else if (status === 'cancelled') {
+            // Cancellation email
+            await resend.emails.send({
+              from: FROM_EMAIL,
+              to: [whitelistData.email],
+              subject: 'PKRSC Redemption Cancelled',
+              html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                  <h2 style="color: #dc2626;">Redemption Cancelled</h2>
+                  
+                  <p>Dear User,</p>
+                  
+                  <p>Your PKRSC redemption request has been cancelled.</p>
+                  
+                  <div style="background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 16px; margin: 20px 0;">
+                    <strong>Redemption Details:</strong><br><br>
+                    <strong>PKRSC Amount:</strong> ${data.pkrsc_amount} PKRSC<br>
+                    <strong>Your Wallet:</strong> ${data.user_id}
+                  </div>
+                  
+                  ${cancellationReason ? `
+                    <div style="background-color: #fef2f2; padding: 16px; border-radius: 8px; margin: 20px 0;">
+                      <strong>Reason:</strong> ${cancellationReason}
+                    </div>
+                  ` : ''}
+                  
+                  <p><strong>What to do next:</strong></p>
+                  <ul>
+                    <li>Review the cancellation reason</li>
+                    <li>Correct any issues if applicable</li>
+                    <li>Submit a new redemption request if needed</li>
+                  </ul>
+                  
+                  <p>Your PKRSC tokens remain in your wallet and have not been burned.</p>
+                  
+                  <p>If you need assistance or have questions, please contact us:</p>
+                  
+                  <div style="background-color: #f3f4f6; padding: 16px; border-radius: 8px; margin: 20px 0;">
+                    <strong>Email:</strong> <a href="mailto:team@pkrsc.org">team@pkrsc.org</a>
+                  </div>
+                  
+                  <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+                  
+                  <p style="color: #6b7280; font-size: 12px;">
+                    This is an automated notification from PKRSC.
+                  </p>
+                </div>
+              `,
+            })
+            console.log(`Redemption cancellation email sent to ${whitelistData.email}`)
+          }
+        } catch (emailError) {
+          console.error('Error sending redemption email:', emailError)
+        }
+      }
 
       return new Response(
         JSON.stringify({ data }),

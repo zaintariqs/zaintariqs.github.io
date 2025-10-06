@@ -1,5 +1,9 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { Resend } from 'npm:resend@2.0.0'
+
+const resend = new Resend(Deno.env.get('RESEND_API_KEY'))
+const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'team@pkrsc.org'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -185,6 +189,64 @@ serve(async (req) => {
         }
       })
 
+      // Send success email notification
+      const { data: whitelistData } = await supabase
+        .from('whitelist_requests')
+        .select('email')
+        .ilike('wallet_address', deposit.user_id)
+        .single()
+
+      if (whitelistData?.email) {
+        try {
+          await resend.emails.send({
+            from: FROM_EMAIL,
+            to: [whitelistData.email],
+            subject: 'PKRSC Deposit Confirmed',
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #059669;">Deposit Successful!</h2>
+                
+                <p>Dear User,</p>
+                
+                <p>Your PKRSC deposit has been successfully processed and confirmed.</p>
+                
+                <div style="background-color: #f0fdf4; border-left: 4px solid #059669; padding: 16px; margin: 20px 0;">
+                  <strong>Deposit Details:</strong><br><br>
+                  <strong>Amount Deposited:</strong> ${deposit.amount_pkr} PKR<br>
+                  <strong>PKRSC Tokens Minted:</strong> ${deposit.amount_pkr} PKRSC<br>
+                  <strong>Payment Method:</strong> ${deposit.payment_method}<br>
+                  <strong>Your Wallet:</strong> ${deposit.user_id}
+                </div>
+                
+                <div style="background-color: #f9fafb; padding: 16px; border-radius: 8px; margin: 20px 0;">
+                  <strong>Blockchain Transaction:</strong><br>
+                  <a href="https://basescan.org/tx/${mintTxHash}" style="color: #2563eb; word-break: break-all;">
+                    ${mintTxHash}
+                  </a>
+                </div>
+                
+                ${deposit.user_transaction_id ? `
+                  <div style="background-color: #f9fafb; padding: 16px; border-radius: 8px; margin: 20px 0;">
+                    <strong>Banking Transaction ID:</strong> ${deposit.user_transaction_id}
+                  </div>
+                ` : ''}
+                
+                <p>Your PKRSC tokens are now available in your wallet and ready to use.</p>
+                
+                <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+                
+                <p style="color: #6b7280; font-size: 12px;">
+                  If you have any questions, contact us at <a href="mailto:team@pkrsc.org">team@pkrsc.org</a>
+                </p>
+              </div>
+            `,
+          })
+          console.log(`Deposit success email sent to ${whitelistData.email}`)
+        } catch (emailError) {
+          console.error('Error sending deposit success email:', emailError)
+        }
+      }
+
       return new Response(
         JSON.stringify({ data }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -230,6 +292,65 @@ serve(async (req) => {
           timestamp: new Date().toISOString()
         }
       })
+
+      // Send rejection email notification
+      const { data: whitelistData } = await supabase
+        .from('whitelist_requests')
+        .select('email')
+        .ilike('wallet_address', deposit.user_id)
+        .single()
+
+      if (whitelistData?.email) {
+        try {
+          await resend.emails.send({
+            from: FROM_EMAIL,
+            to: [whitelistData.email],
+            subject: 'PKRSC Deposit - Action Required',
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #dc2626;">Deposit Could Not Be Processed</h2>
+                
+                <p>Dear User,</p>
+                
+                <p>Unfortunately, your PKRSC deposit could not be processed at this time.</p>
+                
+                <div style="background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 16px; margin: 20px 0;">
+                  <strong>Deposit Details:</strong><br><br>
+                  <strong>Amount:</strong> ${deposit.amount_pkr} PKR<br>
+                  <strong>Payment Method:</strong> ${deposit.payment_method}<br>
+                  <strong>Your Wallet:</strong> ${deposit.user_id}
+                </div>
+                
+                <div style="background-color: #fef2f2; padding: 16px; border-radius: 8px; margin: 20px 0;">
+                  <strong>Reason:</strong> ${rejectionReason}
+                </div>
+                
+                <p><strong>What to do next:</strong></p>
+                <ul>
+                  <li>Review the reason above carefully</li>
+                  <li>Correct any issues with your transaction</li>
+                  <li>Submit a new deposit request</li>
+                </ul>
+                
+                <p>If you believe this was rejected in error or need assistance, please contact our support team:</p>
+                
+                <div style="background-color: #f3f4f6; padding: 16px; border-radius: 8px; margin: 20px 0;">
+                  <strong>Email:</strong> <a href="mailto:team@pkrsc.org">team@pkrsc.org</a>
+                </div>
+                
+                <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+                
+                <p style="color: #6b7280; font-size: 12px;">
+                  This is an automated notification from PKRSC.
+                </p>
+              </div>
+            `,
+          })
+          console.log(`Deposit rejection email sent to ${whitelistData.email}`)
+        } catch (emailError) {
+          console.error('Error sending deposit rejection email:', emailError)
+        }
+      }
 
       return new Response(
         JSON.stringify({ data }),

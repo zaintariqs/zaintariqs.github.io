@@ -44,3 +44,12 @@ verify_jwt = false
 
 [functions.approve-deposit]
 verify_jwt = false
+
+[functions.blacklist-user]
+verify_jwt = false
+
+[functions.get-bank-reserves]
+verify_jwt = false
+
+[functions.update-bank-reserves]
+verify_jwt = false
