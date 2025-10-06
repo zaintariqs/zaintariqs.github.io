@@ -197,6 +197,15 @@ export function AdminSection() {
     hash,
   })
 
+  // Refetch contract data when transaction is confirmed
+  useEffect(() => {
+    if (isConfirmed) {
+      console.log('Transaction confirmed, refetching contract data...')
+      refetchTotalSupply()
+      refetchTreasury()
+    }
+  }, [isConfirmed, refetchTotalSupply, refetchTreasury])
+
   // Verify admin status on mount
   useEffect(() => {
     const verifyAdmin = async () => {
