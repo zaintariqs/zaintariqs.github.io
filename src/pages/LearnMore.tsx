@@ -15,8 +15,8 @@ const LearnMore = () => {
 
   const handleDownloadWhitepaper = () => {
     const link = document.createElement('a');
-    link.href = '/documents/whitepaper.pdf';
-    link.download = 'PKR-Stable-Whitepaper.pdf';
+    link.href = '/PKRSC_Whitepaper.pdf';
+    link.download = 'PKRSC_Whitepaper.pdf';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
