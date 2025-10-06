@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import { Shield, TrendingUp, Zap, Users, Eye, MessageCircle } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { translations } from "@/translations";
@@ -6,10 +5,6 @@ import { translations } from "@/translations";
 const PKRFeaturesSection = () => {
   const { language, isUrdu } = useLanguage();
   const t = translations[language];
-
-  const handleWhatsAppContact = () => {
-    window.open("https://wa.me/905314390365", "_blank");
-  };
 
   const features = [
     {
@@ -75,26 +70,6 @@ const PKRFeaturesSection = () => {
           ))}
         </div>
 
-        {/* CTA Section - Refined */}
-        <div className={`relative overflow-hidden text-center bg-gradient-card backdrop-blur-md border border-crypto-green/20 rounded-3xl p-16 ${isUrdu ? 'text-right' : ''}`}>
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,hsl(var(--crypto-green)/0.08),transparent_70%)]" />
-          <div className="relative z-10">
-            <h3 className="text-3xl md:text-4xl font-bold text-white mb-5 tracking-tight">
-              {t.ctaTitle}
-            </h3>
-            <p className="text-base text-gray-400 mb-10 max-w-2xl mx-auto leading-relaxed font-light">
-              {t.ctaSubtitle}
-            </p>
-            <Button 
-              size="lg"
-              onClick={handleWhatsAppContact}
-              className="bg-crypto-green hover:bg-crypto-green-light text-white px-8 py-6 text-base font-semibold rounded-xl shadow-crypto hover:shadow-glow transition-all duration-300"
-            >
-              <MessageCircle className="h-5 w-5 mr-2" />
-              {isUrdu ? "واٹس ایپ پر رابطہ کریں" : "Contact Us on WhatsApp"}
-            </Button>
-          </div>
-        </div>
       </div>
     </section>
   );
