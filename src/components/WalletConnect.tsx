@@ -193,25 +193,73 @@ export function WalletConnect() {
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button className="bg-crypto-green hover:bg-crypto-green/90 text-white">
-          <Wallet className="h-4 w-4 mr-2" />
-          Connect Wallet
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="bg-crypto-dark border-crypto-gray">
-        {connectors.map((connector) => (
-          <DropdownMenuItem
-            key={connector.uid}
-            onClick={() => connect({ connector })}
-            className="text-white hover:bg-crypto-gray cursor-pointer"
+    <>
+      <AlertDialog open={showBlacklistDialog}>
+        <AlertDialogContent className="bg-crypto-dark border-destructive">
+          <button
+            onClick={() => setShowBlacklistDialog(false)}
+            className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
           >
+            <X className="h-4 w-4 text-gray-400 hover:text-white" />
+            <span className="sr-only">Close</span>
+          </button>
+          
+          <AlertDialogHeader>
+            <div className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-6 w-6" />
+              <AlertDialogTitle>Access Denied</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="space-y-4 text-gray-300">
+              <p className="text-base">Your wallet address has been restricted from accessing PKRSC services.</p>
+              
+              <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4">
+                <p className="text-sm font-medium text-destructive mb-2">Reason:</p>
+                <p className="text-sm text-gray-200">{blacklistReason}</p>
+              </div>
+
+              <p className="text-sm text-gray-400">
+                If you believe this is a mistake or have questions, please contact our legal team.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <Button 
+              onClick={() => window.location.href = 'mailto:legal@pkrsc.org'}
+              className="bg-crypto-green hover:bg-crypto-green/90 text-white w-full sm:w-auto"
+            >
+              Contact Us
+            </Button>
+            <Button 
+              onClick={() => setShowBlacklistDialog(false)}
+              variant="outline"
+              className="w-full sm:w-auto"
+            >
+              Close
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button className="bg-crypto-green hover:bg-crypto-green/90 text-white">
             <Wallet className="h-4 w-4 mr-2" />
-            {connector.name}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+            Connect Wallet
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="bg-crypto-dark border-crypto-gray">
+          {connectors.map((connector) => (
+            <DropdownMenuItem
+              key={connector.uid}
+              onClick={() => connect({ connector })}
+              className="text-white hover:bg-crypto-gray cursor-pointer"
+            >
+              <Wallet className="h-4 w-4 mr-2" />
+              {connector.name}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
   )
 }
