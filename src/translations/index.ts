@@ -19,7 +19,7 @@ export const translations = {
     
     // Features
     featuresTitle: "Why Choose PKR Stable?",
-    featuresSubtitle: "Experience the future of digital payments with our revolutionary stablecoin technology",
+    featuresSubtitle: "Building trust through transparency - every token backed by real PKR reserves, verified on-chain",
     feature1: {
       title: "Stable Value",
       description: "Always pegged 1:1 with Pakistani Rupee, ensuring price stability and predictable value for your transactions."
@@ -101,7 +101,7 @@ export const translations = {
     
     // Features
     featuresTitle: "PKR سٹیبل کیوں منتخب کریں؟",
-    featuresSubtitle: "ہماری انقلابی سٹیبل کوائن ٹیکنالوجی کے ساتھ ڈیجیٹل پیمنٹس کا مستقبل تجربہ کریں",
+    featuresSubtitle: "شفافیت کے ذریعے اعتماد پیدا کرنا - ہر ٹوکن حقیقی PKR ریزرو سے محفوظ، آن چین تصدیق شدہ",
     feature1: {
       title: "مستحکم قدر",
       description: "ہمیشہ پاکستانی روپے کے ساتھ 1:1 کی نسبت، آپ کے لین دین کے لیے قیمت کی استحکام اور قابل اعتماد قدر کو یقینی بناتا ہے۔"
