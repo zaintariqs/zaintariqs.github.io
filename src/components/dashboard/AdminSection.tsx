@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Shield, Coins, Flame, Ban, AlertTriangle, TrendingUp, Download, DollarSign, BarChart3, Landmark, PieChart as PieChartIcon, Copy, ExternalLink } from 'lucide-react'
+import { Shield, Coins, Flame, Ban, AlertTriangle, TrendingUp, Download, DollarSign, BarChart3, Landmark, PieChart as PieChartIcon, Copy, ExternalLink, RefreshCw } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { parseUnits, formatUnits } from 'viem'
 import { supportedChains } from '@/lib/web3-config'
@@ -633,9 +633,22 @@ ${Object.entries(blacklistedAddresses.reduce((acc, entry) => {
         {/* PKR Reserve Overview */}
         <Card className="bg-card/50 border-border">
           <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-primary" />
-              <CardTitle className="text-base">Reserve Overview</CardTitle>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-primary" />
+                <CardTitle className="text-base">Reserve Overview</CardTitle>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  refetchTotalSupply()
+                  refetchTreasury()
+                }}
+                title="Refresh on-chain data"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
             </div>
           </CardHeader>
           <CardContent className="space-y-3">

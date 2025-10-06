@@ -8,7 +8,7 @@ const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'team@pkrsc.org'
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-wallet-address',
-  'Access-Control-Allow-Methods': 'GET,PATCH,OPTIONS',
+  'Access-Control-Allow-Methods': 'GET,POST,PATCH,OPTIONS',
 }
 
 serve(async (req) => {
@@ -46,9 +46,9 @@ serve(async (req) => {
       )
     }
 
-    // GET: Fetch all redemptions (admin only)
-    if (req.method === 'GET') {
-      console.log(`Admin ${walletAddress} fetching all redemptions`)
+    // GET or POST: Fetch all redemptions (admin only)
+    if (req.method === 'GET' || req.method === 'POST') {
+      console.log(`Admin ${walletAddress} fetching all redemptions (method: ${req.method})`)
       
       const { data, error } = await supabase
         .from('redemptions')
