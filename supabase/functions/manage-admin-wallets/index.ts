@@ -6,8 +6,8 @@ const MASTER_MINTER_ADDRESS = '0x5be080f81552c2495B288c04D2B64b9F7A4A9F3F'
 
 interface AdminManagementRequest {
   requestingWallet: string;
-  targetWallet: string;
-  action: 'add' | 'revoke';
+  targetWallet?: string;
+  action: 'add' | 'revoke' | 'list';
 }
 
 Deno.serve(async (req) => {
@@ -23,16 +23,24 @@ Deno.serve(async (req) => {
     const { requestingWallet, targetWallet, action }: AdminManagementRequest = await req.json()
 
     // Validate input
-    if (!requestingWallet || !targetWallet || !action) {
+    if (!requestingWallet || !action) {
       return new Response(
         JSON.stringify({ error: 'Missing required fields' }),
         { status: 400, headers: responseHeaders }
       )
     }
 
-    if (!['add', 'revoke'].includes(action)) {
+    if (!['add', 'revoke', 'list'].includes(action)) {
       return new Response(
-        JSON.stringify({ error: 'Invalid action. Must be "add" or "revoke"' }),
+        JSON.stringify({ error: 'Invalid action. Must be "add", "revoke", or "list"' }),
+        { status: 400, headers: responseHeaders }
+      )
+    }
+
+    // For add/revoke actions, targetWallet is required
+    if ((action === 'add' || action === 'revoke') && !targetWallet) {
+      return new Response(
+        JSON.stringify({ error: 'targetWallet is required for add/revoke actions' }),
         { status: 400, headers: responseHeaders }
       )
     }
@@ -51,6 +59,26 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ error: 'Unauthorized: Only the master minter can manage admin wallets' }),
         { status: 403, headers: responseHeaders }
+      )
+    }
+
+    // Handle list action
+    if (action === 'list') {
+      console.log(`Admin ${requestingWallet} listing all admin wallets`)
+      
+      const { data: wallets, error } = await supabase
+        .from('admin_wallets')
+        .select('*')
+        .order('added_at', { ascending: false })
+
+      if (error) throw error
+
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          wallets: wallets || []
+        }),
+        { headers: responseHeaders }
       )
     }
 
