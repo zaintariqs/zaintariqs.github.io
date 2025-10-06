@@ -34,6 +34,7 @@ export const AdminWalletManagement = () => {
   useEffect(() => {
     const fetchAdminWallets = async () => {
       try {
+        console.log("[AdminWalletManagement] Fetching admin wallets for:", address);
         const { data, error } = await supabase.functions.invoke("manage-admin-wallets", {
           body: {
             requestingWallet: address,
@@ -41,17 +42,25 @@ export const AdminWalletManagement = () => {
           },
         });
 
+        console.log("[AdminWalletManagement] Response:", { data, error });
+
         if (error) throw error;
         if (data?.wallets) {
+          console.log("[AdminWalletManagement] Setting wallets:", data.wallets);
           setAdminWallets(data.wallets);
+        } else {
+          console.log("[AdminWalletManagement] No wallets in response");
         }
       } catch (error) {
-        console.error("Error fetching admin wallets:", error);
+        console.error("[AdminWalletManagement] Error fetching admin wallets:", error);
       }
     };
 
     if (isMasterMinter) {
+      console.log("[AdminWalletManagement] Is master minter, fetching wallets");
       fetchAdminWallets();
+    } else {
+      console.log("[AdminWalletManagement] Not master minter, skipping fetch");
     }
   }, [address, isMasterMinter]);
 
