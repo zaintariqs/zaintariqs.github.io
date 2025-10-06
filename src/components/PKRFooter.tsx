@@ -1,5 +1,5 @@
 // PKRFooter component for PKRSC application
-import { MessageCircle, Mail, MapPin } from "lucide-react";
+import { Mail, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { translations } from "@/translations";
@@ -7,10 +7,6 @@ import { translations } from "@/translations";
 const PKRFooter = () => {
   const { language, isUrdu } = useLanguage();
   const t = translations[language];
-
-  const handleWhatsAppContact = () => {
-    window.open("https://wa.me/905314390365", "_blank");
-  };
 
   return (
     <footer className="bg-crypto-dark border-t border-crypto-gray">
@@ -43,20 +39,13 @@ const PKRFooter = () => {
           <div className="space-y-4">
             <h4 className="text-white font-semibold">{t.contactInfo}</h4>
             <div className="space-y-3">
-              <button 
-                onClick={handleWhatsAppContact}
-                className={`flex items-center text-sm text-gray-400 hover:text-crypto-green transition-colors ${isUrdu ? 'flex-row-reverse space-x-reverse space-x-2' : 'space-x-2'}`}
-              >
-                <MessageCircle className="h-4 w-4" />
-                <span>{t.whatsapp}</span>
-              </button>
               <div className={`flex items-center text-sm text-gray-400 ${isUrdu ? 'flex-row-reverse space-x-reverse space-x-2' : 'space-x-2'}`}>
                 <Mail className="h-4 w-4" />
                 <span>{t.email}</span>
               </div>
               <div className={`flex items-center text-sm text-gray-400 ${isUrdu ? 'flex-row-reverse space-x-reverse space-x-2' : 'space-x-2'}`}>
                 <MapPin className="h-4 w-4" />
-                <span>{t.lahore}</span>
+                <span>{t.karachi}</span>
               </div>
             </div>
           </div>

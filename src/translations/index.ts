@@ -73,10 +73,9 @@ export const translations = {
     footerTagline: "Pakistan's most trusted digital currency platform",
     quickLinks: "Quick Links",
     contactInfo: "Contact Info",
-    whatsapp: "WhatsApp",
-    email: "Email",
+    email: "team@pkrsc.org",
     location: "Location",
-    lahore: "Lahore, Pakistan",
+    karachi: "Karachi, Pakistan",
     copyright: "© 2024 PKR Stable. All rights reserved.",
     compliance: "Regulated digital currency platform compliant with Pakistani financial laws."
   },
@@ -155,10 +154,9 @@ export const translations = {
     footerTagline: "پاکستان کا سب سے بھروسہ مند ڈیجیٹل کرنسی پلیٹ فارم",
     quickLinks: "فوری لنکس",
     contactInfo: "رابطے کی معلومات",
-    whatsapp: "واٹس ایپ",
-    email: "ای میل",
+    email: "team@pkrsc.org",
     location: "مقام",
-    lahore: "لاہور، پاکستان",
+    karachi: "کراچی، پاکستان",
     copyright: "© 2024 PKR سٹیبل۔ تمام حقوق محفوظ ہیں۔",
     compliance: "پاکستانی مالیاتی قوانین کے مطابق ریگولیٹڈ ڈیجیٹل کرنسی پلیٹ فارم۔"
   }
