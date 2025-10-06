@@ -406,14 +406,19 @@ export function AdminSection() {
     }
 
     try {
-      writeContract({
-        address: PKRSC_CONTRACT_ADDRESS as `0x${string}`,
-        abi: pkrscAbi,
-        functionName: 'blacklist',
-        args: [blacklistAddress as `0x${string}`],
-        account: address as `0x${string}`,
-        chain: currentChain,
+      const response = await supabase.functions.invoke('blacklist-user', {
+        body: {
+          walletAddress: blacklistAddress,
+          reason: `${blacklistReason}: ${blacklistDescription}`
+        },
+        headers: {
+          'x-wallet-address': address || ''
+        }
       })
+
+      if (response.error) {
+        throw new Error(response.error.message || 'Failed to blacklist user')
+      }
       
       saveBlacklistEntry({
         address: blacklistAddress,
@@ -422,15 +427,17 @@ export function AdminSection() {
         timestamp: new Date()
       })
       
-      addTransaction('blacklist', '0', blacklistAddress, hash)
       toast({
-        title: "Blacklisting address",
-        description: `Blacklisting ${blacklistAddress} for ${blacklistReason}`,
+        title: "Address Blacklisted",
+        description: `${blacklistAddress} has been blacklisted. ${response.data.emailSent ? 'Email notification sent.' : ''}`,
       })
-    } catch (error) {
+
+      setBlacklistAddress('')
+      setBlacklistDescription('')
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to blacklist address",
+        description: error.message || "Failed to blacklist address",
         variant: "destructive",
       })
     }
@@ -447,25 +454,30 @@ export function AdminSection() {
     }
 
     try {
-      writeContract({
-        address: PKRSC_CONTRACT_ADDRESS as `0x${string}`,
-        abi: pkrscAbi,
-        functionName: 'unBlacklist',
-        args: [unblacklistAddress as `0x${string}`],
-        account: address as `0x${string}`,
-        chain: currentChain,
+      const response = await supabase.functions.invoke('unblacklist-user', {
+        body: {
+          walletAddress: unblacklistAddress
+        },
+        headers: {
+          'x-wallet-address': address || ''
+        }
       })
+
+      if (response.error) {
+        throw new Error(response.error.message || 'Failed to unblacklist user')
+      }
       
       removeBlacklistEntry(unblacklistAddress)
-      addTransaction('unblacklist', '0', unblacklistAddress, hash)
       toast({
-        title: "Unblacklisting address",
-        description: `Removing ${unblacklistAddress} from blacklist`,
+        title: "Address Unblacklisted",
+        description: `${unblacklistAddress} has been removed from blacklist`,
       })
-    } catch (error) {
+
+      setUnblacklistAddress('')
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to unblacklist address",
+        description: error.message || "Failed to unblacklist address",
         variant: "destructive",
       })
     }

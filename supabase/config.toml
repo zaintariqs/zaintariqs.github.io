@@ -6,6 +6,9 @@ verify_jwt = true
 [functions.delete-whitelist]
 verify_jwt = false
 
+[functions.unblacklist-user]
+verify_jwt = false
+
 [functions.manage-admin-wallets]
 verify_jwt = false
 
