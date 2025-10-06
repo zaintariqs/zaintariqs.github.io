@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAccount, useConnect, useDisconnect, useBalance, useChainId } from 'wagmi'
 import { Button } from '@/components/ui/button'
 import { 
@@ -8,9 +8,18 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator 
 } from '@/components/ui/dropdown-menu'
-import { Wallet, ChevronDown, Copy, LogOut, Network } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { Wallet, ChevronDown, Copy, LogOut, Network, AlertTriangle } from 'lucide-react'
 import { supportedChains } from '@/lib/web3-config'
 import { useToast } from '@/hooks/use-toast'
+import { supabase } from '@/integrations/supabase/client'
 
 export function WalletConnect() {
   const { address, isConnected } = useAccount()
@@ -18,12 +27,45 @@ export function WalletConnect() {
   const { disconnect } = useDisconnect()
   const chainId = useChainId()
   const { toast } = useToast()
+  const [showBlacklistDialog, setShowBlacklistDialog] = useState(false)
+  const [blacklistReason, setBlacklistReason] = useState('')
   
   const { data: balance } = useBalance({
     address: address,
   })
 
   const currentChain = supportedChains.find(chain => chain.id === chainId)
+
+  // Check if wallet is blacklisted on connection
+  useEffect(() => {
+    const checkBlacklist = async () => {
+      if (!address) return
+
+      try {
+        const { data, error } = await supabase.functions.invoke('check-blacklist', {
+          body: { walletAddress: address }
+        })
+
+        if (error) {
+          console.error('Error checking blacklist:', error)
+          return
+        }
+
+        if (data?.isBlacklisted) {
+          setBlacklistReason(data.reason || 'No reason provided')
+          setShowBlacklistDialog(true)
+          // Disconnect the wallet immediately
+          setTimeout(() => {
+            disconnect()
+          }, 100)
+        }
+      } catch (error) {
+        console.error('Error checking blacklist:', error)
+      }
+    }
+
+    checkBlacklist()
+  }, [address, disconnect])
   
   const formatAddress = (addr: string) => {
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`
@@ -46,7 +88,57 @@ export function WalletConnect() {
 
   if (isConnected && address) {
     return (
-      <DropdownMenu>
+      <>
+        <AlertDialog open={showBlacklistDialog} onOpenChange={setShowBlacklistDialog}>
+          <AlertDialogContent className="bg-crypto-dark border-destructive">
+            <AlertDialogHeader>
+              <div className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="h-6 w-6" />
+                <AlertDialogTitle>Account Access Restricted</AlertDialogTitle>
+              </div>
+              <AlertDialogDescription className="space-y-4 text-gray-300">
+                <p>Your wallet address has been restricted from accessing PKRSC services.</p>
+                
+                <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4">
+                  <p className="text-sm font-medium text-destructive mb-2">Reason:</p>
+                  <p className="text-sm text-gray-200">{blacklistReason}</p>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">What this means:</p>
+                  <ul className="text-sm space-y-1 list-disc list-inside ml-2">
+                    <li>You cannot make deposits or redemptions</li>
+                    <li>Your wallet has been blocked from using PKRSC services</li>
+                    <li>This action was taken to protect the platform's integrity</li>
+                  </ul>
+                </div>
+
+                <div className="bg-muted/10 rounded-lg p-4">
+                  <p className="text-sm font-medium mb-2">Need help?</p>
+                  <p className="text-sm">
+                    If you believe this is a mistake or have questions, please contact our legal team immediately at:
+                  </p>
+                  <a 
+                    href="mailto:legal@pkrsc.org" 
+                    className="text-crypto-green hover:underline font-medium mt-1 inline-block"
+                  >
+                    legal@pkrsc.org
+                  </a>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <Button 
+                onClick={() => setShowBlacklistDialog(false)}
+                className="w-full"
+              >
+                Close
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" className="bg-crypto-dark border-crypto-gray text-white hover:bg-crypto-gray">
             <Wallet className="h-4 w-4 mr-2" />
@@ -102,6 +194,7 @@ export function WalletConnect() {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      </>
     )
   }
 
