@@ -16,7 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Wallet, ChevronDown, Copy, LogOut, Network, AlertTriangle } from 'lucide-react'
+import { Wallet, ChevronDown, Copy, LogOut, Network, AlertTriangle, X } from 'lucide-react'
 import { supportedChains } from '@/lib/web3-config'
 import { useToast } from '@/hooks/use-toast'
 import { supabase } from '@/integrations/supabase/client'
@@ -86,48 +86,45 @@ export function WalletConnect() {
   if (isConnected && address) {
     return (
       <>
-        <AlertDialog open={showBlacklistDialog} onOpenChange={setShowBlacklistDialog}>
+        <AlertDialog open={showBlacklistDialog}>
           <AlertDialogContent className="bg-crypto-dark border-destructive">
+            <button
+              onClick={() => setShowBlacklistDialog(false)}
+              className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
+            >
+              <X className="h-4 w-4 text-gray-400 hover:text-white" />
+              <span className="sr-only">Close</span>
+            </button>
+            
             <AlertDialogHeader>
               <div className="flex items-center gap-2 text-destructive">
                 <AlertTriangle className="h-6 w-6" />
-                <AlertDialogTitle>Account Access Restricted</AlertDialogTitle>
+                <AlertDialogTitle>Access Denied</AlertDialogTitle>
               </div>
               <AlertDialogDescription className="space-y-4 text-gray-300">
-                <p>Your wallet address has been restricted from accessing PKRSC services.</p>
+                <p className="text-base">Your wallet address has been restricted from accessing PKRSC services.</p>
                 
                 <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4">
                   <p className="text-sm font-medium text-destructive mb-2">Reason:</p>
                   <p className="text-sm text-gray-200">{blacklistReason}</p>
                 </div>
 
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">What this means:</p>
-                  <ul className="text-sm space-y-1 list-disc list-inside ml-2">
-                    <li>You cannot make deposits or redemptions</li>
-                    <li>Your wallet has been blocked from using PKRSC services</li>
-                    <li>This action was taken to protect the platform's integrity</li>
-                  </ul>
-                </div>
-
-                <div className="bg-muted/10 rounded-lg p-4">
-                  <p className="text-sm font-medium mb-2">Need help?</p>
-                  <p className="text-sm">
-                    If you believe this is a mistake or have questions, please contact our legal team immediately at:
-                  </p>
-                  <a 
-                    href="mailto:legal@pkrsc.org" 
-                    className="text-crypto-green hover:underline font-medium mt-1 inline-block"
-                  >
-                    legal@pkrsc.org
-                  </a>
-                </div>
+                <p className="text-sm text-gray-400">
+                  If you believe this is a mistake or have questions, please contact our legal team.
+                </p>
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter>
+            <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+              <Button 
+                onClick={() => window.location.href = 'mailto:legal@pkrsc.org'}
+                className="bg-crypto-green hover:bg-crypto-green/90 text-white w-full sm:w-auto"
+              >
+                Contact Us
+              </Button>
               <Button 
                 onClick={() => setShowBlacklistDialog(false)}
-                className="w-full"
+                variant="outline"
+                className="w-full sm:w-auto"
               >
                 Close
               </Button>
