@@ -49,6 +49,26 @@ export const translations = {
     ctaTitle: "Ready to Get Started?",
     ctaSubtitle: "Join thousands of users who trust PKR Stable for their digital currency needs",
     
+    // Whitelist Section
+    whitelistBadge: "KYC Required",
+    whitelistTitle: "Get Whitelisted to Start Trading",
+    whitelistSubtitle: "To ensure compliance and security, all users must complete our whitelisting process before accessing the platform.",
+    whitelistWhyTitle: "Why Whitelisting?",
+    whitelistWhyDesc: "Our whitelisting process ensures a secure and compliant trading environment:",
+    whitelistReason1: "Comply with Pakistani financial regulations and AML/KYC requirements",
+    whitelistReason2: "Prevent fraud and unauthorized access to the platform",
+    whitelistReason3: "Protect all users by maintaining a verified community",
+    whitelistReason4: "Enable seamless PKR deposits and withdrawals through verified channels",
+    whitelistProcessTitle: "How It Works",
+    whitelistStep1Title: "Submit Your Application",
+    whitelistStep1Desc: "Provide your wallet address and email to begin the verification process",
+    whitelistStep2Title: "Review Period",
+    whitelistStep2Desc: "Our team will review your application within 24-48 hours",
+    whitelistStep3Title: "Start Trading",
+    whitelistStep3Desc: "Once approved, you can connect your wallet and start trading PKRSC",
+    whitelistFormTitle: "Apply for Whitelist",
+    whitelistFormDesc: "Fill in your details below to submit your whitelist application",
+    
     // Footer
     footerTagline: "Pakistan's most trusted digital currency platform",
     quickLinks: "Quick Links",
@@ -110,6 +130,26 @@ export const translations = {
     // Call to Action
     ctaTitle: "شروع کرنے کے لیے تیار ہیں؟",
     ctaSubtitle: "ہزاروں صارفین کا حصہ بنیں جو اپنی ڈیجیٹل کرنسی کی ضروریات کے لیے PKR سٹیبل پر بھروسہ کرتے ہیں",
+    
+    // Whitelist Section
+    whitelistBadge: "KYC ضروری",
+    whitelistTitle: "ٹریڈنگ شروع کرنے کے لیے وائٹ لسٹ کروائیں",
+    whitelistSubtitle: "تعمیل اور سیکیورٹی کو یقینی بنانے کے لیے، تمام صارفین کو پلیٹ فارم تک رسائی سے پہلے ہماری وائٹ لسٹنگ عمل مکمل کرنا ہوگا۔",
+    whitelistWhyTitle: "وائٹ لسٹنگ کیوں؟",
+    whitelistWhyDesc: "ہماری وائٹ لسٹنگ عمل ایک محفوظ اور تعمیل شدہ ٹریڈنگ ماحول کو یقینی بناتا ہے:",
+    whitelistReason1: "پاکستانی مالیاتی ضوابط اور AML/KYC ضروریات کی تعمیل",
+    whitelistReason2: "دھوکہ دہی اور پلیٹ فارم تک غیر مجاز رسائی کو روکنا",
+    whitelistReason3: "تصدیق شدہ کمیونٹی کو برقرار رکھ کر تمام صارفین کی حفاظت",
+    whitelistReason4: "تصدیق شدہ چینلز کے ذریعے PKR ڈپازٹس اور نکلوانے کو آسان بنانا",
+    whitelistProcessTitle: "یہ کیسے کام کرتا ہے",
+    whitelistStep1Title: "اپنی درخواست جمع کروائیں",
+    whitelistStep1Desc: "تصدیقی عمل شروع کرنے کے لیے اپنا والیٹ ایڈریس اور ای میل فراہم کریں",
+    whitelistStep2Title: "جائزہ کی مدت",
+    whitelistStep2Desc: "ہماری ٹیم 24-48 گھنٹوں میں آپ کی درخواست کا جائزہ لے گی",
+    whitelistStep3Title: "ٹریڈنگ شروع کریں",
+    whitelistStep3Desc: "منظوری کے بعد، آپ اپنا والیٹ منسلک کر سکتے ہیں اور PKRSC کی ٹریڈنگ شروع کر سکتے ہیں",
+    whitelistFormTitle: "وائٹ لسٹ کے لیے درخواست دیں",
+    whitelistFormDesc: "اپنی وائٹ لسٹ درخواست جمع کرانے کے لیے ذیل میں اپنی تفصیلات بھریں",
     
     // Footer
     footerTagline: "پاکستان کا سب سے بھروسہ مند ڈیجیٹل کرنسی پلیٹ فارم",
