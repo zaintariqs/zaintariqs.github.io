@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { Bot, TrendingUp, Activity, AlertCircle } from 'lucide-react'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Bot, TrendingUp, Activity, AlertCircle, ExternalLink } from 'lucide-react'
 import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/hooks/use-toast'
 import { useAccount } from 'wagmi'
@@ -119,7 +120,7 @@ export function MarketMakerSection() {
       .from('market_maker_transactions')
       .select('*')
       .order('created_at', { ascending: false })
-      .limit(10)
+      .limit(50)
 
     if (error) {
       console.error('Error fetching transactions:', error)
@@ -357,40 +358,95 @@ export function MarketMakerSection() {
           </div>
         )}
 
-        {/* Transaction History */}
-        <div className="space-y-2">
-          <h3 className="font-semibold text-card-foreground">Recent Transactions</h3>
-          <div className="space-y-2">
-            {transactions.length === 0 ? (
-              <div className="text-sm text-muted-foreground text-center py-4">
-                No transactions yet
-              </div>
-            ) : (
-              transactions.map((tx) => (
-                <div key={tx.id} className="p-3 bg-muted/30 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <TrendingUp className={`h-4 w-4 ${tx.action === 'BUY' ? 'text-crypto-green' : 'text-orange-500'}`} />
-                      <span className="font-medium">{tx.action}</span>
-                    </div>
-                    <span className={`text-xs px-2 py-1 rounded ${
-                      tx.status === 'completed' ? 'bg-crypto-green/20 text-crypto-green' : 'bg-red-500/20 text-red-500'
-                    }`}>
-                      {tx.status}
-                    </span>
-                  </div>
-                  <div className="text-sm text-muted-foreground mt-1">
-                    {tx.amount_pkrsc.toFixed(2)} PKRSC @ ${tx.price.toFixed(4)}
-                  </div>
-                  {tx.error_message && (
-                    <div className="text-xs text-destructive mt-1">{tx.error_message}</div>
-                  )}
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {new Date(tx.created_at).toLocaleString()}
-                  </div>
-                </div>
-              ))
-            )}
+        {/* Transaction History Table */}
+        <div className="space-y-3">
+          <h3 className="font-semibold text-card-foreground">Bot Trading History</h3>
+          <div className="border rounded-lg overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/30">
+                  <TableHead>Time</TableHead>
+                  <TableHead>Action</TableHead>
+                  <TableHead className="text-right">USDT</TableHead>
+                  <TableHead className="text-right">PKRSC</TableHead>
+                  <TableHead className="text-right">Price</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Tx Hash</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {transactions.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                      No trades executed yet. Bot will trade when price deviates from target.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  transactions.map((tx) => (
+                    <TableRow key={tx.id} className="hover:bg-muted/20">
+                      <TableCell className="text-sm">
+                        {new Date(tx.created_at).toLocaleString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <TrendingUp className={`h-4 w-4 ${
+                            tx.action === 'BUY' ? 'text-crypto-green' : 'text-orange-500'
+                          }`} />
+                          <span className={`font-medium ${
+                            tx.action === 'BUY' ? 'text-crypto-green' : 'text-orange-500'
+                          }`}>
+                            {tx.action}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {tx.amount_usdt.toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {tx.amount_pkrsc.toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-sm">
+                        ${tx.price.toFixed(6)}
+                      </TableCell>
+                      <TableCell>
+                        <span className={`text-xs px-2 py-1 rounded-full ${
+                          tx.status === 'completed' 
+                            ? 'bg-crypto-green/20 text-crypto-green' 
+                            : 'bg-red-500/20 text-red-500'
+                        }`}>
+                          {tx.status}
+                        </span>
+                        {tx.error_message && (
+                          <div className="text-xs text-destructive mt-1 max-w-[200px] truncate" title={tx.error_message}>
+                            {tx.error_message}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {tx.transaction_hash && (
+                          <a
+                            href={`https://basescan.org/tx/${tx.transaction_hash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-primary hover:text-primary/80 text-sm"
+                          >
+                            <span className="font-mono">
+                              {tx.transaction_hash.slice(0, 6)}...{tx.transaction_hash.slice(-4)}
+                            </span>
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </div>
         </div>
 
