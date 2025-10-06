@@ -141,6 +141,19 @@ export function AdminSection() {
     }
   })
 
+  // Read dead address balance (burned tokens)
+  const DEAD_ADDRESS = '0x000000000000000000000000000000000000dEaD'
+  const { data: deadBalance, refetch: refetchDeadBalance } = useReadContract({
+    address: PKRSC_CONTRACT_ADDRESS as `0x${string}`,
+    abi: pkrscAbi,
+    functionName: 'balanceOf',
+    args: [DEAD_ADDRESS as `0x${string}`],
+    chainId: base.id,
+    query: {
+      refetchInterval: 10000, // Refetch every 10 seconds
+    }
+  })
+
   // Log contract read errors
   useEffect(() => {
     if (decimalsError) console.error('Error reading decimals:', decimalsError)
@@ -679,6 +692,11 @@ ${Object.entries(blacklistedAddresses.reduce((acc, entry) => {
                 onClick={() => {
                   refetchTotalSupply()
                   refetchTreasury()
+                  refetchDeadBalance()
+                  toast({
+                    title: "Refreshing...",
+                    description: "Fetching latest on-chain data"
+                  })
                 }}
                 title="Refresh on-chain data"
               >
@@ -692,14 +710,30 @@ ${Object.entries(blacklistedAddresses.reduce((acc, entry) => {
               <div className="text-2xl font-bold text-foreground">
                 {totalSupply ? formatUnits(totalSupply, tokenDecimals) : 'Loading...'}
               </div>
-              <div className="text-xs text-muted-foreground">PKRSC</div>
+              <div className="text-xs text-muted-foreground">PKRSC (on-chain)</div>
             </div>
             <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Treasury Balance</Label>
-              <div className="text-2xl font-bold text-primary">
-                {treasuryBalance ? formatUnits(treasuryBalance, tokenDecimals) : 'Loading...'}
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Circulating Supply</Label>
+              <div className="text-2xl font-bold text-green-500">
+                {totalSupply && treasuryBalance && deadBalance 
+                  ? formatUnits((totalSupply as bigint) - (treasuryBalance as bigint) - (deadBalance as bigint), tokenDecimals)
+                  : 'Loading...'}
               </div>
-              <div className="text-xs text-muted-foreground">PKRSC</div>
+              <div className="text-xs text-muted-foreground">PKRSC (excludes treasury & burned)</div>
+            </div>
+            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border/50">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Treasury</Label>
+                <div className="text-lg font-semibold text-primary">
+                  {treasuryBalance ? formatUnits(treasuryBalance, tokenDecimals) : '...'}
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Burned</Label>
+                <div className="text-lg font-semibold text-destructive">
+                  {deadBalance ? formatUnits(deadBalance, tokenDecimals) : '...'}
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
