@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useToast } from '@/hooks/use-toast'
-import { Loader2, CheckCircle, XCircle, Search, Trash2 } from 'lucide-react'
+import { Loader2, CheckCircle, XCircle, Search, Trash2, Copy } from 'lucide-react'
 import { supabase } from '@/integrations/supabase/client'
 import {
   Dialog,
@@ -40,6 +40,14 @@ export function WhitelistingRequests() {
   const [selectedRequest, setSelectedRequest] = useState<WhitelistRequest | null>(null)
   const [rejectionReason, setRejectionReason] = useState('')
   const [searchEmail, setSearchEmail] = useState('')
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Copied!",
+      description: `${label} copied to clipboard`,
+    });
+  };
 
   const fetchRequests = async () => {
     if (!address) return
@@ -302,22 +310,38 @@ export function WhitelistingRequests() {
           ) : (
             <div className="overflow-x-auto">
               <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Wallet Address</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Requested At</TableHead>
-                    <TableHead>Reviewed By</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredRequests.map((request) => (
-                    <TableRow key={request.id}>
-                      <TableCell className="font-mono text-xs">
-                        {request.wallet_address.slice(0, 6)}...{request.wallet_address.slice(-4)}
-                      </TableCell>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12">#</TableHead>
+                  <TableHead>Wallet Address</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Requested At</TableHead>
+                  <TableHead>Reviewed By</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredRequests.map((request, index) => (
+                  <TableRow key={request.id}>
+                    <TableCell className="font-medium text-muted-foreground">
+                      {index + 1}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs">
+                          {request.wallet_address.slice(0, 6)}...{request.wallet_address.slice(-4)}
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => copyToClipboard(request.wallet_address, "Address")}
+                          className="h-6 w-6 p-0"
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </TableCell>
                       <TableCell>{request.email}</TableCell>
                       <TableCell>{getStatusBadge(request.status)}</TableCell>
                       <TableCell>{formatDate(request.requested_at)}</TableCell>

@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { CreditCard, Check, X, ExternalLink, Eye, Copy } from 'lucide-react'
+import { CreditCard, Check, X, ExternalLink, Eye, Copy, RefreshCw } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
 interface Deposit {
@@ -40,6 +40,7 @@ export function AdminDeposits() {
   const [mintTxHash, setMintTxHash] = useState('')
   const [rejectionReason, setRejectionReason] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [searchAddress, setSearchAddress] = useState('')
 
   const fetchDeposits = async () => {
     if (!address) return
@@ -161,6 +162,10 @@ export function AdminDeposits() {
     )
   }
 
+  const filteredDeposits = deposits.filter(deposit =>
+    deposit.user_id.toLowerCase().includes(searchAddress.toLowerCase())
+  )
+
   if (isLoading) {
     return (
       <Card className="bg-card border-border">
@@ -185,22 +190,41 @@ export function AdminDeposits() {
     <>
       <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5 text-primary" />
-            All Deposits
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-primary" />
+              All Deposits
+            </CardTitle>
+            <Button onClick={fetchDeposits} variant="outline" size="sm">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
+          <div className="mb-4">
+            <Input
+              placeholder="Search by wallet address..."
+              value={searchAddress}
+              onChange={(e) => setSearchAddress(e.target.value)}
+              className="max-w-sm"
+            />
+          </div>
           {deposits.length === 0 ? (
             <div className="text-center py-12">
               <CreditCard className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <p className="text-muted-foreground">No deposits yet</p>
+            </div>
+          ) : filteredDeposits.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">No deposits found matching "{searchAddress}"</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-12">#</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>User</TableHead>
                     <TableHead>Amount</TableHead>
@@ -211,8 +235,11 @@ export function AdminDeposits() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {deposits.map((deposit) => (
+                  {filteredDeposits.map((deposit, index) => (
                     <TableRow key={deposit.id}>
+                      <TableCell className="font-medium text-muted-foreground">
+                        {index + 1}
+                      </TableCell>
                       <TableCell className="font-medium">
                         {new Date(deposit.created_at).toLocaleDateString()}
                       </TableCell>

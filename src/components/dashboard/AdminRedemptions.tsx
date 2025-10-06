@@ -39,6 +39,7 @@ export function AdminRedemptions() {
   const [burnTransactionHash, setBurnTransactionHash] = useState('')
   const [cancellationReason, setCancellationReason] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [searchAddress, setSearchAddress] = useState('')
 
   const fetchRedemptions = async () => {
     if (!address) return
@@ -187,6 +188,10 @@ export function AdminRedemptions() {
     )
   }
 
+  const filteredRedemptions = redemptions.filter(redemption =>
+    redemption.user_id.toLowerCase().includes(searchAddress.toLowerCase())
+  );
+
   if (isLoading) {
     return (
       <Card className="bg-card border-border">
@@ -228,16 +233,29 @@ export function AdminRedemptions() {
           </div>
         </CardHeader>
         <CardContent>
+          <div className="mb-4">
+            <Input
+              placeholder="Search by wallet address..."
+              value={searchAddress}
+              onChange={(e) => setSearchAddress(e.target.value)}
+              className="max-w-sm"
+            />
+          </div>
           {redemptions.length === 0 ? (
             <div className="text-center py-12">
               <Banknote className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <p className="text-muted-foreground">No redemptions yet</p>
+            </div>
+          ) : filteredRedemptions.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">No redemptions found matching "{searchAddress}"</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-12">#</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>User</TableHead>
                     <TableHead>Amount</TableHead>
@@ -248,8 +266,11 @@ export function AdminRedemptions() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {redemptions.map((redemption) => (
+                  {filteredRedemptions.map((redemption, index) => (
                     <TableRow key={redemption.id}>
+                      <TableCell className="font-medium text-muted-foreground">
+                        {index + 1}
+                      </TableCell>
                       <TableCell className="font-medium">
                         {new Date(redemption.created_at).toLocaleDateString()}
                       </TableCell>
