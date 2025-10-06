@@ -195,12 +195,13 @@ export function AdminSection() {
 
   const { isLoading: isConfirming, isSuccess: isConfirmed, data: txReceipt } = useWaitForTransactionReceipt({
     hash,
+    chainId: base.id,
   })
 
   // Refetch contract data when transaction is confirmed
   useEffect(() => {
     if (isConfirmed) {
-      console.log('Transaction confirmed, refetching contract data...')
+      console.log('Transaction confirmed on Base, refetching contract data...')
       refetchTotalSupply()
       refetchTreasury()
     }
