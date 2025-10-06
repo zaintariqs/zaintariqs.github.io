@@ -76,7 +76,7 @@ export const translations = {
     email: "team@pkrsc.org",
     location: "Location",
     karachi: "Karachi, Pakistan",
-    copyright: "© 2024 PKR Stable. All rights reserved.",
+    copyright: "© 2025 PKR Stable. All rights reserved.",
     compliance: "Regulated digital currency platform compliant with Pakistani financial laws."
   },
   
@@ -157,7 +157,7 @@ export const translations = {
     email: "team@pkrsc.org",
     location: "مقام",
     karachi: "کراچی، پاکستان",
-    copyright: "© 2024 PKR سٹیبل۔ تمام حقوق محفوظ ہیں۔",
+    copyright: "© 2025 PKR سٹیبل۔ تمام حقوق محفوظ ہیں۔",
     compliance: "پاکستانی مالیاتی قوانین کے مطابق ریگولیٹڈ ڈیجیٹل کرنسی پلیٹ فارم۔"
   }
 };
