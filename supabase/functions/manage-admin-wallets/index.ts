@@ -1,6 +1,9 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders, responseHeaders } from '../_shared/cors.ts'
 
+// Master minter - the only address that can manage admin wallets
+const MASTER_MINTER_ADDRESS = '0x5be080f81552c2495B288c04D2B64b9F7A4A9F3F'
+
 interface AdminManagementRequest {
   requestingWallet: string;
   targetWallet: string;
@@ -34,21 +37,34 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Verify requesting user is an admin
-    const { data: isAdmin, error: adminCheckError } = await supabase.rpc('is_admin_wallet', {
-      wallet_addr: requestingWallet
-    })
+    // Verify requesting user is the master minter
+    const isMasterMinter = requestingWallet.toLowerCase() === MASTER_MINTER_ADDRESS.toLowerCase()
 
-    if (adminCheckError || !isAdmin) {
-      console.error('Unauthorized admin management attempt:', requestingWallet)
+    if (!isMasterMinter) {
+      console.error('Unauthorized admin management attempt by non-master-minter:', requestingWallet)
       await supabase.from('admin_actions').insert({
         wallet_address: requestingWallet,
         action_type: 'UNAUTHORIZED_ADMIN_MANAGEMENT_ATTEMPT',
-        details: { targetWallet, action, error: 'Unauthorized' }
+        details: { targetWallet, action, error: 'Only master minter can manage admin wallets' }
       })
       
       return new Response(
-        JSON.stringify({ error: 'Unauthorized: Admin access required' }),
+        JSON.stringify({ error: 'Unauthorized: Only the master minter can manage admin wallets' }),
+        { status: 403, headers: responseHeaders }
+      )
+    }
+
+    // Prevent revoking master minter's admin status
+    if (action === 'revoke' && targetWallet.toLowerCase() === MASTER_MINTER_ADDRESS.toLowerCase()) {
+      console.error('Attempt to revoke master minter status:', requestingWallet)
+      await supabase.from('admin_actions').insert({
+        wallet_address: requestingWallet,
+        action_type: 'ATTEMPTED_MASTER_MINTER_REVOCATION',
+        details: { targetWallet, action, error: 'Cannot revoke master minter status' }
+      })
+      
+      return new Response(
+        JSON.stringify({ error: 'Cannot revoke master minter admin status' }),
         { status: 403, headers: responseHeaders }
       )
     }

@@ -8,11 +8,22 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Shield, UserPlus, UserMinus } from "lucide-react";
 
+// Master minter - the only address that can manage admin wallets
+const MASTER_MINTER_ADDRESS = '0x5be080f81552c2495B288c04D2B64b9F7A4A9F3F'
+
 export const AdminWalletManagement = () => {
   const { address } = useAccount();
   const { toast } = useToast();
   const [targetWallet, setTargetWallet] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Check if current user is master minter
+  const isMasterMinter = address?.toLowerCase() === MASTER_MINTER_ADDRESS.toLowerCase();
+
+  // Don't render if not master minter
+  if (!isMasterMinter) {
+    return null;
+  }
 
   const handleAdminAction = async (action: "add" | "revoke") => {
     if (!address) {
