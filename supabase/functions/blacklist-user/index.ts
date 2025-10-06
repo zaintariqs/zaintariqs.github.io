@@ -80,7 +80,7 @@ serve(async (req) => {
     }
 
     // Update whitelist_requests status to "blacklisted"
-    await supabase
+    const { error: updateError, data: updateData } = await supabase
       .from('whitelist_requests')
       .update({ 
         status: 'blacklisted',
@@ -89,6 +89,12 @@ serve(async (req) => {
         reviewed_by: adminWallet.toLowerCase()
       })
       .ilike('wallet_address', walletAddress)
+
+    if (updateError) {
+      console.error('Error updating whitelist status:', updateError)
+    } else {
+      console.log('Whitelist status updated for:', walletAddress, 'rows affected:', updateData)
+    }
 
     // Send email notification if email exists
     if (whitelistData?.email) {
