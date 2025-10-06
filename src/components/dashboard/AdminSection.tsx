@@ -16,6 +16,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { supabase } from '@/integrations/supabase/client'
 import { BankReserves } from './BankReserves'
 import { AdminWalletManagement } from './AdminWalletManagement'
+import { BlacklistedAddressesList } from './BlacklistedAddressesList'
 
 const MASTER_MINTER_ADDRESS = '0x5be080f81552c2495B288c04D2B64b9F7A4A9F3F'
 const PKRSC_CONTRACT_ADDRESS = '0x1f192CB7B36d7acfBBdCA1E0C1d697361508F9D5'
@@ -1057,6 +1058,11 @@ ${Object.entries(blacklistedAddresses.reduce((acc, entry) => {
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* All Blacklisted Addresses */}
+              <div className="mt-8">
+                <BlacklistedAddressesList />
               </div>
             </TabsContent>
           </Tabs>
