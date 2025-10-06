@@ -14,6 +14,7 @@ import { parseUnits, formatUnits } from 'viem'
 import { supportedChains } from '@/lib/web3-config'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Cell, Pie } from 'recharts'
 import { supabase } from '@/integrations/supabase/client'
+import { base } from 'wagmi/chains'
 import { BankReserves } from './BankReserves'
 import { AdminWalletManagement } from './AdminWalletManagement'
 import { BlacklistedAddressesList } from './BlacklistedAddressesList'
@@ -116,12 +117,14 @@ export function AdminSection() {
     address: PKRSC_CONTRACT_ADDRESS as `0x${string}`,
     abi: pkrscAbi,
     functionName: 'decimals',
+    chainId: base.id,
   })
   
   const { data: totalSupply, error: totalSupplyError, refetch: refetchTotalSupply } = useReadContract({
     address: PKRSC_CONTRACT_ADDRESS as `0x${string}`,
     abi: pkrscAbi,
     functionName: 'totalSupply',
+    chainId: base.id,
   })
   
   const { data: treasuryBalance, error: treasuryError, refetch: refetchTreasury } = useReadContract({
@@ -129,7 +132,23 @@ export function AdminSection() {
     abi: pkrscAbi,
     functionName: 'balanceOf',
     args: [MASTER_MINTER_ADDRESS as `0x${string}`],
+    chainId: base.id,
   })
+
+  // Log contract read errors
+  useEffect(() => {
+    if (decimalsError) console.error('Error reading decimals:', decimalsError)
+    if (totalSupplyError) console.error('Error reading totalSupply:', totalSupplyError)
+    if (treasuryError) console.error('Error reading treasury balance:', treasuryError)
+    
+    console.log('Contract reads:', {
+      decimals,
+      totalSupply: totalSupply?.toString(),
+      treasuryBalance: treasuryBalance?.toString(),
+      chainId,
+      address
+    })
+  }, [decimals, totalSupply, treasuryBalance, decimalsError, totalSupplyError, treasuryError, chainId, address])
 
   // Log contract read errors
   useEffect(() => {
