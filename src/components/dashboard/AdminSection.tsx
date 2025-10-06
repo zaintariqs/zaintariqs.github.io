@@ -125,6 +125,9 @@ export function AdminSection() {
     abi: pkrscAbi,
     functionName: 'totalSupply',
     chainId: base.id,
+    query: {
+      refetchInterval: 10000, // Refetch every 10 seconds
+    }
   })
   
   const { data: treasuryBalance, error: treasuryError, refetch: refetchTreasury } = useReadContract({
@@ -133,6 +136,9 @@ export function AdminSection() {
     functionName: 'balanceOf',
     args: [MASTER_MINTER_ADDRESS as `0x${string}`],
     chainId: base.id,
+    query: {
+      refetchInterval: 10000, // Refetch every 10 seconds
+    }
   })
 
   // Log contract read errors
