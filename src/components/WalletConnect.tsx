@@ -54,10 +54,7 @@ export function WalletConnect() {
         if (data?.isBlacklisted) {
           setBlacklistReason(data.reason || 'No reason provided')
           setShowBlacklistDialog(true)
-          // Disconnect the wallet immediately
-          setTimeout(() => {
-            disconnect()
-          }, 100)
+          disconnect()
         }
       } catch (error) {
         console.error('Error checking blacklist:', error)
