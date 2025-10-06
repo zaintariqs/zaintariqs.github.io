@@ -165,7 +165,7 @@ export function MyDeposits() {
     const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline", className: string }> = {
       pending: { variant: "secondary", className: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" },
       processing: { variant: "secondary", className: "bg-blue-500/10 text-blue-500 border-blue-500/20" },
-      completed: { variant: "default", className: "bg-green-500/10 text-green-500 border-green-500/20" },
+      completed: { variant: "default", className: "bg-crypto-green/10 text-crypto-green border-crypto-green/20" },
       rejected: { variant: "destructive", className: "" },
       cancelled: { variant: "outline", className: "" },
     }

@@ -341,8 +341,8 @@ export function RedeemSection() {
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center gap-3 p-4 bg-green-500/10 rounded-lg border border-green-500/20">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
+                <div className="flex items-center gap-3 p-4 bg-crypto-green/10 rounded-lg border border-crypto-green/20">
+                  <CheckCircle className="h-5 w-5 text-crypto-green" />
                   <div className="flex-1">
                     <p className="font-medium text-sm text-card-foreground">Transaction Confirmed</p>
                     <p className="text-xs text-muted-foreground">

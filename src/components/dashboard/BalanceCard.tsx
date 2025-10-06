@@ -129,7 +129,7 @@ export function BalanceCard() {
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">Network</span>
           <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="bg-primary/10 text-primary">
+            <Badge variant="secondary" className="bg-crypto-cyan/10 text-crypto-cyan border-crypto-cyan/20">
               {currentChain?.name || 'Unknown'}
             </Badge>
             <Button 
@@ -147,10 +147,10 @@ export function BalanceCard() {
         {/* PKRSC Balance */}
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <Wallet className="h-4 w-4 text-primary" />
+            <Wallet className="h-4 w-4 text-crypto-cyan" />
             <span className="text-sm font-medium text-card-foreground">PKRSC Balance</span>
           </div>
-          <div className="text-3xl font-bold text-primary">
+          <div className="text-3xl font-bold text-crypto-green">
             {formattedPkrscBalance} PKRSC
           </div>
           <div className="text-sm text-muted-foreground">

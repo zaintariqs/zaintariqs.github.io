@@ -163,10 +163,10 @@ export function BankReserves() {
     <Card className="bg-card border-border">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Banknote className="h-5 w-5 text-primary" />
+          <Banknote className="h-5 w-5 text-crypto-cyan" />
           Bank Reserves
           {isUpdating && (
-            <span className="text-xs text-green-500 animate-pulse">● Updating</span>
+            <span className="text-xs text-crypto-green animate-pulse">● Updating</span>
           )}
         </CardTitle>
       </CardHeader>

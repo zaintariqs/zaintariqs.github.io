@@ -251,7 +251,7 @@ export function MarketMakerSection() {
         {/* Status */}
         <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
           <div className="flex items-center gap-3">
-            <Activity className={`h-5 w-5 ${config?.status === 'active' ? 'text-green-500' : 'text-muted-foreground'}`} />
+            <Activity className={`h-5 w-5 ${config?.status === 'active' ? 'text-crypto-green' : 'text-muted-foreground'}`} />
             <div>
               <div className="font-medium">Bot Status</div>
               <div className="text-sm text-muted-foreground capitalize">{config?.status}</div>
@@ -357,11 +357,11 @@ export function MarketMakerSection() {
                 <div key={tx.id} className="p-3 bg-muted/30 rounded-lg">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <TrendingUp className={`h-4 w-4 ${tx.action === 'BUY' ? 'text-green-500' : 'text-red-500'}`} />
+                      <TrendingUp className={`h-4 w-4 ${tx.action === 'BUY' ? 'text-crypto-green' : 'text-orange-500'}`} />
                       <span className="font-medium">{tx.action}</span>
                     </div>
                     <span className={`text-xs px-2 py-1 rounded ${
-                      tx.status === 'completed' ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'
+                      tx.status === 'completed' ? 'bg-crypto-green/20 text-crypto-green' : 'bg-red-500/20 text-red-500'
                     }`}>
                       {tx.status}
                     </span>

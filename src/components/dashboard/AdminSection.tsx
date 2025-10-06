@@ -714,7 +714,7 @@ ${Object.entries(blacklistedAddresses.reduce((acc, entry) => {
             </div>
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground uppercase tracking-wide">Circulating Supply</Label>
-              <div className="text-2xl font-bold text-green-500">
+              <div className="text-2xl font-bold text-crypto-green">
                 {totalSupply && treasuryBalance && deadBalance 
                   ? formatUnits((totalSupply as bigint) - (treasuryBalance as bigint) - (deadBalance as bigint), tokenDecimals)
                   : 'Loading...'}
@@ -724,13 +724,13 @@ ${Object.entries(blacklistedAddresses.reduce((acc, entry) => {
             <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border/50">
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">Treasury</Label>
-                <div className="text-lg font-semibold text-primary">
+                <div className="text-lg font-semibold text-crypto-cyan">
                   {treasuryBalance ? formatUnits(treasuryBalance, tokenDecimals) : '...'}
                 </div>
               </div>
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">Burned</Label>
-                <div className="text-lg font-semibold text-destructive">
+                <div className="text-lg font-semibold text-orange-500">
                   {deadBalance ? formatUnits(deadBalance, tokenDecimals) : '...'}
                 </div>
               </div>
@@ -752,11 +752,11 @@ ${Object.entries(blacklistedAddresses.reduce((acc, entry) => {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center p-2 rounded-lg bg-background/50">
-                <div className="text-2xl font-bold text-primary">{userDeposits.length + userRedemptions.length}</div>
+                <div className="text-2xl font-bold text-crypto-cyan">{userDeposits.length + userRedemptions.length}</div>
                 <div className="text-xs text-muted-foreground">Total Txs</div>
               </div>
               <div className="text-center p-2 rounded-lg bg-background/50">
-                <div className="text-2xl font-bold text-green-500">
+                <div className="text-2xl font-bold text-crypto-green">
                   {userDeposits.filter(d => d.status === 'approved').length}
                 </div>
                 <div className="text-xs text-muted-foreground">Deposits</div>
