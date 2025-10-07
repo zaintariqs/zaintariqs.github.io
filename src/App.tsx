@@ -11,6 +11,7 @@ import Index from "./pages/Index";
 import Browse from "./pages/Browse";
 import Security from "./pages/Security";
 import LearnMore from "./pages/LearnMore";
+import FAQ from "./pages/FAQ";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 
@@ -29,6 +30,7 @@ const AppContent = () => {
         <Route path="/browse" element={<Browse />} />
         <Route path="/security" element={<Security />} />
         <Route path="/learn-more" element={<LearnMore />} />
+        <Route path="/faq" element={<FAQ />} />
         <Route path="/dashboard" element={
           <WhitelistCheck>
             <Dashboard />

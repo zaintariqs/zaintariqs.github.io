@@ -46,6 +46,9 @@ const PKRHeader = () => {
             <Link to="/security" className="text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
               {t.security}
             </Link>
+            <Link to="/faq" className="text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
+              {t.faq}
+            </Link>
             <Link to="/learn-more" className="text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
               {t.learnMore}
             </Link>
@@ -101,6 +104,9 @@ const PKRHeader = () => {
                 </a>
                 <Link to="/security" className="block text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
                   {t.security}
+                </Link>
+                <Link to="/faq" className="block text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
+                  {t.faq}
                 </Link>
                 <Link to="/learn-more" className="block text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
                   {t.learnMore}

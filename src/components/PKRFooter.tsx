@@ -31,6 +31,7 @@ const PKRFooter = () => {
             <div className="space-y-2 text-sm">
               <a href="#features" className="block text-gray-400 hover:text-crypto-green transition-colors">{t.features}</a>
               <Link to="/security" className="block text-gray-400 hover:text-crypto-green transition-colors">{t.security}</Link>
+              <Link to="/faq" className="block text-gray-400 hover:text-crypto-green transition-colors">{t.faq}</Link>
               <Link to="/learn-more" className="block text-gray-400 hover:text-crypto-green transition-colors">{t.learnMore}</Link>
             </div>
           </div>

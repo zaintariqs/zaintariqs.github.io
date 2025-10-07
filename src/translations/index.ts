@@ -4,6 +4,7 @@ export const translations = {
     features: "Features",
     security: "Security",
     learnMore: "Learn More",
+    faq: "FAQ",
     contactUs: "Contact Us",
     
     // Hero Section
@@ -85,6 +86,7 @@ export const translations = {
     features: "خصوصیات",
     security: "سیکورٹی",
     learnMore: "مزید جانیں",
+    faq: "عمومی سوالات",
     contactUs: "رابطہ کریں",
     
     // Hero Section
