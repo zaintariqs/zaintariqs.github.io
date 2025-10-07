@@ -470,9 +470,9 @@ Deno.serve(async (req) => {
           console.log('USDT approved')
         }
 
-        // Execute swap: USDT -> PKRSC with 5% slippage tolerance
+        // Execute swap: USDT -> PKRSC with 30% slippage tolerance (low-liquidity safety)
         const expectedOut = ethers.parseUnits((tradeAmountUsdt / currentPrice).toFixed(6), 6)
-        const minOut = (expectedOut * BigInt(95)) / BigInt(100) // 5% slippage
+        const minOut = (expectedOut * BigInt(70)) / BigInt(100) // 30% slippage
         
         const params = {
           tokenIn: USDT_ADDRESS,
@@ -527,8 +527,8 @@ Deno.serve(async (req) => {
           console.log('PKRSC approved')
         }
 
-        // Execute swap: PKRSC -> USDT with 5% slippage tolerance
-        const expectedOut = ethers.parseUnits((tradeAmountUsdt * 0.95).toFixed(6), 6)
+        // Execute swap: PKRSC -> USDT with 30% slippage tolerance (low-liquidity safety)
+        const expectedOut = ethers.parseUnits((tradeAmountUsdt * 0.70).toFixed(6), 6)
         
         const params = {
           tokenIn: PKRSC_ADDRESS,
@@ -606,6 +606,28 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ 
           message: 'Skipped due to RPC rate limit; please retry shortly',
           rateLimited: true
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+      
+      // Handle slippage too tight gracefully
+      const errMsg = (tradeError instanceof Error ? tradeError.message : String(tradeError)).toLowerCase()
+      if (errMsg.includes('too little received')) {
+        await supabase.from('admin_actions').insert({
+          wallet_address: walletAddress,
+          action_type: 'MARKET_MAKER_SLIPPAGE_PROTECTION',
+          details: {
+            action: shouldBuy ? 'BUY' : 'SELL',
+            amountUsdt: tradeAmountUsdt,
+            price: currentPrice,
+            message: 'Swap would receive too little; skipping to avoid bad fill'
+          }
+        })
+
+        return new Response(JSON.stringify({ 
+          message: 'Skipped due to low received (slippage/impact). Try smaller trade or higher tolerance.',
+          slippageProtection: true
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
