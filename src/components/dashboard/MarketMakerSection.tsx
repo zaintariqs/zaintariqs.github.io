@@ -191,7 +191,7 @@ export function MarketMakerSection() {
     setUpdating(true)
     try {
       const { data, error } = await supabase.functions.invoke('market-maker', {
-        body: { walletAddress: address }
+        body: { walletAddress: address, force: true }
       })
       
       if (error) {
@@ -210,10 +210,18 @@ export function MarketMakerSection() {
         return
       }
 
-      toast({
-        title: 'Bot Executed',
-        description: data?.message || 'Market maker bot ran successfully'
-      })
+      const msg = (data as any)?.message as string | undefined
+      if (msg && (msg.toLowerCase().includes('circuit breaker') || msg.toLowerCase().includes('skipped'))) {
+        toast({
+          title: 'Bot Skipped',
+          description: msg,
+        })
+      } else {
+        toast({
+          title: 'Bot Executed',
+          description: msg || 'Market maker bot ran successfully'
+        })
+      }
       fetchTransactions()
       fetchConfig()
     } catch (error) {
