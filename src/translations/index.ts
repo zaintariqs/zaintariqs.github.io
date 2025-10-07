@@ -43,7 +43,7 @@ export const translations = {
     },
     feature6: {
       title: "Secure & Private",
-      description: "Military-grade encryption and blockchain security protect your funds and personal information at all times."
+      description: "Advanced encryption and blockchain security protect your funds and personal information at all times."
     },
     
     // Call to Action
@@ -125,7 +125,7 @@ export const translations = {
     },
     feature6: {
       title: "محفوظ اور نجی",
-      description: "فوجی درجے کی انکرپشن اور بلاک چین سیکورٹی ہر وقت آپ کے فنڈز اور ذاتی معلومات کی حفاظت کرتا ہے۔"
+      description: "جدید انکرپشن اور بلاک چین سیکورٹی ہر وقت آپ کے فنڈز اور ذاتی معلومات کی حفاظت کرتا ہے۔"
     },
     
     // Call to Action
