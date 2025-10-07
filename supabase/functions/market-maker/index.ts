@@ -202,7 +202,7 @@ Deno.serve(async (req) => {
       })
     }
     
-    // Check for minimum liquidity (if available)
+    // Check for minimum liquidity and adjust trade size
     if (priceSource === 'dexscreener' && liquidityUsd < 100) {
       console.warn('Very low liquidity detected:', liquidityUsd)
       await supabase.from('admin_actions').insert({
@@ -210,6 +210,21 @@ Deno.serve(async (req) => {
         action_type: 'MARKET_MAKER_LOW_LIQUIDITY',
         details: { liquidityUsd, currentPrice }
       })
+      
+      // Pause bot if liquidity is critically low
+      if (liquidityUsd < 50) {
+        await supabase.from('market_maker_config').update({
+          status: 'paused'
+        }).eq('id', config.id)
+        
+        return new Response(JSON.stringify({ 
+          error: 'Pool liquidity too low for safe trading',
+          liquidityUsd 
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
     }
     
     console.log(`Price: $${currentPrice.toFixed(6)} (source: ${priceSource})`)
@@ -248,8 +263,28 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Execute trade
-    const tradeAmountUsdt = parseFloat(config.trade_amount_usdt)
+    // Execute trade with adjusted size based on liquidity
+    let tradeAmountUsdt = parseFloat(config.trade_amount_usdt)
+    
+    // Limit trade to max 2% of pool liquidity if we have that data
+    if (liquidityUsd > 0) {
+      const maxTradeSize = liquidityUsd * 0.02 // 2% of liquidity
+      if (tradeAmountUsdt > maxTradeSize) {
+        console.log(`Reducing trade size from $${tradeAmountUsdt} to $${maxTradeSize.toFixed(2)} (2% of pool liquidity)`)
+        tradeAmountUsdt = maxTradeSize
+        
+        await supabase.from('admin_actions').insert({
+          wallet_address: walletAddress,
+          action_type: 'MARKET_MAKER_TRADE_SIZE_REDUCED',
+          details: { 
+            originalSize: config.trade_amount_usdt,
+            adjustedSize: tradeAmountUsdt,
+            liquidityUsd 
+          }
+        })
+      }
+    }
+    
     let txHash = ''
     let action = ''
     let amountPkrsc = 0
@@ -279,14 +314,17 @@ Deno.serve(async (req) => {
           console.log('USDT approved')
         }
 
-        // Execute swap: USDT -> PKRSC
+        // Execute swap: USDT -> PKRSC with 5% slippage tolerance
+        const expectedOut = ethers.parseUnits((tradeAmountUsdt / currentPrice).toFixed(18), 18)
+        const minOut = (expectedOut * BigInt(95)) / BigInt(100) // 5% slippage
+        
         const params = {
           tokenIn: USDT_ADDRESS,
           tokenOut: PKRSC_ADDRESS,
           fee: 3000, // 0.3%
           recipient: wallet.address,
           amountIn: amountIn,
-          amountOutMinimum: 0, // Accept any amount (risky, but simplified)
+          amountOutMinimum: minOut,
           sqrtPriceLimitX96: 0
         }
 
@@ -318,14 +356,16 @@ Deno.serve(async (req) => {
           console.log('PKRSC approved')
         }
 
-        // Execute swap: PKRSC -> USDT
+        // Execute swap: PKRSC -> USDT with 5% slippage tolerance
+        const expectedOut = ethers.parseUnits((tradeAmountUsdt * 0.95).toFixed(6), 6)
+        
         const params = {
           tokenIn: PKRSC_ADDRESS,
           tokenOut: USDT_ADDRESS,
           fee: 3000,
           recipient: wallet.address,
           amountIn: amountIn,
-          amountOutMinimum: 0,
+          amountOutMinimum: expectedOut,
           sqrtPriceLimitX96: 0
         }
 
