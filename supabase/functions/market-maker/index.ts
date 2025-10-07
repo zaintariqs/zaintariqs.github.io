@@ -263,6 +263,14 @@ Deno.serve(async (req) => {
         action = 'BUY'
         const amountIn = ethers.parseUnits(tradeAmountUsdt.toString(), 6) // USDT has 6 decimals
         
+        // Check USDT balance
+        const usdtBalance = await usdt.balanceOf(wallet.address)
+        console.log('USDT balance:', ethers.formatUnits(usdtBalance, 6))
+        
+        if (usdtBalance < amountIn) {
+          throw new Error(`Insufficient USDT balance. Have: ${ethers.formatUnits(usdtBalance, 6)}, Need: ${tradeAmountUsdt}`)
+        }
+        
         // Check and approve USDT
         const allowance = await usdt.allowance(wallet.address, UNISWAP_ROUTER)
         if (allowance < amountIn) {
@@ -292,6 +300,15 @@ Deno.serve(async (req) => {
         action = 'SELL'
         amountPkrsc = tradeAmountUsdt / currentPrice
         const amountIn = ethers.parseUnits(amountPkrsc.toFixed(18), 18) // PKRSC has 18 decimals
+        
+        // Check PKRSC balance
+        const pkrscBalance = await pkrsc.balanceOf(wallet.address)
+        console.log('PKRSC balance:', ethers.formatUnits(pkrscBalance, 18))
+        console.log('PKRSC needed:', amountPkrsc.toFixed(6))
+        
+        if (pkrscBalance < amountIn) {
+          throw new Error(`Insufficient PKRSC balance. Have: ${ethers.formatUnits(pkrscBalance, 18)}, Need: ${amountPkrsc.toFixed(6)}`)
+        }
         
         // Check and approve PKRSC
         const allowance = await pkrsc.allowance(wallet.address, UNISWAP_ROUTER)
