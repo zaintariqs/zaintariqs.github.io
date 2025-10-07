@@ -97,6 +97,22 @@ const FAQ = () => {
     },
     {
       question: isUrdu
+        ? "کیا PKRSC سٹیٹ بینک آف پاکستان (SBP) کے زیر نگرانی ہے؟"
+        : "Is PKRSC regulated by the State Bank of Pakistan (SBP)?",
+      answer: isUrdu
+        ? "PKRSC ایک ریگولیٹری سینڈ باکس فریم ورک کے تحت ٹیسٹ کیا جا رہا ہے، جو SBP گائیڈ لائنز، FATF سفارشات، اور AML/KYC معیارات کی تعمیل کے لیے ڈیزائن کیا گیا ہے۔ منظوری کے بعد یہ پروجیکٹ مکمل طور پر ریگولیٹری نگرانی میں کام کرنے کا ارادہ رکھتا ہے۔"
+        : "PKRSC is being tested under a regulatory sandbox framework, designed to comply with SBP guidelines, FATF recommendations, and AML/KYC standards. The project aims to operate fully under regulatory oversight once approved.",
+    },
+    {
+      question: isUrdu
+        ? "PKRSC کی گورننس کون کرتا ہے؟"
+        : "Who governs PKRSC?",
+      answer: isUrdu
+        ? "ابتدائی طور پر، PKRSC کو قابل اعتماد شراکت داروں کے ساتھ ملٹی سگنیچر (multisig) گورننس ماڈل کے ذریعے منظم کیا جاتا ہے۔ بعد کے مراحل میں، گورننس DAO (Decentralized Autonomous Organization) میں منتقل ہو جائے گی، جو کمیونٹی کی شرکت اور شفافیت کو یقینی بناتی ہے۔"
+        : "Initially, PKRSC is managed by a multi-signature (multisig) governance model involving trusted partners. In later stages, governance will transition to a DAO (Decentralized Autonomous Organization), ensuring community participation and transparency.",
+    },
+    {
+      question: isUrdu
         ? "میں سپورٹ کے لیے کیسے رابطہ کر سکتا ہوں؟"
         : "How can I contact support?",
       answer: isUrdu
