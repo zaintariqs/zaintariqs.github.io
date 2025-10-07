@@ -183,11 +183,22 @@ Deno.serve(async (req) => {
       console.log('PKRSC:', PKRSC_ADDRESS)
       console.log('USDT:', USDT_ADDRESS)
       
-      // Get pool address from factory
+      // Get pool address from factory - try all fee tiers
       const factory = new ethers.Contract(UNISWAP_FACTORY, FACTORY_ABI, provider)
-      const poolAddress = await factory.getPool(PKRSC_ADDRESS, USDT_ADDRESS, 3000) // 0.3% fee tier
+      const feeTiers = [100, 500, 3000, 10000] // 0.01%, 0.05%, 0.3%, 1%
+      let poolAddress = ethers.ZeroAddress
+      let foundFeeTier = 0
       
-      console.log('Pool address from factory:', poolAddress)
+      for (const fee of feeTiers) {
+        const addr = await factory.getPool(PKRSC_ADDRESS, USDT_ADDRESS, fee)
+        console.log(`Checking fee tier ${fee/10000}%: ${addr}`)
+        if (addr && addr !== ethers.ZeroAddress) {
+          poolAddress = addr
+          foundFeeTier = fee
+          console.log(`✓ Found pool at fee tier ${fee/10000}%: ${addr}`)
+          break
+        }
+      }
       
       if (poolAddress && poolAddress !== ethers.ZeroAddress) {
         const pool = new ethers.Contract(poolAddress, POOL_ABI, provider)
@@ -244,6 +255,7 @@ Deno.serve(async (req) => {
           details: { 
             source: 'uniswap_pool',
             poolAddress,
+            feeTier: foundFeeTier,
             token0,
             token1,
             sqrtPriceX96: sqrtPriceX96.toString(),
@@ -251,14 +263,14 @@ Deno.serve(async (req) => {
           }
         })
       } else {
-        console.error('Pool address is zero or null - pool does not exist')
+        console.error('No pool found in any fee tier')
         await supabase.from('admin_actions').insert({
           wallet_address: walletAddress,
           action_type: 'MARKET_MAKER_POOL_NOT_FOUND',
           details: { 
             pkrsc: PKRSC_ADDRESS,
             usdt: USDT_ADDRESS,
-            fee: 3000
+            triedFeeTiers: feeTiers
           }
         })
       }
