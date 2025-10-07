@@ -52,8 +52,8 @@ const FAQ = () => {
     {
       question: isUrdu ? "PKRSC کتنا محفوظ ہے؟" : "How secure is PKRSC?",
       answer: isUrdu
-        ? "ہم جدید انکرپشن، بلاک چین سیکورٹی، اور مکمل ریزرو شفافیت استعمال کرتے ہیں۔ تمام ٹرانزیکشنز آن چین تصدیق شدہ ہیں اور آپ کے فنڈز محفوظ والیٹس میں محفوظ ہیں۔"
-        : "We use advanced encryption, blockchain security, and full reserve transparency. All transactions are verified on-chain and your funds are secured in protected wallets.",
+        ? "ہم جدید انکرپشن، بلاک چین سیکورٹی، اور مکمل ریزرو شفافیت استعمال کرتے ہیں۔ تمام ٹرانزیکشنز آن چین تصدیق شدہ ہیں اور آپ اپنے والیٹ پر مکمل کنٹرول رکھتے ہیں۔"
+        : "We use advanced encryption, blockchain security, and full reserve transparency. All transactions are verified on-chain and you maintain full control of your wallet.",
     },
     {
       question: isUrdu
