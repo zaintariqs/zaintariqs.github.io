@@ -59,6 +59,38 @@ const ERC20_ABI = [
   'function decimals() view returns (uint8)'
 ]
 
+// Helpers
+const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms))
+
+function isRateLimitError(error: any): boolean {
+  try {
+    const msg = error?.info?.error?.message?.toLowerCase?.() || error?.message?.toLowerCase?.() || ''
+    const code = error?.info?.error?.code
+    return msg.includes('rate limit') || code === -32016
+  } catch {
+    return false
+  }
+}
+
+async function withRetries<T>(fn: () => Promise<T>, attempts = 3, baseDelayMs = 300): Promise<T> {
+  let lastErr: any
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn()
+    } catch (err) {
+      lastErr = err
+      if (isRateLimitError(err) && i < attempts - 1) {
+        const delay = baseDelayMs * Math.pow(2, i)
+        console.warn(`Rate limited, retrying in ${delay}ms (attempt ${i + 2}/${attempts})`)
+        await sleep(delay)
+        continue
+      }
+      break
+    }
+  }
+  throw lastErr
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -414,7 +446,7 @@ Deno.serve(async (req) => {
         const amountIn = ethers.parseUnits(tradeAmountUsdt.toString(), 6) // USDT has 6 decimals
         
         // Check USDT balance
-        const usdtBalance = await usdt.balanceOf(wallet.address)
+        const usdtBalance = await withRetries(() => usdt.balanceOf(wallet.address))
         console.log('USDT balance:', ethers.formatUnits(usdtBalance, 6))
         
         if (usdtBalance < amountIn) {
@@ -422,7 +454,7 @@ Deno.serve(async (req) => {
         }
         
         // Check and approve USDT
-        const allowance = await usdt.allowance(wallet.address, UNISWAP_ROUTER)
+        const allowance = await withRetries(() => usdt.allowance(wallet.address, UNISWAP_ROUTER))
         if (allowance < amountIn) {
           const approveTx = await usdt.approve(UNISWAP_ROUTER, ethers.MaxUint256)
           await approveTx.wait()
@@ -455,7 +487,7 @@ Deno.serve(async (req) => {
         const amountIn = ethers.parseUnits(amountPkrsc.toFixed(18), 18) // PKRSC has 18 decimals
         
         // Check PKRSC balance
-        const pkrscBalance = await pkrsc.balanceOf(wallet.address)
+        const pkrscBalance = await withRetries(() => pkrsc.balanceOf(wallet.address))
         console.log('PKRSC balance:', ethers.formatUnits(pkrscBalance, 18))
         console.log('PKRSC needed:', amountPkrsc.toFixed(6))
         
@@ -464,7 +496,7 @@ Deno.serve(async (req) => {
         }
         
         // Check and approve PKRSC
-        const allowance = await pkrsc.allowance(wallet.address, UNISWAP_ROUTER)
+        const allowance = await withRetries(() => pkrsc.allowance(wallet.address, UNISWAP_ROUTER))
         if (allowance < amountIn) {
           const approveTx = await pkrsc.approve(UNISWAP_ROUTER, ethers.MaxUint256)
           await approveTx.wait()
@@ -533,6 +565,27 @@ Deno.serve(async (req) => {
 
     } catch (tradeError) {
       console.error('Trade execution failed:', tradeError)
+      
+      // Handle RPC rate limit gracefully (do not mark bot as error)
+      if (isRateLimitError(tradeError)) {
+        await supabase.from('admin_actions').insert({
+          wallet_address: walletAddress,
+          action_type: 'MARKET_MAKER_RATE_LIMIT',
+          details: {
+            action: shouldBuy ? 'BUY' : 'SELL',
+            amountUsdt: tradeAmountUsdt,
+            price: currentPrice,
+            message: 'RPC rate limit encountered; skipping this run'
+          }
+        })
+        
+        return new Response(JSON.stringify({ 
+          message: 'Skipped due to RPC rate limit; please retry shortly',
+          rateLimited: true
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
       
       // Log failed transaction
       await supabase.from('market_maker_transactions').insert({
