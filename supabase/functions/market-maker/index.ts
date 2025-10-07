@@ -26,7 +26,12 @@ const UNISWAP_FACTORY = '0x33128a8fC17869897dcE68Ed026d694621f6FDfD'
 const USDT_ADDRESS = '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2'
 const PKRSC_ADDRESS = '0x1f192CB7B36d7acfBBdCA1E0C1d697361508F9D5'
 const PKRSC_USDT_POOL = '0xBED1168062498b1D28FF6461611798436352551f' // Direct pool address
-const BASE_RPC = 'https://mainnet.base.org'
+// Use multiple RPC endpoints as fallbacks
+const BASE_RPCS = [
+  'https://mainnet.base.org',
+  'https://base.llamarpc.com',
+  'https://base-rpc.publicnode.com'
+]
 
 // Minimal Uniswap Router ABI
 const ROUTER_ABI = [
@@ -146,9 +151,26 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Set up Web3 provider and wallet
-    const provider = new ethers.JsonRpcProvider(BASE_RPC)
-    const wallet = new ethers.Wallet(privateKey, provider)
+    // Set up Web3 provider and wallet with fallback RPC
+    let provider: ethers.JsonRpcProvider | null = null
+    let wallet: ethers.Wallet | null = null
+    
+    for (const rpc of BASE_RPCS) {
+      try {
+        provider = new ethers.JsonRpcProvider(rpc)
+        await provider.getBlockNumber() // Test connection
+        wallet = new ethers.Wallet(privateKey, provider)
+        console.log(`Using RPC: ${rpc}`)
+        break
+      } catch (error) {
+        console.warn(`RPC ${rpc} failed, trying next...`)
+        continue
+      }
+    }
+    
+    if (!provider || !wallet) {
+      throw new Error('All RPC endpoints failed')
+    }
 
     console.log('Bot wallet address:', wallet.address)
 
@@ -194,40 +216,25 @@ Deno.serve(async (req) => {
         
         console.log('sqrtPriceX96:', sqrtPriceX96.toString())
         
-        // Get token order
+        // Get token order and decimals (both tokens have 6 decimals, so we can simplify)
         const token0 = await pool.token0()
         const token1 = await pool.token1()
         
         console.log('token0:', token0)
         console.log('token1:', token1)
         
-        // Get decimals
-        const token0Contract = new ethers.Contract(token0, ERC20_ABI, provider)
-        const token1Contract = new ethers.Contract(token1, ERC20_ABI, provider)
-        const decimals0 = await token0Contract.decimals()
-        const decimals1 = await token1Contract.decimals()
-        
-        console.log('decimals0:', decimals0, 'decimals1:', decimals1)
-        
-        // Convert sqrtPriceX96 to actual price
-        // price = (sqrtPriceX96 / 2^96)^2
+        // Both PKRSC and USDT have 6 decimals, so no decimal adjustment needed
         const sqrtPrice = Number(sqrtPriceX96) / (2 ** 96)
         const price = sqrtPrice ** 2
         
         console.log('Raw price from sqrtPriceX96:', price)
         
-        // Adjust for decimals and token order
-        // If PKRSC is token0, price is in USDT per PKRSC
-        // If PKRSC is token1, we need to invert
+        // Token order adjustment (no decimal adjustment needed since both have 6 decimals)
         if (token0.toLowerCase() === PKRSC_ADDRESS.toLowerCase()) {
-          // token0 = PKRSC, token1 = USDT
-          // price = (amount of token1) / (amount of token0)
-          currentPrice = price * (10 ** (Number(decimals0) - Number(decimals1)))
+          currentPrice = price
           console.log('PKRSC is token0, price:', currentPrice)
         } else {
-          // token0 = USDT, token1 = PKRSC
-          // price = (amount of token1) / (amount of token0), so we invert
-          currentPrice = (1 / price) * (10 ** (Number(decimals1) - Number(decimals0)))
+          currentPrice = 1 / price
           console.log('PKRSC is token1, price:', currentPrice)
         }
         
