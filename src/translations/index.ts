@@ -25,8 +25,8 @@ export const translations = {
       description: "Always pegged 1:1 with Pakistani Rupee, ensuring price stability and predictable value for your transactions."
     },
     feature2: {
-      title: "Instant Transfers",
-      description: "Send and receive money instantly, 24/7, without waiting for bank processing times or dealing with traditional banking delays."
+      title: "Accessible to All",
+      description: "No traditional bank account required. Anyone with a smartphone and internet connection can access and use PKR Stable."
     },
     feature3: {
       title: "Low Fees",
@@ -106,8 +106,8 @@ export const translations = {
       description: "ہمیشہ پاکستانی روپے کے ساتھ 1:1 کی نسبت، آپ کے لین دین کے لیے قیمت کی استحکام اور قابل اعتماد قدر کو یقینی بناتا ہے۔"
     },
     feature2: {
-      title: "فوری ٹرانسفر",
-      description: "بینک کی پروسیسنگ ٹائم کا انتظار کیے بغیر، 24/7 فوری طور پر پیسے بھیجیں اور وصول کریں۔"
+      title: "سب کے لیے قابل رسائی",
+      description: "روایتی بینک اکاؤنٹ کی ضرورت نہیں۔ سمارٹ فون اور انٹرنیٹ کنکشن والا کوئی بھی شخص PKR سٹیبل استعمال کر سکتا ہے۔"
     },
     feature3: {
       title: "کم فیس",
