@@ -45,7 +45,7 @@ const LearnMore = () => {
                 </span>
               </h1>
               <p className="text-xl text-gray-300 mb-8 max-w-3xl mx-auto leading-relaxed">
-                Comprehensive technical documentation and whitepaper for PKR Stable will be available soon for public review and audit.
+                Comprehensive technical documentation and whitepaper for PKR Stable is now available for public review and audit.
               </p>
             </div>
           </div>
