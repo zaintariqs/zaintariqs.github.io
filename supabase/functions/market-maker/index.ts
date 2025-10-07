@@ -179,22 +179,31 @@ Deno.serve(async (req) => {
     let priceSource = 'none'
     
     try {
+      console.log('Attempting to fetch price from Uniswap pool...')
+      console.log('PKRSC:', PKRSC_ADDRESS)
+      console.log('USDT:', USDT_ADDRESS)
+      
       // Get pool address from factory
       const factory = new ethers.Contract(UNISWAP_FACTORY, FACTORY_ABI, provider)
       const poolAddress = await factory.getPool(PKRSC_ADDRESS, USDT_ADDRESS, 3000) // 0.3% fee tier
       
-      console.log('Pool address:', poolAddress)
+      console.log('Pool address from factory:', poolAddress)
       
-      if (poolAddress !== ethers.ZeroAddress) {
+      if (poolAddress && poolAddress !== ethers.ZeroAddress) {
         const pool = new ethers.Contract(poolAddress, POOL_ABI, provider)
         
         // Get current price from pool
         const slot0 = await pool.slot0()
         const sqrtPriceX96 = slot0[0]
         
+        console.log('sqrtPriceX96:', sqrtPriceX96.toString())
+        
         // Get token order
         const token0 = await pool.token0()
         const token1 = await pool.token1()
+        
+        console.log('token0:', token0)
+        console.log('token1:', token1)
         
         // Get decimals
         const token0Contract = new ethers.Contract(token0, ERC20_ABI, provider)
@@ -202,23 +211,32 @@ Deno.serve(async (req) => {
         const decimals0 = await token0Contract.decimals()
         const decimals1 = await token1Contract.decimals()
         
+        console.log('decimals0:', decimals0, 'decimals1:', decimals1)
+        
         // Convert sqrtPriceX96 to actual price
         // price = (sqrtPriceX96 / 2^96)^2
-        const price = (Number(sqrtPriceX96) / (2 ** 96)) ** 2
+        const sqrtPrice = Number(sqrtPriceX96) / (2 ** 96)
+        const price = sqrtPrice ** 2
+        
+        console.log('Raw price from sqrtPriceX96:', price)
         
         // Adjust for decimals and token order
         // If PKRSC is token0, price is in USDT per PKRSC
         // If PKRSC is token1, we need to invert
         if (token0.toLowerCase() === PKRSC_ADDRESS.toLowerCase()) {
-          // price = USDT per PKRSC, adjust for decimals
+          // token0 = PKRSC, token1 = USDT
+          // price = (amount of token1) / (amount of token0)
           currentPrice = price * (10 ** (Number(decimals0) - Number(decimals1)))
+          console.log('PKRSC is token0, price:', currentPrice)
         } else {
-          // Invert: price = PKRSC per USDT, adjust for decimals
+          // token0 = USDT, token1 = PKRSC
+          // price = (amount of token1) / (amount of token0), so we invert
           currentPrice = (1 / price) * (10 ** (Number(decimals1) - Number(decimals0)))
+          console.log('PKRSC is token1, price:', currentPrice)
         }
         
         priceSource = 'uniswap_pool'
-        console.log('Price from Uniswap pool:', currentPrice)
+        console.log('✓ Successfully fetched Uniswap pool price: $' + currentPrice.toFixed(6))
         
         await supabase.from('admin_actions').insert({
           wallet_address: walletAddress,
@@ -226,15 +244,36 @@ Deno.serve(async (req) => {
           details: { 
             source: 'uniswap_pool',
             poolAddress,
+            token0,
+            token1,
             sqrtPriceX96: sqrtPriceX96.toString(),
             price: currentPrice
           }
         })
       } else {
-        console.warn('Pool not found on Uniswap')
+        console.error('Pool address is zero or null - pool does not exist')
+        await supabase.from('admin_actions').insert({
+          wallet_address: walletAddress,
+          action_type: 'MARKET_MAKER_POOL_NOT_FOUND',
+          details: { 
+            pkrsc: PKRSC_ADDRESS,
+            usdt: USDT_ADDRESS,
+            fee: 3000
+          }
+        })
       }
     } catch (error) {
-      console.warn('Uniswap pool query failed:', error)
+      console.error('ERROR fetching Uniswap pool price:', error)
+      console.error('Error details:', error instanceof Error ? error.message : String(error))
+      
+      await supabase.from('admin_actions').insert({
+        wallet_address: walletAddress,
+        action_type: 'MARKET_MAKER_POOL_ERROR',
+        details: { 
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      })
     }
     
     // If no price found from pool, try DEX Screener as fallback
