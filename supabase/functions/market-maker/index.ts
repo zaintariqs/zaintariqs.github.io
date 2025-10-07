@@ -106,7 +106,8 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     // Get the requesting wallet address from the request body
-    const { walletAddress } = await req.json().catch(() => ({}))
+    const { walletAddress, force } = await req.json().catch(() => ({}))
+    const forceRun = Boolean(force)
     
     if (!walletAddress) {
       console.error('No wallet address provided')
@@ -131,22 +132,30 @@ Deno.serve(async (req) => {
     // Check for suspicious activity (circuit breaker)
     const { data: recentFailures } = await supabase
       .from('market_maker_transactions')
-      .select('*')
+      .select('id, created_at, error_message')
       .eq('status', 'failed')
       .gte('created_at', new Date(Date.now() - 3600000).toISOString()) // Last hour
       .order('created_at', { ascending: false })
 
-    if (recentFailures && recentFailures.length >= 3) {
-      console.error('Circuit breaker triggered: Too many recent failures')
+    const criticalFailures = (recentFailures || []).filter((r: any) => {
+      const msg = (r.error_message || '').toLowerCase()
+      // Ignore inventory/rate-limit type failures
+      if (msg.includes('insufficient pkrsc')) return false
+      if (msg.includes('rate limit')) return false
+      return true
+    })
+
+    if (!forceRun && criticalFailures.length >= 3) {
+      console.error('Circuit breaker triggered: Too many recent critical failures')
       await supabase.from('admin_actions').insert({
         wallet_address: walletAddress,
         action_type: 'MARKET_MAKER_CIRCUIT_BREAKER',
-        details: { reason: 'Too many failed transactions in last hour', failures: recentFailures.length }
+        details: { reason: 'Too many critical failed transactions in last hour', failures: criticalFailures.length }
       })
       
       return new Response(
-        JSON.stringify({ error: 'Market maker circuit breaker activated due to recent failures' }),
-        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ message: 'Circuit breaker active. Skipping run without force=true.' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -492,7 +501,22 @@ Deno.serve(async (req) => {
         console.log('PKRSC needed:', amountPkrsc.toFixed(6))
         
         if (pkrscBalance < amountIn) {
-          throw new Error(`Insufficient PKRSC balance. Have: ${ethers.formatUnits(pkrscBalance, 18)}, Need: ${amountPkrsc.toFixed(6)}`)
+          await supabase.from('admin_actions').insert({
+            wallet_address: walletAddress,
+            action_type: 'MARKET_MAKER_INSUFFICIENT_INVENTORY',
+            details: {
+              have: ethers.formatUnits(pkrscBalance, 18),
+              need: amountPkrsc.toFixed(6)
+            }
+          })
+          
+          return new Response(JSON.stringify({
+            message: 'Insufficient PKRSC inventory in bot wallet to execute SELL',
+            have: ethers.formatUnits(pkrscBalance, 18),
+            need: amountPkrsc.toFixed(6)
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          })
         }
         
         // Check and approve PKRSC
