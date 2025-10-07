@@ -471,7 +471,7 @@ Deno.serve(async (req) => {
         }
 
         // Execute swap: USDT -> PKRSC with 5% slippage tolerance
-        const expectedOut = ethers.parseUnits((tradeAmountUsdt / currentPrice).toFixed(18), 18)
+        const expectedOut = ethers.parseUnits((tradeAmountUsdt / currentPrice).toFixed(6), 6)
         const minOut = (expectedOut * BigInt(95)) / BigInt(100) // 5% slippage
         
         const params = {
@@ -493,11 +493,11 @@ Deno.serve(async (req) => {
       } else if (shouldSell) {
         action = 'SELL'
         amountPkrsc = tradeAmountUsdt / currentPrice
-        const amountIn = ethers.parseUnits(amountPkrsc.toFixed(18), 18) // PKRSC has 18 decimals
+        const amountIn = ethers.parseUnits(amountPkrsc.toFixed(6), 6) // PKRSC has 6 decimals (not 18!)
         
         // Check PKRSC balance
         const pkrscBalance = await withRetries(() => pkrsc.balanceOf(wallet.address))
-        console.log('PKRSC balance:', ethers.formatUnits(pkrscBalance, 18))
+        console.log('PKRSC balance:', ethers.formatUnits(pkrscBalance, 6))
         console.log('PKRSC needed:', amountPkrsc.toFixed(6))
         
         if (pkrscBalance < amountIn) {
@@ -505,14 +505,14 @@ Deno.serve(async (req) => {
             wallet_address: walletAddress,
             action_type: 'MARKET_MAKER_INSUFFICIENT_INVENTORY',
             details: {
-              have: ethers.formatUnits(pkrscBalance, 18),
+              have: ethers.formatUnits(pkrscBalance, 6),
               need: amountPkrsc.toFixed(6)
             }
           })
           
           return new Response(JSON.stringify({
             message: 'Insufficient PKRSC inventory in bot wallet to execute SELL',
-            have: ethers.formatUnits(pkrscBalance, 18),
+            have: ethers.formatUnits(pkrscBalance, 6),
             need: amountPkrsc.toFixed(6)
           }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
