@@ -306,6 +306,13 @@ serve(async (req) => {
             )
           }
 
+          // Calculate 0.5% transaction fee
+          const FEE_PERCENTAGE = 0.5
+          const feeAmount = (amount * FEE_PERCENTAGE) / 100
+          const netAmount = amount - feeAmount
+
+          console.log(`[redemptions] Fee calculation (existing burn): Original=${amount} PKRSC, Fee=${feeAmount} PKRSC (${FEE_PERCENTAGE}%), Net=${netAmount} PKRSC`)
+
           const { data, error } = await supabase
             .from('redemptions')
             .insert({
@@ -329,10 +336,21 @@ serve(async (req) => {
             )
           }
 
+          // Record transaction fee
+          await supabase.from('transaction_fees').insert({
+            transaction_type: 'redemption',
+            transaction_id: data.id,
+            user_id: body.walletAddress.toLowerCase(),
+            original_amount: amount,
+            fee_percentage: FEE_PERCENTAGE,
+            fee_amount: feeAmount,
+            net_amount: netAmount
+          })
+
           await supabase.from('admin_actions').insert({
             action_type: 'redemption_created_from_existing_burn',
             wallet_address: body.walletAddress.toLowerCase(),
-            details: { redemptionId: data.id, burnTx, amount, timestamp: new Date().toISOString() }
+            details: { redemptionId: data.id, burnTx, amount, feeAmount, netAmount, timestamp: new Date().toISOString() }
           })
 
           return new Response(
@@ -355,6 +373,13 @@ serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
+
+      // Calculate 0.5% transaction fee
+      const FEE_PERCENTAGE = 0.5
+      const feeAmount = (body.pkrscAmount * FEE_PERCENTAGE) / 100
+      const netAmount = body.pkrscAmount - feeAmount
+
+      console.log(`[redemptions] Fee calculation: Original=${body.pkrscAmount} PKRSC, Fee=${feeAmount} PKRSC (${FEE_PERCENTAGE}%), Net=${netAmount} PKRSC`)
 
       const { data, error } = await supabase
         .from('redemptions')
@@ -386,6 +411,17 @@ serve(async (req) => {
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
+
+      // Record transaction fee
+      await supabase.from('transaction_fees').insert({
+        transaction_type: 'redemption',
+        transaction_id: data.id,
+        user_id: body.walletAddress.toLowerCase(),
+        original_amount: body.pkrscAmount,
+        fee_percentage: FEE_PERCENTAGE,
+        fee_amount: feeAmount,
+        net_amount: netAmount
+      })
       
       // Log success for audit
       await supabase.from('admin_actions').insert({
@@ -394,6 +430,8 @@ serve(async (req) => {
         details: { 
           redemptionId: data.id,
           amount: body.pkrscAmount,
+          feeAmount,
+          netAmount,
           timestamp: new Date().toISOString()
         }
       })

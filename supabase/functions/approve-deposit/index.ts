@@ -140,6 +140,13 @@ serve(async (req) => {
         )
       }
 
+      // Calculate 0.5% transaction fee
+      const FEE_PERCENTAGE = 0.5
+      const feeAmount = (deposit.amount_pkr * FEE_PERCENTAGE) / 100
+      const netAmount = deposit.amount_pkr - feeAmount
+
+      console.log(`Deposit fee calculation: Original=${deposit.amount_pkr} PKR, Fee=${feeAmount} PKR (${FEE_PERCENTAGE}%), Net=${netAmount} PKR`)
+
       // Update deposit as completed
       const { data, error } = await supabase
         .from('deposits')
@@ -162,9 +169,29 @@ serve(async (req) => {
         )
       }
 
-      // Update PKR bank reserves
+      // Record transaction fee
+      const { error: feeError } = await supabase
+        .from('transaction_fees')
+        .insert({
+          transaction_type: 'deposit',
+          transaction_id: depositId,
+          user_id: deposit.user_id.toLowerCase(),
+          original_amount: deposit.amount_pkr,
+          fee_percentage: FEE_PERCENTAGE,
+          fee_amount: feeAmount,
+          net_amount: netAmount
+        })
+
+      if (feeError) {
+        console.error('Error recording transaction fee:', feeError)
+        // Don't fail the approval, just log the error
+      } else {
+        console.log(`Transaction fee recorded: ${feeAmount} PKR`)
+      }
+
+      // Update PKR bank reserves (with net amount after fee)
       const { error: reserveError } = await supabase.rpc('update_pkr_reserves', {
-        amount_change: deposit.amount_pkr,
+        amount_change: netAmount,
         updated_by_wallet: walletAddress.toLowerCase()
       })
 
@@ -213,7 +240,8 @@ serve(async (req) => {
                 <div style="background-color: #f0fdf4; border-left: 4px solid #059669; padding: 16px; margin: 20px 0;">
                   <strong>Deposit Details:</strong><br><br>
                   <strong>Amount Deposited:</strong> ${deposit.amount_pkr} PKR<br>
-                  <strong>PKRSC Tokens Minted:</strong> ${deposit.amount_pkr} PKRSC<br>
+                  <strong>Transaction Fee (0.5%):</strong> ${feeAmount.toFixed(2)} PKR<br>
+                  <strong>PKRSC Tokens Received:</strong> ${netAmount.toFixed(2)} PKRSC<br>
                   <strong>Payment Method:</strong> ${deposit.payment_method}<br>
                   <strong>Your Wallet:</strong> ${deposit.user_id}
                 </div>

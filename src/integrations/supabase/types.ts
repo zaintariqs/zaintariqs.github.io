@@ -299,6 +299,42 @@ export type Database = {
         }
         Relationships: []
       }
+      transaction_fees: {
+        Row: {
+          created_at: string
+          fee_amount: number
+          fee_percentage: number
+          id: string
+          net_amount: number
+          original_amount: number
+          transaction_id: string
+          transaction_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          fee_amount: number
+          fee_percentage?: number
+          id?: string
+          net_amount: number
+          original_amount: number
+          transaction_id: string
+          transaction_type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          fee_amount?: number
+          fee_percentage?: number
+          id?: string
+          net_amount?: number
+          original_amount?: number
+          transaction_id?: string
+          transaction_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
