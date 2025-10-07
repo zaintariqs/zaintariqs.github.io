@@ -338,19 +338,41 @@ export function MarketMakerSection() {
         </div>
 
         {/* Status */}
-        <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
-          <div className="flex items-center gap-3">
-            <Activity className={`h-5 w-5 ${config?.status === 'active' ? 'text-crypto-green' : 'text-muted-foreground'}`} />
-            <div>
-              <div className="font-medium">Bot Status</div>
-              <div className="text-sm text-muted-foreground capitalize">{config?.status}</div>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+            <div className="flex items-center gap-3">
+              <Activity className={`h-5 w-5 ${config?.status === 'active' ? 'text-crypto-green' : 'text-muted-foreground'}`} />
+              <div>
+                <div className="font-medium">Bot Status</div>
+                <div className="text-sm text-muted-foreground capitalize">{config?.status}</div>
+              </div>
             </div>
+            <Switch
+              checked={config?.status === 'active'}
+              onCheckedChange={toggleBot}
+              disabled={updating}
+            />
           </div>
-          <Switch
-            checked={config?.status === 'active'}
-            onCheckedChange={toggleBot}
-            disabled={updating}
-          />
+          
+          {/* Automation Status */}
+          <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+            <div className="flex items-center gap-3">
+              <Clock className={`h-5 w-5 ${cronStatus?.active ? 'text-crypto-green' : 'text-muted-foreground'}`} />
+              <div>
+                <div className="font-medium">Automated Trading</div>
+                <div className="text-sm text-muted-foreground">
+                  {cronStatus?.active 
+                    ? `Runs every ${config?.min_trade_interval_seconds || 300}s automatically` 
+                    : 'Manual mode only'}
+                </div>
+              </div>
+            </div>
+            <Switch
+              checked={cronStatus?.active || false}
+              onCheckedChange={toggleCronJob}
+              disabled={updating || config?.status !== 'active'}
+            />
+          </div>
         </div>
 
         {/* Error Alert */}
