@@ -22,6 +22,7 @@ async function verifyAdmin(supabase: any, walletAddress: string): Promise<boolea
 
 // Uniswap V3 Router on Base
 const UNISWAP_ROUTER = '0x2626664c2603336E57B271c5C0b26F421741e481'
+const UNISWAP_FACTORY = '0x33128a8fC17869897dcE68Ed026d694621f6FDfD'
 const USDT_ADDRESS = '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2'
 const PKRSC_ADDRESS = '0x1f192CB7B36d7acfBBdCA1E0C1d697361508F9D5'
 const BASE_RPC = 'https://mainnet.base.org'
@@ -32,11 +33,24 @@ const ROUTER_ABI = [
   'function exactOutputSingle((address tokenIn, address tokenOut, uint24 fee, address recipient, uint256 amountOut, uint256 amountInMaximum, uint160 sqrtPriceLimitX96)) external returns (uint256 amountIn)'
 ]
 
+// Uniswap V3 Factory ABI
+const FACTORY_ABI = [
+  'function getPool(address tokenA, address tokenB, uint24 fee) view returns (address pool)'
+]
+
+// Uniswap V3 Pool ABI
+const POOL_ABI = [
+  'function slot0() view returns (uint160 sqrtPriceX96, int24 tick, uint16 observationIndex, uint16 observationCardinality, uint16 observationCardinalityNext, uint8 feeProtocol, bool unlocked)',
+  'function token0() view returns (address)',
+  'function token1() view returns (address)'
+]
+
 // ERC20 ABI
 const ERC20_ABI = [
   'function balanceOf(address) view returns (uint256)',
   'function approve(address spender, uint256 amount) returns (bool)',
-  'function allowance(address owner, address spender) view returns (uint256)'
+  'function allowance(address owner, address spender) view returns (uint256)',
+  'function decimals() view returns (uint8)'
 ]
 
 Deno.serve(async (req) => {
@@ -159,43 +173,104 @@ Deno.serve(async (req) => {
       console.warn('Forex API error, using config target:', error)
     }
 
-    // Fetch current price from multiple sources
+    // Fetch current price from Uniswap pool directly
     let currentPrice = 0
     let liquidityUsd = 0
     let priceSource = 'none'
     
     try {
-      // Try DEX Screener first
-      const priceResponse = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${PKRSC_ADDRESS}`)
-      const priceData = await priceResponse.json()
+      // Get pool address from factory
+      const factory = new ethers.Contract(UNISWAP_FACTORY, FACTORY_ABI, provider)
+      const poolAddress = await factory.getPool(PKRSC_ADDRESS, USDT_ADDRESS, 3000) // 0.3% fee tier
       
-      if (priceData.pairs && priceData.pairs.length > 0) {
-        const basePool = priceData.pairs.find((pair: any) => 
-          pair.chainId === 'base' && (pair.quoteToken?.symbol === 'USDT' || pair.quoteToken?.symbol === 'USDC')
-        )
+      console.log('Pool address:', poolAddress)
+      
+      if (poolAddress !== ethers.ZeroAddress) {
+        const pool = new ethers.Contract(poolAddress, POOL_ABI, provider)
         
-        if (basePool) {
-          currentPrice = parseFloat(basePool.priceUsd || '0')
-          liquidityUsd = parseFloat(basePool.liquidity?.usd || '0')
-          priceSource = 'dexscreener'
-          console.log('Price from DEX Screener:', currentPrice, 'Liquidity:', liquidityUsd)
+        // Get current price from pool
+        const slot0 = await pool.slot0()
+        const sqrtPriceX96 = slot0[0]
+        
+        // Get token order
+        const token0 = await pool.token0()
+        const token1 = await pool.token1()
+        
+        // Get decimals
+        const token0Contract = new ethers.Contract(token0, ERC20_ABI, provider)
+        const token1Contract = new ethers.Contract(token1, ERC20_ABI, provider)
+        const decimals0 = await token0Contract.decimals()
+        const decimals1 = await token1Contract.decimals()
+        
+        // Convert sqrtPriceX96 to actual price
+        // price = (sqrtPriceX96 / 2^96)^2
+        const price = (Number(sqrtPriceX96) / (2 ** 96)) ** 2
+        
+        // Adjust for decimals and token order
+        // If PKRSC is token0, price is in USDT per PKRSC
+        // If PKRSC is token1, we need to invert
+        if (token0.toLowerCase() === PKRSC_ADDRESS.toLowerCase()) {
+          // price = USDT per PKRSC, adjust for decimals
+          currentPrice = price * (10 ** (Number(decimals0) - Number(decimals1)))
+        } else {
+          // Invert: price = PKRSC per USDT, adjust for decimals
+          currentPrice = (1 / price) * (10 ** (Number(decimals1) - Number(decimals0)))
         }
+        
+        priceSource = 'uniswap_pool'
+        console.log('Price from Uniswap pool:', currentPrice)
+        
+        await supabase.from('admin_actions').insert({
+          wallet_address: walletAddress,
+          action_type: 'MARKET_MAKER_PRICE_FETCH',
+          details: { 
+            source: 'uniswap_pool',
+            poolAddress,
+            sqrtPriceX96: sqrtPriceX96.toString(),
+            price: currentPrice
+          }
+        })
+      } else {
+        console.warn('Pool not found on Uniswap')
       }
     } catch (error) {
-      console.warn('DEX Screener failed:', error)
+      console.warn('Uniswap pool query failed:', error)
     }
     
-    // If no price found, calculate from target USD/PKR rate
+    // If no price found from pool, try DEX Screener as fallback
     if (currentPrice === 0) {
-      console.log('No DEX price found, using forex-derived target price')
+      try {
+        const priceResponse = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${PKRSC_ADDRESS}`)
+        const priceData = await priceResponse.json()
+        
+        if (priceData.pairs && priceData.pairs.length > 0) {
+          const basePool = priceData.pairs.find((pair: any) => 
+            pair.chainId === 'base' && (pair.quoteToken?.symbol === 'USDT' || pair.quoteToken?.symbol === 'USDC')
+          )
+          
+          if (basePool) {
+            currentPrice = parseFloat(basePool.priceUsd || '0')
+            liquidityUsd = parseFloat(basePool.liquidity?.usd || '0')
+            priceSource = 'dexscreener'
+            console.log('Price from DEX Screener fallback:', currentPrice, 'Liquidity:', liquidityUsd)
+          }
+        }
+      } catch (error) {
+        console.warn('DEX Screener fallback failed:', error)
+      }
+    }
+    
+    // If still no price, calculate from target USD/PKR rate as last resort
+    if (currentPrice === 0) {
+      console.log('No pool price found, using forex-derived target price as fallback')
       currentPrice = 1 / usdToPkr
-      priceSource = 'calculated'
+      priceSource = 'calculated_fallback'
       
       await supabase.from('admin_actions').insert({
         wallet_address: walletAddress,
         action_type: 'MARKET_MAKER_PRICE_FALLBACK',
         details: { 
-          reason: 'DEX price unavailable, using calculated target',
+          reason: 'Pool and DEX price unavailable, using calculated target',
           calculatedPrice: currentPrice,
           usdToPkr
         }
