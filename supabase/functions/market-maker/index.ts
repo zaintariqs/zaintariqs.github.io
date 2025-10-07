@@ -25,6 +25,7 @@ const UNISWAP_ROUTER = '0x2626664c2603336E57B271c5C0b26F421741e481'
 const UNISWAP_FACTORY = '0x33128a8fC17869897dcE68Ed026d694621f6FDfD'
 const USDT_ADDRESS = '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2'
 const PKRSC_ADDRESS = '0x1f192CB7B36d7acfBBdCA1E0C1d697361508F9D5'
+const PKRSC_USDT_POOL = '0xBED1168062498b1D28FF6461611798436352551f' // Direct pool address
 const BASE_RPC = 'https://mainnet.base.org'
 
 // Minimal Uniswap Router ABI
@@ -179,26 +180,10 @@ Deno.serve(async (req) => {
     let priceSource = 'none'
     
     try {
-      console.log('Attempting to fetch price from Uniswap pool...')
-      console.log('PKRSC:', PKRSC_ADDRESS)
-      console.log('USDT:', USDT_ADDRESS)
+      console.log('Fetching price from Uniswap PKRSC/USDT pool...')
+      console.log('Pool address:', PKRSC_USDT_POOL)
       
-      // Get pool address from factory - try all fee tiers
-      const factory = new ethers.Contract(UNISWAP_FACTORY, FACTORY_ABI, provider)
-      const feeTiers = [100, 500, 3000, 10000] // 0.01%, 0.05%, 0.3%, 1%
-      let poolAddress = ethers.ZeroAddress
-      let foundFeeTier = 0
-      
-      for (const fee of feeTiers) {
-        const addr = await factory.getPool(PKRSC_ADDRESS, USDT_ADDRESS, fee)
-        console.log(`Checking fee tier ${fee/10000}%: ${addr}`)
-        if (addr && addr !== ethers.ZeroAddress) {
-          poolAddress = addr
-          foundFeeTier = fee
-          console.log(`✓ Found pool at fee tier ${fee/10000}%: ${addr}`)
-          break
-        }
-      }
+      const poolAddress = PKRSC_USDT_POOL
       
       if (poolAddress && poolAddress !== ethers.ZeroAddress) {
         const pool = new ethers.Contract(poolAddress, POOL_ABI, provider)
@@ -255,7 +240,6 @@ Deno.serve(async (req) => {
           details: { 
             source: 'uniswap_pool',
             poolAddress,
-            feeTier: foundFeeTier,
             token0,
             token1,
             sqrtPriceX96: sqrtPriceX96.toString(),
@@ -263,14 +247,12 @@ Deno.serve(async (req) => {
           }
         })
       } else {
-        console.error('No pool found in any fee tier')
+        console.error('Pool address is invalid')
         await supabase.from('admin_actions').insert({
           wallet_address: walletAddress,
-          action_type: 'MARKET_MAKER_POOL_NOT_FOUND',
+          action_type: 'MARKET_MAKER_POOL_INVALID',
           details: { 
-            pkrsc: PKRSC_ADDRESS,
-            usdt: USDT_ADDRESS,
-            triedFeeTiers: feeTiers
+            poolAddress: PKRSC_USDT_POOL
           }
         })
       }
@@ -447,7 +429,7 @@ Deno.serve(async (req) => {
         const params = {
           tokenIn: USDT_ADDRESS,
           tokenOut: PKRSC_ADDRESS,
-          fee: 3000, // 0.3%
+          fee: 100, // 0.01% fee tier
           recipient: wallet.address,
           amountIn: amountIn,
           amountOutMinimum: minOut,
@@ -488,7 +470,7 @@ Deno.serve(async (req) => {
         const params = {
           tokenIn: PKRSC_ADDRESS,
           tokenOut: USDT_ADDRESS,
-          fee: 3000,
+          fee: 100, // 0.01% fee tier
           recipient: wallet.address,
           amountIn: amountIn,
           amountOutMinimum: expectedOut,
