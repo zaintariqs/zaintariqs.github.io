@@ -367,6 +367,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_market_maker_cron_status: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          active: boolean
+          jobname: string
+          last_run: string
+          next_run: string
+          schedule: string
+        }[]
+      }
       get_market_maker_status: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -391,6 +401,10 @@ export type Database = {
       }
       is_wallet_whitelisted: {
         Args: { wallet_addr: string }
+        Returns: boolean
+      }
+      toggle_market_maker_cron: {
+        Args: { enable: boolean }
         Returns: boolean
       }
       update_pkr_reserves: {

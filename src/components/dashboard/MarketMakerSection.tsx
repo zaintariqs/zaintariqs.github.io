@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Bot, TrendingUp, Activity, AlertCircle, ExternalLink } from 'lucide-react'
+import { Bot, TrendingUp, Activity, AlertCircle, ExternalLink, Clock } from 'lucide-react'
 import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/hooks/use-toast'
 import { useAccount } from 'wagmi'
@@ -32,10 +32,17 @@ interface Transaction {
   created_at: string
 }
 
+interface CronStatus {
+  jobname: string
+  schedule: string
+  active: boolean
+}
+
 export function MarketMakerSection() {
   const { toast } = useToast()
   const { address } = useAccount()
   const [config, setConfig] = useState<BotConfig | null>(null)
+  const [cronStatus, setCronStatus] = useState<CronStatus | null>(null)
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState(false)
@@ -49,6 +56,7 @@ export function MarketMakerSection() {
   useEffect(() => {
     fetchConfig()
     fetchTransactions()
+    fetchCronStatus()
 
     // Subscribe to real-time updates
     const configChannel = supabase
@@ -127,6 +135,60 @@ export function MarketMakerSection() {
     } else if (data) {
       setTransactions(data)
     }
+  }
+
+  const fetchCronStatus = async () => {
+    try {
+      const { data, error } = await supabase.rpc('get_market_maker_cron_status')
+      
+      if (error) {
+        console.error('Error fetching cron status:', error)
+        return
+      }
+      
+      if (data && data.length > 0) {
+        setCronStatus(data[0])
+      }
+    } catch (error) {
+      console.error('Error fetching cron status:', error)
+    }
+  }
+
+  const toggleCronJob = async (enable: boolean) => {
+    if (!address) return
+    
+    setUpdating(true)
+    try {
+      const { error } = await supabase.rpc('toggle_market_maker_cron', {
+        enable
+      })
+      
+      if (error) {
+        toast({
+          title: 'Error',
+          description: 'Failed to toggle automation',
+          variant: 'destructive'
+        })
+        return
+      }
+      
+      toast({
+        title: enable ? 'Automation Enabled' : 'Automation Paused',
+        description: enable 
+          ? 'Bot will run automatically every 5 minutes' 
+          : 'Automatic execution has been paused'
+      })
+      
+      fetchCronStatus()
+    } catch (error) {
+      console.error('Error toggling cron:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to toggle automation',
+        variant: 'destructive'
+      })
+    }
+    setUpdating(false)
   }
 
   const updateConfig = async (updates: Partial<BotConfig>) => {
@@ -257,6 +319,24 @@ export function MarketMakerSection() {
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Automation Status */}
+        <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-primary/20">
+          <div className="flex items-center gap-3">
+            <Clock className={`h-5 w-5 ${cronStatus?.active ? 'text-crypto-green animate-pulse' : 'text-muted-foreground'}`} />
+            <div>
+              <div className="font-medium">Automated Scheduling</div>
+              <div className="text-sm text-muted-foreground">
+                {cronStatus?.active ? 'Running every 5 minutes' : 'Paused'}
+              </div>
+            </div>
+          </div>
+          <Switch 
+            checked={cronStatus?.active || false}
+            onCheckedChange={toggleCronJob}
+            disabled={updating}
+          />
+        </div>
+
         {/* Status */}
         <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
           <div className="flex items-center gap-3">
