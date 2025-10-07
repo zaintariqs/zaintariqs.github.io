@@ -30,7 +30,7 @@ export const translations = {
     },
     feature3: {
       title: "Low Fees",
-      description: "Enjoy minimal transaction costs compared to traditional banking and international transfer services."
+      description: "Only 0.5% fee on deposits and withdrawals - significantly lower than traditional banking and international transfer services."
     },
     feature4: {
       title: "Full Transparency",
@@ -111,7 +111,7 @@ export const translations = {
     },
     feature3: {
       title: "کم فیس",
-      description: "روایتی بینکنگ اور بین الاقوامی ٹرانسفر سروسز کے مقابلے میں کم سے کم ٹرانزیکشن کاسٹ کا لطف اٹھائیں۔"
+      description: "ڈپازٹس اور نکلوانے پر صرف 0.5% فیس - روایتی بینکنگ اور بین الاقوامی ٹرانسفر سروسز سے نمایاں طور پر کم۔"
     },
     feature4: {
       title: "مکمل شفافیت",
