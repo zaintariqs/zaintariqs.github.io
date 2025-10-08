@@ -25,31 +25,25 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Verify admin with market maker permission
-    const { data: hasPermission } = await supabase.rpc('is_admin_wallet', {
-      wallet: walletAddress.toLowerCase()
-    })
+    // Verify admin with market maker permission using RPC
+    const { data: hasMarketMakerPermission, error: permError } = await supabase
+      .rpc('has_admin_permission', {
+        _wallet_address: walletAddress,
+        _permission: 'manage_market_maker'
+      })
 
-    if (!hasPermission) {
-      console.log('Unauthorized access attempt:', walletAddress)
+    if (permError) {
+      console.error('Error checking permissions:', permError)
       return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
+        JSON.stringify({ error: 'Permission check failed' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       )
     }
 
-    // Verify manage_market_maker permission
-    const { data: permissions } = await supabase
-      .from('admin_roles')
-      .select('permission')
-      .eq('wallet_address', walletAddress)
-      .eq('permission', 'manage_market_maker')
-      .single()
-
-    if (!permissions) {
-      console.log('User lacks market maker permission:', walletAddress)
+    if (!hasMarketMakerPermission) {
+      console.log('Unauthorized or insufficient permissions:', walletAddress)
       return new Response(
-        JSON.stringify({ error: 'Insufficient permissions' }),
+        JSON.stringify({ error: 'Unauthorized or insufficient permissions' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
       )
     }
