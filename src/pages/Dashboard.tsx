@@ -103,13 +103,13 @@ export default function Dashboard() {
               <UniswapSection />
               
               <Tabs defaultValue="whitelisting" className="w-full">
-                <TabsList className="grid w-full grid-cols-6">
-                  <TabsTrigger value="whitelisting">Whitelisting</TabsTrigger>
-                  <TabsTrigger value="admin-deposits">All Deposits</TabsTrigger>
-                  <TabsTrigger value="admin-redemptions">All Redemptions</TabsTrigger>
-                  <TabsTrigger value="fees">Transaction Fees</TabsTrigger>
-                  <TabsTrigger value="deposits">My Deposits</TabsTrigger>
-                  <TabsTrigger value="redemptions">My Redemptions</TabsTrigger>
+                <TabsList className="flex flex-wrap w-full gap-2 h-auto justify-start p-2">
+                  <TabsTrigger value="whitelisting" className="flex-1 min-w-[140px]">Whitelisting</TabsTrigger>
+                  <TabsTrigger value="admin-deposits" className="flex-1 min-w-[140px]">All Deposits</TabsTrigger>
+                  <TabsTrigger value="admin-redemptions" className="flex-1 min-w-[140px]">All Redemptions</TabsTrigger>
+                  <TabsTrigger value="fees" className="flex-1 min-w-[140px]">Transaction Fees</TabsTrigger>
+                  <TabsTrigger value="deposits" className="flex-1 min-w-[140px]">My Deposits</TabsTrigger>
+                  <TabsTrigger value="redemptions" className="flex-1 min-w-[140px]">My Redemptions</TabsTrigger>
                 </TabsList>
                 <TabsContent value="whitelisting" className="mt-6">
                   <WhitelistingRequests />
