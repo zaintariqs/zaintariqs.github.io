@@ -129,7 +129,7 @@ export function TopUpSection() {
 
           {/* Payment Methods */}
           <Tabs defaultValue="easypaisa" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="easypaisa" className="flex items-center gap-2">
                 <Smartphone className="h-4 w-4" />
                 EasyPaisa
@@ -137,6 +137,10 @@ export function TopUpSection() {
               <TabsTrigger value="jazzcash" className="flex items-center gap-2">
                 <Smartphone className="h-4 w-4" />
                 JazzCash
+              </TabsTrigger>
+              <TabsTrigger value="bank" className="flex items-center gap-2">
+                <CreditCard className="h-4 w-4" />
+                Bank Deposit
               </TabsTrigger>
             </TabsList>
             
@@ -178,6 +182,35 @@ export function TopUpSection() {
                 {isProcessing ? 'Processing...' : 'Pay with JazzCash'}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
+            </TabsContent>
+
+            <TabsContent value="bank" className="space-y-4">
+              <div className="p-4 bg-muted/50 rounded-lg space-y-3">
+                <div className="font-medium text-card-foreground mb-3">Bank Transfer Details</div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Bank Name:</span>
+                    <span className="font-medium text-card-foreground">Meezan Bank</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Account Number:</span>
+                    <span className="font-medium text-card-foreground">10111000111001</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">IBAN:</span>
+                    <span className="font-medium text-card-foreground">PKMEZN100100101000111110</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Account Title:</span>
+                    <span className="font-medium text-card-foreground">PKR Stable Coin</span>
+                  </div>
+                </div>
+              </div>
+              <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                <p className="text-xs text-yellow-600 dark:text-yellow-500">
+                  ⚠️ Disclaimer: Upload the proof of payment to complete the transaction
+                </p>
+              </div>
             </TabsContent>
           </Tabs>
 
