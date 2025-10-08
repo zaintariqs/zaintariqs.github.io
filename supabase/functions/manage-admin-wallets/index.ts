@@ -90,8 +90,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Prevent revoking master minter's admin status
-    const masterMinterAddress = await getMasterMinterAddress(supabase)
+    // Prevent revoking master minter's admin status (masterMinterAddress already declared above)
     if (action === 'revoke' && targetWallet.toLowerCase() === masterMinterAddress.toLowerCase()) {
       console.error('Attempt to revoke master minter status:', requestingWallet)
       await supabase.from('admin_actions').insert({
