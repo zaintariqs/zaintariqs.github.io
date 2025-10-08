@@ -22,6 +22,9 @@ interface Redemption {
   bank_name: string
   account_number: string
   account_title: string
+  bankName?: string
+  accountNumber?: string
+  accountTitle?: string
   cancellation_reason?: string
   created_at: string
   updated_at: string
@@ -280,9 +283,9 @@ export function AdminRedemptions() {
                       <TableCell>{redemption.pkrsc_amount.toLocaleString()} PKRSC</TableCell>
                       <TableCell>
                         <div className="max-w-[200px]">
-                          <div className="font-medium text-sm">{redemption.bank_name}</div>
-                          <div className="text-xs text-muted-foreground">{redemption.account_title}</div>
-                          <div className="text-xs text-muted-foreground font-mono">{redemption.account_number}</div>
+                          <div className="font-medium text-sm">{redemption.bankName || redemption.bank_name}</div>
+                          <div className="text-xs text-muted-foreground">{redemption.accountTitle || redemption.account_title}</div>
+                          <div className="text-xs text-muted-foreground font-mono">{redemption.accountNumber || redemption.account_number}</div>
                         </div>
                       </TableCell>
                       <TableCell>{getStatusBadge(redemption.status)}</TableCell>
