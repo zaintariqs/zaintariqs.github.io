@@ -85,7 +85,7 @@ export function MarketMakerSection() {
       supabase.removeChannel(configChannel)
       supabase.removeChannel(txChannel)
     }
-  }, [])
+  }, [address])
 
   const fetchConfig = async () => {
     if (!address) {
@@ -124,16 +124,21 @@ export function MarketMakerSection() {
   }
 
   const fetchTransactions = async () => {
-    if (!address) return
+    if (!address) {
+      console.log('No address, skipping transaction fetch')
+      return
+    }
 
+    console.log('Fetching transactions for address:', address)
     try {
       const { data, error } = await supabase.functions.invoke('get-market-maker-transactions', {
         body: { walletAddress: address, limit: 50 }
       })
 
       if (error) {
-        console.error('Error fetching transactions:', error)
+        console.error('Error fetching transactions:', error, data)
       } else if (data) {
+        console.log('Transactions fetched:', data.length)
         setTransactions(data)
       }
     } catch (error) {
