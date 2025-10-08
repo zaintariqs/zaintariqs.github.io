@@ -1,13 +1,22 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { Resend } from 'npm:resend@2.0.0'
+import { 
+  verifyWalletSignature, 
+  hasAdminPermission, 
+  checkRateLimit, 
+  isTransactionHashUsed,
+  markTransactionHashUsed,
+  logAdminAction,
+  isNonceValid
+} from '../_shared/security.ts'
 
 const resend = new Resend(Deno.env.get('RESEND_API_KEY'))
 const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'team@pkrsc.org'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-wallet-address',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-wallet-address, x-wallet-signature, x-signature-message, x-nonce',
   'Access-Control-Allow-Methods': 'POST,OPTIONS',
 }
 
@@ -26,34 +35,68 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     const walletAddress = req.headers.get('x-wallet-address')
+    const signature = req.headers.get('x-wallet-signature')
+    const signedMessage = req.headers.get('x-signature-message')
+    const nonce = req.headers.get('x-nonce')
     
-    if (!walletAddress) {
+    if (!walletAddress || !signature || !signedMessage || !nonce) {
       return new Response(
-        JSON.stringify({ error: 'Wallet address required' }),
+        JSON.stringify({ error: 'Wallet address, signature, message, and nonce required' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Verify admin status with enhanced logging
-    const { data: isAdmin, error: adminError } = await supabase
-      .rpc('is_admin_wallet', { wallet_addr: walletAddress })
-    
-    // Log admin authentication attempt
-    await supabase.from('admin_actions').insert({
-      action_type: isAdmin ? 'admin_auth_success' : 'admin_auth_failed',
-      wallet_address: walletAddress.toLowerCase(),
-      details: { 
-        timestamp: new Date().toISOString(),
-        endpoint: 'approve-deposit',
-        success: !!isAdmin
-      }
-    })
-    
-    if (adminError || !isAdmin) {
-      console.error('Admin verification failed for wallet:', walletAddress, adminError)
+    // Validate nonce timestamp
+    if (!isNonceValid(nonce)) {
       return new Response(
-        JSON.stringify({ error: 'Unauthorized: Admin access required' }),
+        JSON.stringify({ error: 'Invalid or expired nonce' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Verify wallet signature
+    const sigVerification = await verifyWalletSignature(
+      supabase,
+      walletAddress,
+      signature,
+      signedMessage,
+      nonce
+    )
+
+    if (!sigVerification.valid) {
+      return new Response(
+        JSON.stringify({ error: sigVerification.error || 'Invalid signature' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Check admin permission
+    const hasPermission = await hasAdminPermission(supabase, walletAddress, 'approve_deposits')
+    
+    if (!hasPermission) {
+      console.error('Admin lacks approve_deposits permission:', walletAddress)
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized: approve_deposits permission required' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Check rate limit (max 20 approvals per 5 minutes)
+    const rateLimitResult = await checkRateLimit(supabase, walletAddress, 'approve_deposit', 20, 5)
+    if (!rateLimitResult.allowed) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Rate limit exceeded',
+          retryAfter: rateLimitResult.retryAfter 
+        }),
+        { 
+          status: 429, 
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json',
+            'Retry-After': String(rateLimitResult.retryAfter || 300)
+          } 
+        }
       )
     }
 
@@ -89,6 +132,15 @@ serve(async (req) => {
         )
       }
 
+      // Check if transaction hash was already used (prevent replay attacks)
+      const txHashUsed = await isTransactionHashUsed(supabase, mintTxHash)
+      if (txHashUsed) {
+        return new Response(
+          JSON.stringify({ error: 'Transaction hash already used (replay attack prevented)' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
       // Verify the mint transaction on-chain
       try {
         const { ethers } = await import('https://esm.sh/ethers@6.9.0')
@@ -105,6 +157,29 @@ serve(async (req) => {
         if (receipt.status !== 1) {
           return new Response(
             JSON.stringify({ error: 'Mint transaction failed on-chain' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+
+        // Enhanced validation: Check transaction is recent (within last 24 hours)
+        const block = await provider.getBlock(receipt.blockNumber)
+        const txTimestamp = block?.timestamp || 0
+        const currentTime = Math.floor(Date.now() / 1000)
+        const twentyFourHours = 24 * 60 * 60
+
+        if (currentTime - txTimestamp > twentyFourHours) {
+          return new Response(
+            JSON.stringify({ error: 'Transaction is too old (must be within last 24 hours)' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+
+        // Enhanced validation: Check minimum confirmations (at least 3 blocks)
+        const currentBlock = await provider.getBlockNumber()
+        const confirmations = currentBlock - receipt.blockNumber
+        if (confirmations < 3) {
+          return new Response(
+            JSON.stringify({ error: `Transaction needs more confirmations (${confirmations}/3)` }),
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           )
         }
@@ -132,6 +207,9 @@ serve(async (req) => {
         const mintedAmount = Number(value) / 10 ** PKRSC_DECIMALS
 
         console.log(`Verified mint: ${mintedAmount} PKRSC to ${deposit.user_id}`)
+        
+        // Mark transaction hash as used
+        await markTransactionHashUsed(supabase, mintTxHash, 'mint', deposit.user_id)
       } catch (error) {
         console.error('Error verifying mint transaction:', error)
         return new Response(
@@ -202,19 +280,23 @@ serve(async (req) => {
         console.log(`Updated PKR reserves: +${deposit.amount_pkr}`)
       }
 
-      // Log admin action
-      await supabase.from('admin_actions').insert({
-        action_type: 'deposit_approved',
-        wallet_address: walletAddress.toLowerCase(),
-        details: { 
+      // Log admin action with signature
+      await logAdminAction(
+        supabase,
+        'deposit_approved',
+        walletAddress,
+        { 
           depositId,
           userId: deposit.user_id,
           amount: deposit.amount_pkr,
           mintTxHash,
           reserveUpdated: !reserveError,
           timestamp: new Date().toISOString()
-        }
-      })
+        },
+        nonce,
+        signature,
+        signedMessage
+      )
 
       // Send success email notification
       const { data: whitelistData } = await supabase
@@ -309,17 +391,21 @@ serve(async (req) => {
         )
       }
 
-      // Log admin action
-      await supabase.from('admin_actions').insert({
-        action_type: 'deposit_rejected',
-        wallet_address: walletAddress.toLowerCase(),
-        details: { 
+      // Log admin action with signature
+      await logAdminAction(
+        supabase,
+        'deposit_rejected',
+        walletAddress,
+        { 
           depositId,
           userId: deposit.user_id,
           rejectionReason,
           timestamp: new Date().toISOString()
-        }
-      })
+        },
+        nonce,
+        signature,
+        signedMessage
+      )
 
       // Send rejection email notification
       const { data: whitelistData } = await supabase
