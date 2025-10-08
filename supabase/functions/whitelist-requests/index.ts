@@ -3,8 +3,54 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-wallet-address",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-wallet-address, x-wallet-signature, x-signature-message, x-nonce",
 };
+
+// Verify wallet signature to prevent fake requests
+async function verifyWalletSignature(
+  walletAddress: string,
+  signature: string,
+  message: string
+): Promise<boolean> {
+  try {
+    const { ethers } = await import('https://esm.sh/ethers@6.9.0')
+    const recoveredAddress = ethers.verifyMessage(message, signature)
+    return recoveredAddress.toLowerCase() === walletAddress.toLowerCase()
+  } catch (error) {
+    console.error('Signature verification failed:', error)
+    return false
+  }
+}
+
+// Encrypt email for PII protection
+async function encryptEmail(email: string): Promise<string> {
+  const key = Deno.env.get('BANK_DATA_ENCRYPTION_KEY')
+  if (!key) throw new Error('Encryption key not configured')
+  
+  const encoder = new TextEncoder()
+  const data = encoder.encode(email)
+  const iv = crypto.getRandomValues(new Uint8Array(16))
+  
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(key.padEnd(32, '0').slice(0, 32)),
+    { name: 'AES-GCM' },
+    false,
+    ['encrypt']
+  )
+  
+  const encrypted = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    cryptoKey,
+    data
+  )
+  
+  const combined = new Uint8Array(iv.length + encrypted.byteLength)
+  combined.set(iv)
+  combined.set(new Uint8Array(encrypted), iv.length)
+  
+  return btoa(String.fromCharCode(...combined))
+}
 
 // Rate limiting configuration
 const RATE_LIMIT_MS = 60000; // 1 minute
@@ -86,13 +132,40 @@ serve(async (req) => {
     }
 
     if (req.method === "POST") {
-      // Create new whitelist request
+      // Create new whitelist request with signature verification
       const { walletAddress, email } = await req.json();
+      const signatureHeader = req.headers.get('x-wallet-signature')
+      const messageHeaderEncoded = req.headers.get('x-signature-message')
+      const nonceHeader = req.headers.get('x-nonce')
+      const messageHeader = messageHeaderEncoded ? atob(messageHeaderEncoded) : null
 
       if (!walletAddress || !email) {
         return new Response(
           JSON.stringify({ error: "Wallet address and email are required" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Require signature verification to prevent spam/harvesting
+      if (!signatureHeader || !messageHeader || !nonceHeader) {
+        return new Response(
+          JSON.stringify({ error: "Wallet signature required for verification" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Verify signature
+      const isValidSignature = await verifyWalletSignature(
+        walletAddress,
+        signatureHeader,
+        messageHeader
+      )
+      
+      if (!isValidSignature) {
+        console.error('Invalid signature for whitelist request:', walletAddress)
+        return new Response(
+          JSON.stringify({ error: "Invalid wallet signature" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
@@ -129,13 +202,28 @@ serve(async (req) => {
         }
       }
 
-      // Create new whitelist request
+      // Encrypt email and store separately
+      const encryptedEmail = await encryptEmail(email.toLowerCase())
+      
+      // Store encrypted email
+      await supabase.from('encrypted_emails').insert({
+        wallet_address: walletAddress.toLowerCase(),
+        encrypted_email: encryptedEmail
+      })
+
+      // Get client IP for logging
+      const clientIp = req.headers.get("x-forwarded-for") || "unknown"
+
+      // Create new whitelist request with signature tracking
       const { data, error } = await supabase
         .from("whitelist_requests")
         .insert({
           wallet_address: walletAddress.toLowerCase(),
           email: email.toLowerCase(),
           status: "pending",
+          signature: signatureHeader,
+          nonce: nonceHeader,
+          client_ip: clientIp
         })
         .select()
         .single();

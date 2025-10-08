@@ -3,8 +3,24 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-wallet-address',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-wallet-address, x-wallet-signature, x-signature-message, x-nonce',
   'Access-Control-Allow-Methods': 'GET,POST,PATCH,OPTIONS',
+}
+
+// Verify wallet signature to prove ownership
+async function verifyWalletSignature(
+  walletAddress: string,
+  signature: string,
+  message: string
+): Promise<boolean> {
+  try {
+    const { ethers } = await import('https://esm.sh/ethers@6.9.0')
+    const recoveredAddress = ethers.verifyMessage(message, signature)
+    return recoveredAddress.toLowerCase() === walletAddress.toLowerCase()
+  } catch (error) {
+    console.error('Signature verification failed:', error)
+    return false
+  }
 }
 
 serve(async (req) => {
@@ -18,11 +34,46 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     const walletAddress = req.headers.get('x-wallet-address')
+    const signatureHeader = req.headers.get('x-wallet-signature')
+    const messageHeaderEncoded = req.headers.get('x-signature-message')
+    const nonceHeader = req.headers.get('x-nonce')
+    const messageHeader = messageHeaderEncoded ? atob(messageHeaderEncoded) : null
     
-    if (!walletAddress) {
+    if (!walletAddress || !signatureHeader || !messageHeader || !nonceHeader) {
+      console.warn('Missing authentication headers for admin-deposits')
       return new Response(
-        JSON.stringify({ error: 'Wallet address required' }),
+        JSON.stringify({ error: 'Authentication required: wallet signature missing' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Verify the signature proves wallet ownership
+    const isValidSignature = await verifyWalletSignature(
+      walletAddress,
+      signatureHeader,
+      messageHeader
+    )
+    
+    if (!isValidSignature) {
+      console.error('Invalid wallet signature for admin-deposits:', walletAddress)
+      return new Response(
+        JSON.stringify({ error: 'Invalid wallet signature' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Check nonce hasn't been used (replay attack prevention)
+    const { data: nonceCheck } = await supabase
+      .from('admin_actions')
+      .select('id')
+      .eq('nonce', nonceHeader)
+      .single()
+    
+    if (nonceCheck) {
+      console.error('Nonce already used - possible replay attack:', nonceHeader)
+      return new Response(
+        JSON.stringify({ error: 'Invalid nonce - possible replay attack detected' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -30,14 +81,18 @@ serve(async (req) => {
     const { data: isAdmin, error: adminError } = await supabase
       .rpc('is_admin_wallet', { wallet_addr: walletAddress })
     
-    // Log admin authentication attempt
+    // Log admin authentication attempt with signature details
     await supabase.from('admin_actions').insert({
       action_type: isAdmin ? 'admin_auth_success' : 'admin_auth_failed',
       wallet_address: walletAddress.toLowerCase(),
+      nonce: nonceHeader,
+      signature: signatureHeader,
+      signed_message: messageHeader,
       details: { 
         timestamp: new Date().toISOString(),
         endpoint: 'admin-deposits',
-        success: !!isAdmin
+        success: !!isAdmin,
+        signature_verified: isValidSignature
       }
     })
     

@@ -2,11 +2,14 @@ import { http, createConfig } from 'wagmi'
 import { mainnet, polygon, arbitrum, optimism, base } from 'wagmi/chains'
 import { injected, metaMask, walletConnect } from 'wagmi/connectors'
 
-// Get a free project ID from https://cloud.walletconnect.com
-const projectId = '1f8e1f4e8c4a8c4a8c4a8c4a8c4a8c4a' // Replace with your actual WalletConnect project ID
+// SECURITY FIX: Get a proper project ID from https://cloud.reown.com (formerly WalletConnect Cloud)
+// This placeholder ID will NOT work in production. Register your project to get a real ID.
+const projectId = '1f8e1f4e8c4a8c4a8c4a8c4a8c4a8c4a' // TODO: Replace with actual project ID from cloud.reown.com
 
-if (!projectId || projectId.startsWith('YOUR_')) {
-  console.warn('WalletConnect project ID not configured. Some wallet connections may not work properly.')
+if (!projectId || projectId.length < 32 || projectId === '1f8e1f4e8c4a8c4a8c4a8c4a8c4a8c4a') {
+  console.error('⚠️ SECURITY WARNING: WalletConnect project ID is not properly configured!')
+  console.error('Register at https://cloud.reown.com and add your Lovable preview domain to allowlist')
+  console.error('Without this, WalletConnect-based wallets will not function properly.')
 }
 
 export const config = createConfig({

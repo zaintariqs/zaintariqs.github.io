@@ -199,6 +199,7 @@ export type Database = {
           id: string
           mint_transaction_hash: string | null
           payment_method: string
+          phone_encrypted: boolean | null
           phone_number: string
           receipt_url: string | null
           rejection_reason: string | null
@@ -219,6 +220,7 @@ export type Database = {
           id?: string
           mint_transaction_hash?: string | null
           payment_method: string
+          phone_encrypted?: boolean | null
           phone_number: string
           receipt_url?: string | null
           rejection_reason?: string | null
@@ -239,6 +241,7 @@ export type Database = {
           id?: string
           mint_transaction_hash?: string | null
           payment_method?: string
+          phone_encrypted?: boolean | null
           phone_number?: string
           receipt_url?: string | null
           rejection_reason?: string | null
@@ -250,6 +253,33 @@ export type Database = {
           updated_at?: string
           user_id?: string
           user_transaction_id?: string | null
+        }
+        Relationships: []
+      }
+      encrypted_emails: {
+        Row: {
+          accessed_at: string | null
+          accessed_by: string | null
+          created_at: string
+          encrypted_email: string
+          id: string
+          wallet_address: string
+        }
+        Insert: {
+          accessed_at?: string | null
+          accessed_by?: string | null
+          created_at?: string
+          encrypted_email: string
+          id?: string
+          wallet_address: string
+        }
+        Update: {
+          accessed_at?: string | null
+          accessed_by?: string | null
+          created_at?: string
+          encrypted_email?: string
+          id?: string
+          wallet_address?: string
         }
         Relationships: []
       }
@@ -469,39 +499,72 @@ export type Database = {
         }
         Relationships: []
       }
+      whitelist_access_log: {
+        Row: {
+          access_type: string
+          accessed_by: string
+          created_at: string
+          id: string
+          wallet_address: string
+        }
+        Insert: {
+          access_type: string
+          accessed_by: string
+          created_at?: string
+          id?: string
+          wallet_address: string
+        }
+        Update: {
+          access_type?: string
+          accessed_by?: string
+          created_at?: string
+          id?: string
+          wallet_address?: string
+        }
+        Relationships: []
+      }
       whitelist_requests: {
         Row: {
+          client_ip: string | null
           created_at: string
           email: string
           id: string
+          nonce: string | null
           rejection_reason: string | null
           requested_at: string
           reviewed_at: string | null
           reviewed_by: string | null
+          signature: string | null
           status: string
           updated_at: string
           wallet_address: string
         }
         Insert: {
+          client_ip?: string | null
           created_at?: string
           email: string
           id?: string
+          nonce?: string | null
           rejection_reason?: string | null
           requested_at?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
+          signature?: string | null
           status?: string
           updated_at?: string
           wallet_address: string
         }
         Update: {
+          client_ip?: string | null
           created_at?: string
           email?: string
           id?: string
+          nonce?: string | null
           rejection_reason?: string | null
           requested_at?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
+          signature?: string | null
           status?: string
           updated_at?: string
           wallet_address?: string
