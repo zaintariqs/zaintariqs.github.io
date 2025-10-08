@@ -1,8 +1,15 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders, responseHeaders } from '../_shared/cors.ts'
 
-// Master minter - the only address that can manage admin wallets
-const MASTER_MINTER_ADDRESS = '0x5be080f81552c2495B288c04D2B64b9F7A4A9F3F'
+// Get master minter address from secure database function
+async function getMasterMinterAddress(supabase: any): Promise<string> {
+  const { data, error } = await supabase.rpc('get_master_minter_address')
+  if (error || !data) {
+    console.error('Failed to get master minter address:', error)
+    throw new Error('Master minter not configured')
+  }
+  return data
+}
 
 interface AdminManagementRequest {
   requestingWallet: string;
@@ -46,7 +53,8 @@ Deno.serve(async (req) => {
     }
 
     // Verify requesting user is the master minter
-    const isMasterMinter = requestingWallet.toLowerCase() === MASTER_MINTER_ADDRESS.toLowerCase()
+    const masterMinterAddress = await getMasterMinterAddress(supabase)
+    const isMasterMinter = requestingWallet.toLowerCase() === masterMinterAddress.toLowerCase()
 
     if (!isMasterMinter) {
       console.error('Unauthorized admin management attempt by non-master-minter:', requestingWallet)
@@ -83,7 +91,8 @@ Deno.serve(async (req) => {
     }
 
     // Prevent revoking master minter's admin status
-    if (action === 'revoke' && targetWallet.toLowerCase() === MASTER_MINTER_ADDRESS.toLowerCase()) {
+    const masterMinterAddress = await getMasterMinterAddress(supabase)
+    if (action === 'revoke' && targetWallet.toLowerCase() === masterMinterAddress.toLowerCase()) {
       console.error('Attempt to revoke master minter status:', requestingWallet)
       await supabase.from('admin_actions').insert({
         wallet_address: requestingWallet,

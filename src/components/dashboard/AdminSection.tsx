@@ -19,7 +19,6 @@ import { BankReserves } from './BankReserves'
 import { AdminWalletManagement } from './AdminWalletManagement'
 import { BlacklistedAddressesList } from './BlacklistedAddressesList'
 
-const MASTER_MINTER_ADDRESS = '0x5be080f81552c2495B288c04D2B64b9F7A4A9F3F'
 const PKRSC_CONTRACT_ADDRESS = '0x1f192CB7B36d7acfBBdCA1E0C1d697361508F9D5'
 
 // ERC20 with minting/burning/blacklisting functions ABI
@@ -112,6 +111,11 @@ export function AdminSection() {
   
   const currentChain = supportedChains.find(chain => chain.id === chainId)
   
+  // Server-side admin verification and master minter state
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [isCheckingAdmin, setIsCheckingAdmin] = useState(true)
+  const [masterMinterAddress, setMasterMinterAddress] = useState<string>('')
+  
   // Read contract data
   const { data: decimals, error: decimalsError } = useReadContract({
     address: PKRSC_CONTRACT_ADDRESS as `0x${string}`,
@@ -134,9 +138,10 @@ export function AdminSection() {
     address: PKRSC_CONTRACT_ADDRESS as `0x${string}`,
     abi: pkrscAbi,
     functionName: 'balanceOf',
-    args: [MASTER_MINTER_ADDRESS as `0x${string}`],
+    args: masterMinterAddress ? [masterMinterAddress as `0x${string}`] : ['0x0000000000000000000000000000000000000000' as `0x${string}`],
     chainId: base.id,
     query: {
+      enabled: !!masterMinterAddress,
       refetchInterval: 10000, // Refetch every 10 seconds
     }
   })
@@ -208,10 +213,6 @@ export function AdminSection() {
   // Chart colors
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8']
 
-  // Server-side admin verification
-  const [isAdmin, setIsAdmin] = useState(false)
-  const [isCheckingAdmin, setIsCheckingAdmin] = useState(true)
-
   const { isLoading: isConfirming, isSuccess: isConfirmed, data: txReceipt } = useWaitForTransactionReceipt({
     hash,
     chainId: base.id,
@@ -226,7 +227,7 @@ export function AdminSection() {
     }
   }, [isConfirmed, refetchTotalSupply, refetchTreasury])
 
-  // Verify admin status on mount
+  // Verify admin status and fetch master minter address on mount
   useEffect(() => {
     const verifyAdmin = async () => {
       if (!address) {
@@ -237,6 +238,13 @@ export function AdminSection() {
 
       try {
         console.log('[AdminSection] Verifying admin status for:', address)
+        
+        // Fetch master minter address from secure database function
+        const { data: masterMinter, error: masterMinterError } = await supabase.rpc('get_master_minter_address')
+        if (!masterMinterError && masterMinter) {
+          setMasterMinterAddress(masterMinter)
+        }
+        
         const { data, error } = await supabase.functions.invoke('verify-admin-wallet', {
           headers: {
             'x-wallet-address': address
@@ -259,7 +267,7 @@ export function AdminSection() {
     }
 
     verifyAdmin()
-  }, [address])
+  }, [address, supabase])
 
   useEffect(() => {
     // Load data from localStorage
@@ -331,7 +339,7 @@ export function AdminSection() {
       address,
       hash,
       timestamp: new Date().toISOString(),
-      admin: MASTER_MINTER_ADDRESS
+      admin: masterMinterAddress
     }
     const updated = [tx, ...transactions]
     setTransactions(updated)
@@ -551,7 +559,7 @@ export function AdminSection() {
     const content = `
 PKRSC Transaction Report
 Generated: ${new Date().toLocaleString()}
-Admin: ${MASTER_MINTER_ADDRESS}
+Admin: ${masterMinterAddress}
 
 === TREASURY OVERVIEW ===
 Total Supply: ${totalSupply ? formatUnits(totalSupply, tokenDecimals) : 'Loading...'} PKRSC
@@ -589,7 +597,7 @@ ${blacklistedAddresses.map(entry =>
     const content = `
 PKRSC Blacklisted Addresses Report
 Generated: ${new Date().toLocaleString()}
-Admin: ${MASTER_MINTER_ADDRESS}
+Admin: ${masterMinterAddress}
 
 === BLACKLISTED ADDRESSES SUMMARY ===
 Total Blacklisted: ${blacklistedAddresses.length}

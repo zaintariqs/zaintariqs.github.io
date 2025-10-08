@@ -10,9 +10,6 @@ import { Shield, UserPlus, UserMinus, Crown } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 
-// Master minter - the only address that can manage admin wallets
-const MASTER_MINTER_ADDRESS = '0x5be080f81552c2495B288c04D2B64b9F7A4A9F3F'
-
 interface AdminWallet {
   id: string;
   wallet_address: string;
@@ -26,14 +23,21 @@ export const AdminWalletManagement = () => {
   const [targetWallet, setTargetWallet] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [adminWallets, setAdminWallets] = useState<AdminWallet[]>([]);
+  const [masterMinterAddress, setMasterMinterAddress] = useState<string>("");
 
   // Check if current user is master minter
-  const isMasterMinter = address?.toLowerCase() === MASTER_MINTER_ADDRESS.toLowerCase();
+  const isMasterMinter = address?.toLowerCase() === masterMinterAddress.toLowerCase();
 
-  // Fetch admin wallets
+  // Fetch master minter address and admin wallets
   useEffect(() => {
-    const fetchAdminWallets = async () => {
+    const fetchData = async () => {
       try {
+        // Fetch master minter address from secure database function
+        const { data: masterMinter, error: masterMinterError } = await supabase.rpc('get_master_minter_address')
+        if (!masterMinterError && masterMinter) {
+          setMasterMinterAddress(masterMinter)
+        }
+        
         console.log("[AdminWalletManagement] Fetching admin wallets for:", address);
         const { data, error } = await supabase.functions.invoke("manage-admin-wallets", {
           body: {
@@ -56,13 +60,11 @@ export const AdminWalletManagement = () => {
       }
     };
 
-    if (isMasterMinter) {
-      console.log("[AdminWalletManagement] Is master minter, fetching wallets");
-      fetchAdminWallets();
-    } else {
-      console.log("[AdminWalletManagement] Not master minter, skipping fetch");
+    if (address) {
+      console.log("[AdminWalletManagement] Fetching data");
+      fetchData();
     }
-  }, [address, isMasterMinter]);
+  }, [address, supabase]);
 
   // Don't render if not master minter
   if (!isMasterMinter) {
@@ -197,10 +199,11 @@ export const AdminWalletManagement = () => {
               </TableHeader>
               <TableBody>
                 {/* Master Minter - Always show first */}
-                <TableRow className="bg-primary/5">
-                  <TableCell className="font-mono text-xs">
-                    {MASTER_MINTER_ADDRESS}
-                  </TableCell>
+                {masterMinterAddress && (
+                  <TableRow className="bg-primary/5">
+                    <TableCell className="font-mono text-xs">
+                      {masterMinterAddress}
+                    </TableCell>
                   <TableCell>
                     <Badge className="bg-yellow-500 hover:bg-yellow-600 text-black">
                       <Crown className="h-3 w-3 mr-1" />
@@ -212,12 +215,13 @@ export const AdminWalletManagement = () => {
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     System
-                  </TableCell>
-                </TableRow>
+                    </TableCell>
+                  </TableRow>
+                )}
 
                 {/* Other Admin Wallets */}
                 {adminWallets
-                  .filter(wallet => wallet.wallet_address.toLowerCase() !== MASTER_MINTER_ADDRESS.toLowerCase())
+                  .filter(wallet => wallet.wallet_address.toLowerCase() !== masterMinterAddress.toLowerCase())
                   .map((wallet) => (
                     <TableRow key={wallet.id}>
                       <TableCell className="font-mono text-xs">

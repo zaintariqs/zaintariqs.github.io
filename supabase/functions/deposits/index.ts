@@ -235,13 +235,19 @@ serve(async (req) => {
 
       console.log(`Creating deposit for wallet: ${walletAddressHeader}, amount: ${amount}, method: ${paymentMethod}`)
 
+      // Encrypt phone number for PII protection
+      const { encryptPhoneNumber } = await import('../_shared/phone-encryption.ts')
+      const encryptedPhone = await encryptPhoneNumber(sanitizeString(phoneNumber))
+
       const { data, error } = await supabase
         .from('deposits')
         .insert({
           user_id: walletAddressHeader.toLowerCase(),
           amount_pkr: amount,
           payment_method: sanitizeString(paymentMethod.toLowerCase()),
-          phone_number: sanitizeString(phoneNumber),
+          phone_number: encryptedPhone,
+          phone_encrypted: true,
+          phone_encryption_version: 1,
           status: 'pending'
         })
         .select()

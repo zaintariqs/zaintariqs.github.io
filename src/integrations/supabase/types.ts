@@ -200,6 +200,7 @@ export type Database = {
           mint_transaction_hash: string | null
           payment_method: string
           phone_encrypted: boolean | null
+          phone_encryption_version: number | null
           phone_number: string
           receipt_url: string | null
           rejection_reason: string | null
@@ -221,6 +222,7 @@ export type Database = {
           mint_transaction_hash?: string | null
           payment_method: string
           phone_encrypted?: boolean | null
+          phone_encryption_version?: number | null
           phone_number: string
           receipt_url?: string | null
           rejection_reason?: string | null
@@ -242,6 +244,64 @@ export type Database = {
           mint_transaction_hash?: string | null
           payment_method?: string
           phone_encrypted?: boolean | null
+          phone_encryption_version?: number | null
+          phone_number?: string
+          receipt_url?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string | null
+          transaction_id?: string | null
+          updated_at?: string
+          user_id?: string
+          user_transaction_id?: string | null
+        }
+        Relationships: []
+      }
+      deposits_public: {
+        Row: {
+          amount_pkr: number
+          created_at: string
+          id: string
+          mint_transaction_hash: string | null
+          payment_method: string
+          phone_number: string
+          receipt_url: string | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          submitted_at: string | null
+          transaction_id: string | null
+          updated_at: string
+          user_id: string
+          user_transaction_id: string | null
+        }
+        Insert: {
+          amount_pkr: number
+          created_at: string
+          id: string
+          mint_transaction_hash?: string | null
+          payment_method: string
+          phone_number: string
+          receipt_url?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status: string
+          submitted_at?: string | null
+          transaction_id?: string | null
+          updated_at: string
+          user_id: string
+          user_transaction_id?: string | null
+        }
+        Update: {
+          amount_pkr?: number
+          created_at?: string
+          id?: string
+          mint_transaction_hash?: string | null
+          payment_method?: string
           phone_number?: string
           receipt_url?: string | null
           rejection_reason?: string | null
@@ -355,6 +415,93 @@ export type Database = {
           price?: number
           status?: string
           transaction_hash?: string
+        }
+        Relationships: []
+      }
+      master_minter_config: {
+        Row: {
+          created_at: string
+          id: string
+          master_minter_address: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          master_minter_address: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          master_minter_address?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      master_minter_history: {
+        Row: {
+          approved_by: string[] | null
+          change_reason: string | null
+          changed_by: string
+          created_at: string
+          id: string
+          new_address: string
+          old_address: string | null
+        }
+        Insert: {
+          approved_by?: string[] | null
+          change_reason?: string | null
+          changed_by: string
+          created_at?: string
+          id?: string
+          new_address: string
+          old_address?: string | null
+        }
+        Update: {
+          approved_by?: string[] | null
+          change_reason?: string | null
+          changed_by?: string
+          created_at?: string
+          id?: string
+          new_address?: string
+          old_address?: string | null
+        }
+        Relationships: []
+      }
+      pii_access_log: {
+        Row: {
+          access_reason: string | null
+          access_timestamp: string
+          accessed_by_wallet: string
+          accessed_fields: string[]
+          accessed_record_id: string
+          accessed_table: string
+          id: string
+          ip_address: string | null
+        }
+        Insert: {
+          access_reason?: string | null
+          access_timestamp?: string
+          accessed_by_wallet: string
+          accessed_fields: string[]
+          accessed_record_id: string
+          accessed_table: string
+          id?: string
+          ip_address?: string | null
+        }
+        Update: {
+          access_reason?: string | null
+          access_timestamp?: string
+          accessed_by_wallet?: string
+          accessed_fields?: string[]
+          accessed_record_id?: string
+          accessed_table?: string
+          id?: string
+          ip_address?: string | null
         }
         Relationships: []
       }
@@ -573,65 +720,25 @@ export type Database = {
       }
     }
     Views: {
-      deposits_masked: {
-        Row: {
-          amount_pkr: number | null
-          created_at: string | null
-          id: string | null
-          mint_transaction_hash: string | null
-          payment_method: string | null
-          phone_number: string | null
-          receipt_url: string | null
-          rejection_reason: string | null
-          reviewed_at: string | null
-          reviewed_by: string | null
-          status: string | null
-          submitted_at: string | null
-          transaction_id: string | null
-          updated_at: string | null
-          user_id: string | null
-          user_transaction_id: string | null
-        }
-        Insert: {
-          amount_pkr?: number | null
-          created_at?: string | null
-          id?: string | null
-          mint_transaction_hash?: string | null
-          payment_method?: string | null
-          phone_number?: never
-          receipt_url?: string | null
-          rejection_reason?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          status?: string | null
-          submitted_at?: string | null
-          transaction_id?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-          user_transaction_id?: string | null
-        }
-        Update: {
-          amount_pkr?: number | null
-          created_at?: string | null
-          id?: string | null
-          mint_transaction_hash?: string | null
-          payment_method?: string | null
-          phone_number?: never
-          receipt_url?: string | null
-          rejection_reason?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          status?: string | null
-          submitted_at?: string | null
-          transaction_id?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-          user_transaction_id?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
+      check_and_update_rate_limit: {
+        Args: {
+          p_max_operations?: number
+          p_operation_type: string
+          p_wallet_address: string
+          p_window_minutes?: number
+        }
+        Returns: {
+          allowed: boolean
+          retry_after_seconds: number
+        }[]
+      }
+      cleanup_old_rate_limits: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       get_market_maker_cron_status: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -648,6 +755,10 @@ export type Database = {
           last_trade_at: string
           status: Database["public"]["Enums"]["bot_status"]
         }[]
+      }
+      get_master_minter_address: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
       has_admin_permission: {
         Args: {
@@ -678,6 +789,17 @@ export type Database = {
       is_wallet_whitelisted: {
         Args: { wallet_addr: string }
         Returns: boolean
+      }
+      log_pii_access: {
+        Args: {
+          p_accessed_by: string
+          p_fields: string[]
+          p_ip?: string
+          p_reason?: string
+          p_record_id: string
+          p_table: string
+        }
+        Returns: undefined
       }
       mask_phone_number: {
         Args: { phone: string }
