@@ -53,32 +53,24 @@ export function WhitelistingRequests() {
     if (!address) return
 
     try {
-      // Use Supabase client directly with RLS authentication
-      // This works because RLS policies allow users to see their own requests
-      // and admins with manage_whitelist permission can see all requests
-      const { data, error } = await supabase
-        .from('whitelist_requests')
-        .select('*')
-        .order('created_at', { ascending: false })
+      const response = await fetch(
+        'https://jdjreuxhvzmzockuduyq.supabase.co/functions/v1/whitelist-requests',
+        {
+          method: 'GET',
+          headers: {
+            'x-wallet-address': address,
+          },
+        }
+      )
 
-      if (error) {
-        console.error('Supabase error:', error)
-        throw new Error(error.message || 'Failed to fetch whitelist requests')
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to fetch whitelist requests')
       }
 
-      console.log('Fetched whitelist requests:', data?.length)
-      // Map to match the interface type
-      const typedRequests: WhitelistRequest[] = (data || []).map(item => ({
-        id: item.id,
-        wallet_address: item.wallet_address,
-        email: item.email,
-        status: item.status as 'pending' | 'approved' | 'rejected',
-        rejection_reason: item.rejection_reason || undefined,
-        requested_at: item.requested_at,
-        reviewed_at: item.reviewed_at || undefined,
-        reviewed_by: item.reviewed_by || undefined,
-      }))
-      setRequests(typedRequests)
+      const data = await response.json()
+      console.log('Fetched whitelist requests:', data)
+      setRequests(data.requests || [])
     } catch (error: any) {
       console.error('Error fetching whitelist requests:', error)
       toast({
