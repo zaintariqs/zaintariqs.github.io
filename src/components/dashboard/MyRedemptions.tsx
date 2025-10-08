@@ -21,6 +21,9 @@ interface Redemption {
   bank_name: string
   account_number: string
   account_title: string
+  bankName?: string
+  accountNumber?: string
+  accountTitle?: string
   cancellation_reason?: string
   created_at: string
   updated_at: string
@@ -320,9 +323,9 @@ export function MyRedemptions() {
                     <TableCell>{redemption.pkrsc_amount.toLocaleString()} PKRSC</TableCell>
                     <TableCell>
                       <div className="max-w-[150px]">
-                        <div className="font-medium text-sm">{redemption.bank_name}</div>
+                        <div className="font-medium text-sm">{redemption.bankName || redemption.bank_name}</div>
                         <div className="text-xs text-muted-foreground truncate">
-                          {redemption.account_number}
+                          {redemption.accountNumber || redemption.account_number}
                         </div>
                       </div>
                     </TableCell>
