@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0'
-import { encryptBankDetails, decryptBankDetails, isEncrypted } from '../_shared/encryption.ts'
+import { encryptBankDetails, decryptBankDetails, isEncrypted } from '../_shared/encryption_v2.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -312,7 +312,7 @@ serve(async (req) => {
           const feeAmount = (amount * FEE_PERCENTAGE) / 100
           const netAmount = amount - feeAmount
 
-          console.log(`[redemptions] Fee calculation (existing burn): Original=${amount} PKRSC, Fee=${feeAmount} PKRSC (${FEE_PERCENTAGE}%), Net=${netAmount} PKRSC`)
+          console.log(`[redemptions] Fee calculation (existing burn, v2): Original=${amount} PKRSC, Fee=${feeAmount} PKRSC (${FEE_PERCENTAGE}%), Net=${netAmount} PKRSC`)
 
           // Encrypt bank details before storing
           const encryptedBankDetails = await encryptBankDetails({
@@ -387,7 +387,7 @@ serve(async (req) => {
       const feeAmount = (body.pkrscAmount * FEE_PERCENTAGE) / 100
       const netAmount = body.pkrscAmount - feeAmount
 
-      console.log(`[redemptions] Fee calculation: Original=${body.pkrscAmount} PKRSC, Fee=${feeAmount} PKRSC (${FEE_PERCENTAGE}%), Net=${netAmount} PKRSC`)
+      console.log(`[redemptions] Fee calculation (v2): Original=${body.pkrscAmount} PKRSC, Fee=${feeAmount} PKRSC (${FEE_PERCENTAGE}%), Net=${netAmount} PKRSC`)
 
       // Encrypt bank details before storing
       const encryptedBankDetails = await encryptBankDetails({
