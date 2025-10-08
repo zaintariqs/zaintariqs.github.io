@@ -303,12 +303,12 @@ export function MyRedemptions() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Bank</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Burn TX</TableHead>
-                  <TableHead>Bank TX ID</TableHead>
+                  <TableHead className="w-[100px]">Date</TableHead>
+                  <TableHead className="w-[120px]">Amount</TableHead>
+                  <TableHead className="w-[150px]">Bank</TableHead>
+                  <TableHead className="w-[120px]">Status</TableHead>
+                  <TableHead className="w-[100px]">Burn TX</TableHead>
+                  <TableHead className="min-w-[200px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -342,16 +342,16 @@ export function MyRedemptions() {
                         </a>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="min-w-[200px]">
                       {redemption.status === 'completed' && redemption.bank_transaction_id && (
-                        <span className="text-sm font-mono text-green-600 dark:text-green-400">
+                        <span className="text-sm font-mono text-green-600 dark:text-green-400 break-all">
                           {redemption.bank_transaction_id}
                         </span>
                       )}
                       {redemption.status === 'cancelled' && (
-                        <div className="space-y-2">
+                        <div className="space-y-2 py-1">
                           {redemption.cancellation_reason && (
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-xs text-muted-foreground break-words">
                               {redemption.cancellation_reason}
                             </p>
                           )}
@@ -360,13 +360,13 @@ export function MyRedemptions() {
                               size="sm"
                               variant="outline"
                               onClick={() => handleResubmit(redemption)}
-                              className="w-full"
+                              className="w-full whitespace-nowrap"
                             >
-                              <RefreshCcw className="h-3 w-3 mr-2" />
-                              Resubmit with Correct Details
+                              <RefreshCcw className="h-3 w-3 mr-1 flex-shrink-0" />
+                              <span className="text-xs">Resubmit</span>
                             </Button>
                           ) : redemption.transaction_hash && (
-                            <p className="text-xs text-muted-foreground italic">
+                            <p className="text-xs text-muted-foreground italic break-words">
                               {redemptions.some(r => r.transaction_hash === redemption.transaction_hash && r.status === 'completed')
                                 ? 'Completed (see completed entry)'
                                 : 'Resubmitted (see newer entry)'}
