@@ -7,20 +7,18 @@
  */
 
 // Get encryption key from environment
-function getEncryptionKey(): Uint8Array {
-  const keyHex = Deno.env.get('BANK_DATA_ENCRYPTION_KEY')
-  if (!keyHex) {
+async function getEncryptionKey(): Promise<Uint8Array> {
+  const keyString = Deno.env.get('BANK_DATA_ENCRYPTION_KEY')
+  if (!keyString) {
     throw new Error('BANK_DATA_ENCRYPTION_KEY not configured')
   }
   
-  // Convert hex string to Uint8Array
-  const keyBytes = new Uint8Array(keyHex.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)))
+  // Use SHA-256 to derive a proper 32-byte key from the provided string
+  const encoder = new TextEncoder()
+  const keyData = encoder.encode(keyString)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', keyData)
   
-  if (keyBytes.length !== 32) {
-    throw new Error('Encryption key must be 32 bytes (256 bits)')
-  }
-  
-  return keyBytes
+  return new Uint8Array(hashBuffer)
 }
 
 /**
@@ -29,7 +27,7 @@ function getEncryptionKey(): Uint8Array {
  */
 export async function encryptText(plaintext: string): Promise<string> {
   try {
-    const key = getEncryptionKey()
+    const key = await getEncryptionKey()
     
     // Generate random 12-byte IV (recommended for GCM)
     const iv = crypto.getRandomValues(new Uint8Array(12))
@@ -71,7 +69,7 @@ export async function encryptText(plaintext: string): Promise<string> {
  */
 export async function decryptText(encryptedBase64: string): Promise<string> {
   try {
-    const key = getEncryptionKey()
+    const key = await getEncryptionKey()
     
     // Decode from base64
     const combined = Uint8Array.from(atob(encryptedBase64), c => c.charCodeAt(0))
