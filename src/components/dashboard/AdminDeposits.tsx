@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useAccount } from 'wagmi'
+import { useAccount, useSignMessage } from 'wagmi'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -31,6 +31,7 @@ interface Deposit {
 
 export function AdminDeposits() {
   const { address } = useAccount()
+  const { signMessageAsync } = useSignMessage()
   const { toast } = useToast()
   const [deposits, setDeposits] = useState<Deposit[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -46,25 +47,41 @@ export function AdminDeposits() {
     if (!address) return
 
     try {
+      // Generate nonce and message for signature
+      const nonce = Date.now().toString()
+      const message = `Admin access to deposits\nNonce: ${nonce}\nTimestamp: ${new Date().toISOString()}`
+      
+      // Sign the message
+      const signature = await signMessageAsync({ 
+        message,
+        account: address 
+      })
+      
       const response = await fetch(
         'https://jdjreuxhvzmzockuduyq.supabase.co/functions/v1/admin-deposits',
         {
           method: 'GET',
           headers: {
             'x-wallet-address': address,
+            'x-wallet-signature': signature,
+            'x-signature-message': btoa(message),
+            'x-nonce': nonce,
           },
         }
       )
 
-      if (!response.ok) throw new Error('Failed to fetch deposits')
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to fetch deposits')
+      }
 
       const { data } = await response.json()
       setDeposits(data || [])
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching deposits:', error)
       toast({
         title: "Error",
-        description: "Failed to load deposits",
+        description: error.message || "Failed to load deposits",
         variant: "destructive",
       })
     } finally {

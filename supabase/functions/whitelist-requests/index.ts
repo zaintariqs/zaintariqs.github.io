@@ -211,10 +211,7 @@ serve(async (req) => {
         encrypted_email: encryptedEmail
       })
 
-      // Get client IP for logging
-      const clientIp = req.headers.get("x-forwarded-for") || "unknown"
-
-      // Create new whitelist request with signature tracking
+      // Create new whitelist request with signature tracking (clientIp already defined above)
       const { data, error } = await supabase
         .from("whitelist_requests")
         .insert({
