@@ -20,6 +20,9 @@ export type Database = {
           created_at: string
           details: Json | null
           id: string
+          nonce: string | null
+          signature: string | null
+          signed_message: string | null
           wallet_address: string
         }
         Insert: {
@@ -27,6 +30,9 @@ export type Database = {
           created_at?: string
           details?: Json | null
           id?: string
+          nonce?: string | null
+          signature?: string | null
+          signed_message?: string | null
           wallet_address: string
         }
         Update: {
@@ -34,9 +40,74 @@ export type Database = {
           created_at?: string
           details?: Json | null
           id?: string
+          nonce?: string | null
+          signature?: string | null
+          signed_message?: string | null
           wallet_address?: string
         }
         Relationships: []
+      }
+      admin_rate_limits: {
+        Row: {
+          created_at: string
+          id: string
+          last_operation_at: string
+          operation_count: number
+          operation_type: string
+          wallet_address: string
+          window_start: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_operation_at?: string
+          operation_count?: number
+          operation_type: string
+          wallet_address: string
+          window_start?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_operation_at?: string
+          operation_count?: number
+          operation_type?: string
+          wallet_address?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
+      admin_roles: {
+        Row: {
+          granted_at: string
+          granted_by: string
+          id: string
+          permission: Database["public"]["Enums"]["admin_permission"]
+          wallet_address: string
+        }
+        Insert: {
+          granted_at?: string
+          granted_by: string
+          id?: string
+          permission: Database["public"]["Enums"]["admin_permission"]
+          wallet_address: string
+        }
+        Update: {
+          granted_at?: string
+          granted_by?: string
+          id?: string
+          permission?: Database["public"]["Enums"]["admin_permission"]
+          wallet_address?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_roles_wallet_address_fkey"
+            columns: ["wallet_address"]
+            isOneToOne: false
+            referencedRelation: "admin_wallets"
+            referencedColumns: ["wallet_address"]
+          },
+        ]
       }
       admin_wallets: {
         Row: {
@@ -123,6 +194,8 @@ export type Database = {
         Row: {
           amount_pkr: number
           created_at: string
+          full_phone_accessed_at: string | null
+          full_phone_accessed_by: string | null
           id: string
           mint_transaction_hash: string | null
           payment_method: string
@@ -141,6 +214,8 @@ export type Database = {
         Insert: {
           amount_pkr: number
           created_at?: string
+          full_phone_accessed_at?: string | null
+          full_phone_accessed_by?: string | null
           id?: string
           mint_transaction_hash?: string | null
           payment_method: string
@@ -159,6 +234,8 @@ export type Database = {
         Update: {
           amount_pkr?: number
           created_at?: string
+          full_phone_accessed_at?: string | null
+          full_phone_accessed_by?: string | null
           id?: string
           mint_transaction_hash?: string | null
           payment_method?: string
@@ -255,6 +332,8 @@ export type Database = {
         Row: {
           account_number: string
           account_title: string
+          bank_details_accessed_at: string | null
+          bank_details_accessed_by: string | null
           bank_name: string
           bank_transaction_id: string | null
           burn_address: string
@@ -270,6 +349,8 @@ export type Database = {
         Insert: {
           account_number: string
           account_title: string
+          bank_details_accessed_at?: string | null
+          bank_details_accessed_by?: string | null
           bank_name: string
           bank_transaction_id?: string | null
           burn_address?: string
@@ -285,6 +366,8 @@ export type Database = {
         Update: {
           account_number?: string
           account_title?: string
+          bank_details_accessed_at?: string | null
+          bank_details_accessed_by?: string | null
           bank_name?: string
           bank_transaction_id?: string | null
           burn_address?: string
@@ -332,6 +415,33 @@ export type Database = {
           transaction_id?: string
           transaction_type?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      used_transaction_hashes: {
+        Row: {
+          created_at: string
+          id: string
+          transaction_hash: string
+          transaction_type: string
+          used_at: string
+          used_by: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          transaction_hash: string
+          transaction_type: string
+          used_at?: string
+          used_by: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          transaction_hash?: string
+          transaction_type?: string
+          used_at?: string
+          used_by?: string
         }
         Relationships: []
       }
@@ -400,7 +510,63 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      deposits_masked: {
+        Row: {
+          amount_pkr: number | null
+          created_at: string | null
+          id: string | null
+          mint_transaction_hash: string | null
+          payment_method: string | null
+          phone_number: string | null
+          receipt_url: string | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string | null
+          submitted_at: string | null
+          transaction_id: string | null
+          updated_at: string | null
+          user_id: string | null
+          user_transaction_id: string | null
+        }
+        Insert: {
+          amount_pkr?: number | null
+          created_at?: string | null
+          id?: string | null
+          mint_transaction_hash?: string | null
+          payment_method?: string | null
+          phone_number?: never
+          receipt_url?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+          submitted_at?: string | null
+          transaction_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          user_transaction_id?: string | null
+        }
+        Update: {
+          amount_pkr?: number | null
+          created_at?: string | null
+          id?: string | null
+          mint_transaction_hash?: string | null
+          payment_method?: string | null
+          phone_number?: never
+          receipt_url?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+          submitted_at?: string | null
+          transaction_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          user_transaction_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_market_maker_cron_status: {
@@ -420,6 +586,13 @@ export type Database = {
           status: Database["public"]["Enums"]["bot_status"]
         }[]
       }
+      has_admin_permission: {
+        Args: {
+          _permission: Database["public"]["Enums"]["admin_permission"]
+          _wallet_address: string
+        }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -431,6 +604,10 @@ export type Database = {
         Args: { wallet_addr: string }
         Returns: boolean
       }
+      is_nonce_used: {
+        Args: { _nonce: string }
+        Returns: boolean
+      }
       is_wallet_owner: {
         Args: { wallet_address: string }
         Returns: boolean
@@ -438,6 +615,10 @@ export type Database = {
       is_wallet_whitelisted: {
         Args: { wallet_addr: string }
         Returns: boolean
+      }
+      mask_phone_number: {
+        Args: { phone: string }
+        Returns: string
       }
       toggle_market_maker_cron: {
         Args: { enable: boolean }
@@ -449,6 +630,19 @@ export type Database = {
       }
     }
     Enums: {
+      admin_permission:
+        | "view_deposits"
+        | "approve_deposits"
+        | "view_redemptions"
+        | "process_redemptions"
+        | "manage_whitelist"
+        | "manage_blacklist"
+        | "view_reserves"
+        | "manage_reserves"
+        | "manage_market_maker"
+        | "manage_admins"
+        | "view_transaction_fees"
+        | "view_audit_logs"
       app_role: "admin" | "user"
       bot_status: "active" | "paused" | "error"
       redemption_status:
@@ -585,6 +779,20 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      admin_permission: [
+        "view_deposits",
+        "approve_deposits",
+        "view_redemptions",
+        "process_redemptions",
+        "manage_whitelist",
+        "manage_blacklist",
+        "view_reserves",
+        "manage_reserves",
+        "manage_market_maker",
+        "manage_admins",
+        "view_transaction_fees",
+        "view_audit_logs",
+      ],
       app_role: ["admin", "user"],
       bot_status: ["active", "paused", "error"],
       redemption_status: [
