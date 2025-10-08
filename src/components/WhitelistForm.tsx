@@ -52,23 +52,30 @@ export function WhitelistForm() {
       const nonce = Date.now().toString()
       const message = `PKRSC Whitelist Request\nWallet: ${address}\nEmail: ${email}\nNonce: ${nonce}\nTimestamp: ${new Date().toISOString()}`
       
+      console.log('Requesting signature for message:', message)
+      
       // Request signature from user
       let signature: string
       try {
+        if (!address) throw new Error('No wallet address')
         signature = await signMessageAsync({ 
           message,
-          account: address 
+          account: address
         })
+        console.log('Signature received:', signature.substring(0, 20) + '...')
       } catch (signError: any) {
+        console.error('Signature error:', signError)
         toast({
-          title: "Signature Required",
-          description: "Please sign the message in your wallet to verify ownership",
+          title: "Signature Cancelled",
+          description: signError?.message || "Please sign the message in your wallet to verify ownership",
           variant: "destructive"
         })
         setIsSubmitting(false)
         return
       }
 
+      console.log('Submitting whitelist request...')
+      
       // Submit the request with signature
       const response = await fetch(
         'https://jdjreuxhvzmzockuduyq.supabase.co/functions/v1/whitelist-requests',
@@ -88,6 +95,7 @@ export function WhitelistForm() {
       )
 
       const data = await response.json()
+      console.log('Response:', response.status, data)
 
       if (!response.ok) {
         throw new Error(data.error || 'Failed to submit whitelist request')
@@ -103,7 +111,7 @@ export function WhitelistForm() {
       console.error('Error submitting whitelist request:', error)
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Failed to submit request. Please try again.",
         variant: "destructive"
       })
     } finally {
