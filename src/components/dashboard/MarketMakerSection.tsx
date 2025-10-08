@@ -124,16 +124,20 @@ export function MarketMakerSection() {
   }
 
   const fetchTransactions = async () => {
-    const { data, error } = await supabase
-      .from('market_maker_transactions')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(50)
+    if (!address) return
 
-    if (error) {
-      console.error('Error fetching transactions:', error)
-    } else if (data) {
-      setTransactions(data)
+    try {
+      const { data, error } = await supabase.functions.invoke('get-market-maker-transactions', {
+        body: { walletAddress: address, limit: 50 }
+      })
+
+      if (error) {
+        console.error('Error fetching transactions:', error)
+      } else if (data) {
+        setTransactions(data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch transactions:', error)
     }
   }
 
