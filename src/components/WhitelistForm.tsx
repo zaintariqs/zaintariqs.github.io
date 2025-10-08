@@ -5,30 +5,31 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 import { Loader2 } from 'lucide-react'
+import { useAccount, useSignMessage } from 'wagmi'
 
 export function WhitelistForm() {
   const { toast } = useToast()
-  const [walletAddress, setWalletAddress] = useState('')
+  const { address, isConnected } = useAccount()
+  const { signMessageAsync } = useSignMessage()
   const [email, setEmail] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!walletAddress || !email) {
+    if (!isConnected || !address) {
       toast({
         title: "Error",
-        description: "Please fill in all fields",
+        description: "Please connect your wallet first",
         variant: "destructive"
       })
       return
     }
 
-    // Validate ethereum address format
-    if (!/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+    if (!email) {
       toast({
         title: "Error",
-        description: "Please enter a valid Ethereum wallet address",
+        description: "Please enter your email address",
         variant: "destructive"
       })
       return
@@ -47,15 +48,40 @@ export function WhitelistForm() {
     setIsSubmitting(true)
 
     try {
+      // Create message to sign
+      const nonce = Date.now().toString()
+      const message = `PKRSC Whitelist Request\nWallet: ${address}\nEmail: ${email}\nNonce: ${nonce}\nTimestamp: ${new Date().toISOString()}`
+      
+      // Request signature from user
+      let signature: string
+      try {
+        signature = await signMessageAsync({ 
+          message,
+          account: address 
+        })
+      } catch (signError: any) {
+        toast({
+          title: "Signature Required",
+          description: "Please sign the message in your wallet to verify ownership",
+          variant: "destructive"
+        })
+        setIsSubmitting(false)
+        return
+      }
+
+      // Submit the request with signature
       const response = await fetch(
         'https://jdjreuxhvzmzockuduyq.supabase.co/functions/v1/whitelist-requests',
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'x-wallet-signature': signature,
+            'x-signature-message': btoa(message),
+            'x-nonce': nonce,
           },
           body: JSON.stringify({
-            walletAddress: walletAddress.toLowerCase(),
+            walletAddress: address.toLowerCase(),
             email: email.toLowerCase(),
           }),
         }
@@ -72,7 +98,6 @@ export function WhitelistForm() {
         description: "Your whitelist request has been submitted. You will receive an email once it's reviewed.",
       })
 
-      setWalletAddress('')
       setEmail('')
     } catch (error: any) {
       console.error('Error submitting whitelist request:', error)
@@ -89,17 +114,25 @@ export function WhitelistForm() {
   return (
     <div className="w-full">
       <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="walletAddress">Wallet Address</Label>
-            <Input
-              id="walletAddress"
-              type="text"
-              placeholder="0x..."
-              value={walletAddress}
-              onChange={(e) => setWalletAddress(e.target.value)}
-              disabled={isSubmitting}
-            />
-          </div>
+          {!isConnected && (
+            <div className="p-4 bg-muted/30 rounded-lg border border-primary/20">
+              <p className="text-sm text-muted-foreground">
+                Please connect your wallet to submit a whitelist request
+              </p>
+            </div>
+          )}
+          {isConnected && (
+            <div className="space-y-2">
+              <Label htmlFor="walletAddress">Connected Wallet</Label>
+              <Input
+                id="walletAddress"
+                type="text"
+                value={address || ''}
+                disabled
+                className="font-mono text-sm"
+              />
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="email">Email Address</Label>
             <Input
@@ -108,13 +141,13 @@ export function WhitelistForm() {
               placeholder="your@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              disabled={isSubmitting}
+              disabled={isSubmitting || !isConnected}
             />
           </div>
           <Button 
             type="submit" 
             className="w-full"
-            disabled={isSubmitting}
+            disabled={isSubmitting || !isConnected}
           >
             {isSubmitting ? (
               <>
