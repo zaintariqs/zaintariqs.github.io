@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { Resend } from 'npm:resend@2.0.0'
+import { decryptBankDetails, isEncrypted } from '../_shared/encryption.ts'
 
 const resend = new Resend(Deno.env.get('RESEND_API_KEY'))
 const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'team@pkrsc.org'
@@ -63,15 +64,42 @@ serve(async (req) => {
         )
       }
 
-      // Log admin action
+      // Decrypt bank details for admin view
+      const decryptedData = await Promise.all(
+        (data || []).map(async (redemption: any) => {
+          try {
+            // Only decrypt if data appears to be encrypted
+            if (isEncrypted(redemption.bank_name)) {
+              const decrypted = await decryptBankDetails({
+                bankName: redemption.bank_name,
+                accountNumber: redemption.account_number,
+                accountTitle: redemption.account_title
+              })
+              return { ...redemption, ...decrypted }
+            }
+            // Return as-is for old unencrypted data
+            return redemption
+          } catch (decryptError) {
+            console.error('Failed to decrypt redemption data:', decryptError)
+            // Return original if decryption fails (backward compatibility)
+            return redemption
+          }
+        })
+      )
+
+      // Log admin action with bank details access
       await supabase.from('admin_actions').insert({
         action_type: 'admin_viewed_all_redemptions',
         wallet_address: walletAddress.toLowerCase(),
-        details: { timestamp: new Date().toISOString(), count: data?.length || 0 }
+        details: { 
+          timestamp: new Date().toISOString(), 
+          count: decryptedData?.length || 0,
+          bank_details_accessed: true
+        }
       })
 
       return new Response(
-        JSON.stringify({ data }),
+        JSON.stringify({ data: decryptedData }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }

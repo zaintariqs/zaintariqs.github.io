@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0'
+import { encryptBankDetails, decryptBankDetails, isEncrypted } from '../_shared/encryption.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -313,14 +314,21 @@ serve(async (req) => {
 
           console.log(`[redemptions] Fee calculation (existing burn): Original=${amount} PKRSC, Fee=${feeAmount} PKRSC (${FEE_PERCENTAGE}%), Net=${netAmount} PKRSC`)
 
+          // Encrypt bank details before storing
+          const encryptedBankDetails = await encryptBankDetails({
+            bankName: sanitizeString(body.bankName),
+            accountNumber: sanitizeString(body.accountNumber),
+            accountTitle: sanitizeString(body.accountTitle)
+          })
+
           const { data, error } = await supabase
             .from('redemptions')
             .insert({
               user_id: body.walletAddress.toLowerCase(),
               pkrsc_amount: amount,
-              bank_name: sanitizeString(body.bankName),
-              account_number: sanitizeString(body.accountNumber),
-              account_title: sanitizeString(body.accountTitle),
+              bank_name: encryptedBankDetails.bankName,
+              account_number: encryptedBankDetails.accountNumber,
+              account_title: encryptedBankDetails.accountTitle,
               burn_address: BURN_ADDRESS,
               transaction_hash: burnTx,
               status: 'burn_confirmed',
@@ -381,14 +389,21 @@ serve(async (req) => {
 
       console.log(`[redemptions] Fee calculation: Original=${body.pkrscAmount} PKRSC, Fee=${feeAmount} PKRSC (${FEE_PERCENTAGE}%), Net=${netAmount} PKRSC`)
 
+      // Encrypt bank details before storing
+      const encryptedBankDetails = await encryptBankDetails({
+        bankName: sanitizeString(body.bankName),
+        accountNumber: sanitizeString(body.accountNumber),
+        accountTitle: sanitizeString(body.accountTitle)
+      })
+
       const { data, error } = await supabase
         .from('redemptions')
         .insert({
           user_id: body.walletAddress.toLowerCase(),
           pkrsc_amount: body.pkrscAmount,
-          bank_name: sanitizeString(body.bankName),
-          account_number: sanitizeString(body.accountNumber),
-          account_title: sanitizeString(body.accountTitle),
+          bank_name: encryptedBankDetails.bankName,
+          account_number: encryptedBankDetails.accountNumber,
+          account_title: encryptedBankDetails.accountTitle,
           burn_address: BURN_ADDRESS,
           status: 'pending'
         })
@@ -468,8 +483,31 @@ serve(async (req) => {
         )
       }
 
+      // Decrypt bank details for user's own redemptions
+      const decryptedData = await Promise.all(
+        (data || []).map(async (redemption: any) => {
+          try {
+            // Only decrypt if data appears to be encrypted
+            if (isEncrypted(redemption.bank_name)) {
+              const decrypted = await decryptBankDetails({
+                bankName: redemption.bank_name,
+                accountNumber: redemption.account_number,
+                accountTitle: redemption.account_title
+              })
+              return { ...redemption, ...decrypted }
+            }
+            // Return as-is for old unencrypted data
+            return redemption
+          } catch (decryptError) {
+            console.error('Failed to decrypt redemption data:', decryptError)
+            // Return original if decryption fails (backward compatibility)
+            return redemption
+          }
+        })
+      )
+
       return new Response(
-        JSON.stringify({ data }),
+        JSON.stringify({ data: decryptedData }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
