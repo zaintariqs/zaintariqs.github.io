@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAccount, useConnect, useDisconnect, useBalance, useChainId } from 'wagmi'
+import FingerprintJS from '@fingerprintjs/fingerprintjs'
 import { Button } from '@/components/ui/button'
 import { 
   DropdownMenu, 
@@ -36,12 +37,26 @@ export function WalletConnect() {
 
   const currentChain = supportedChains.find(chain => chain.id === chainId)
 
-  // Check if wallet is blacklisted on connection
+  // Check if wallet is blacklisted on connection and log login attempt
   useEffect(() => {
-    const checkBlacklist = async () => {
+    const checkBlacklistAndLogLogin = async () => {
       if (!address) return
 
       try {
+        // Generate fingerprint
+        const fp = await FingerprintJS.load()
+        const result = await fp.get()
+        const fingerprint = result.visitorId
+
+        // Log login attempt
+        await supabase.functions.invoke('log-login-attempt', {
+          body: { 
+            walletAddress: address,
+            fingerprint 
+          }
+        })
+
+        // Check blacklist
         const { data, error } = await supabase.functions.invoke('check-blacklist', {
           body: { walletAddress: address }
         })
@@ -57,11 +72,11 @@ export function WalletConnect() {
           // Do not auto-disconnect to keep the dialog visible until user closes it
         }
       } catch (error) {
-        console.error('Error checking blacklist:', error)
+        console.error('Error in wallet connection process:', error)
       }
     }
 
-    checkBlacklist()
+    checkBlacklistAndLogLogin()
   }, [address, disconnect])
   
   const formatAddress = (addr: string) => {

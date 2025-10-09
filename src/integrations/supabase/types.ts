@@ -343,6 +343,33 @@ export type Database = {
         }
         Relationships: []
       }
+      login_attempts: {
+        Row: {
+          created_at: string
+          fingerprint: string
+          id: string
+          ip_address: string | null
+          user_agent: string | null
+          wallet_address: string
+        }
+        Insert: {
+          created_at?: string
+          fingerprint: string
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          wallet_address: string
+        }
+        Update: {
+          created_at?: string
+          fingerprint?: string
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          wallet_address?: string
+        }
+        Relationships: []
+      }
       market_maker_config: {
         Row: {
           created_at: string

@@ -65,3 +65,6 @@ verify_jwt = false
 
 [functions.set-whitelist-email]
 verify_jwt = false
+
+[functions.log-login-attempt]
+verify_jwt = false

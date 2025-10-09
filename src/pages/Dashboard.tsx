@@ -14,6 +14,7 @@ import { WhitelistingRequests } from '@/components/dashboard/WhitelistingRequest
 import { AdminDeposits } from '@/components/dashboard/AdminDeposits'
 import { AdminRedemptions } from '@/components/dashboard/AdminRedemptions'
 import { TransactionFees } from '@/components/dashboard/TransactionFees'
+import LoginAttempts from '@/components/dashboard/LoginAttempts'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Navigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
@@ -105,6 +106,7 @@ export default function Dashboard() {
               <Tabs defaultValue="whitelisting" className="w-full">
                 <TabsList className="flex flex-wrap w-full gap-2 h-auto justify-start p-2">
                   <TabsTrigger value="whitelisting" className="flex-1 min-w-[140px]">Whitelisting</TabsTrigger>
+                  <TabsTrigger value="login-attempts" className="flex-1 min-w-[140px]">Login Attempts</TabsTrigger>
                   <TabsTrigger value="admin-deposits" className="flex-1 min-w-[140px]">All Deposits</TabsTrigger>
                   <TabsTrigger value="admin-redemptions" className="flex-1 min-w-[140px]">All Redemptions</TabsTrigger>
                   <TabsTrigger value="fees" className="flex-1 min-w-[140px]">Transaction Fees</TabsTrigger>
@@ -113,6 +115,9 @@ export default function Dashboard() {
                 </TabsList>
                 <TabsContent value="whitelisting" className="mt-6">
                   <WhitelistingRequests />
+                </TabsContent>
+                <TabsContent value="login-attempts" className="mt-6">
+                  <LoginAttempts />
                 </TabsContent>
                 <TabsContent value="admin-deposits" className="mt-6">
                   <AdminDeposits />
