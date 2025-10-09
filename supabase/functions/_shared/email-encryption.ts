@@ -2,47 +2,45 @@
  * Email Encryption Utilities
  * 
  * Encrypts email addresses using AES-256-GCM for PII protection
+ * IMPORTANT: Uses same method as original encryption for compatibility
  */
 
-// Get encryption key from environment
-async function getEncryptionKey(): Promise<Uint8Array> {
+// Get encryption key from environment (matches original implementation)
+async function getEncryptionKey(): Promise<CryptoKey> {
   const keyString = Deno.env.get('BANK_DATA_ENCRYPTION_KEY')
   if (!keyString) {
     throw new Error('BANK_DATA_ENCRYPTION_KEY not configured')
   }
   
-  // Use SHA-256 to derive a proper 32-byte key
+  // Match original key derivation: pad to 32 bytes
   const encoder = new TextEncoder()
-  const keyData = encoder.encode(keyString)
-  const hashBuffer = await crypto.subtle.digest('SHA-256', keyData)
+  const paddedKey = keyString.padEnd(32, '0').slice(0, 32)
   
-  return new Uint8Array(hashBuffer)
+  return await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(paddedKey),
+    { name: 'AES-GCM' },
+    false,
+    ['encrypt', 'decrypt']
+  )
 }
 
 /**
  * Encrypt email address using AES-256-GCM
+ * Uses 16-byte IV to match original implementation
  */
 export async function encryptEmail(email: string): Promise<string> {
   try {
-    const key = await getEncryptionKey()
+    const cryptoKey = await getEncryptionKey()
     
-    // Generate random 12-byte IV
-    const iv = crypto.getRandomValues(new Uint8Array(12))
-    
-    // Import key for encryption
-    const cryptoKey = await crypto.subtle.importKey(
-      'raw',
-      key,
-      { name: 'AES-GCM' },
-      false,
-      ['encrypt']
-    )
+    // Generate random 16-byte IV (matches original)
+    const iv = crypto.getRandomValues(new Uint8Array(16))
     
     // Encrypt the email
     const encoder = new TextEncoder()
     const data = encoder.encode(email.toLowerCase())
     const encrypted = await crypto.subtle.encrypt(
-      { name: 'AES-GCM', iv, tagLength: 128 },
+      { name: 'AES-GCM', iv },
       cryptoKey,
       data
     )
@@ -62,30 +60,22 @@ export async function encryptEmail(email: string): Promise<string> {
 
 /**
  * Decrypt email address
+ * Uses 16-byte IV to match original implementation
  */
 export async function decryptEmail(encryptedBase64: string): Promise<string> {
   try {
-    const key = await getEncryptionKey()
+    const cryptoKey = await getEncryptionKey()
     
     // Decode from base64
     const combined = Uint8Array.from(atob(encryptedBase64), c => c.charCodeAt(0))
     
-    // Extract IV (first 12 bytes) and ciphertext
-    const iv = combined.slice(0, 12)
-    const ciphertext = combined.slice(12)
-    
-    // Import key for decryption
-    const cryptoKey = await crypto.subtle.importKey(
-      'raw',
-      key,
-      { name: 'AES-GCM' },
-      false,
-      ['decrypt']
-    )
+    // Extract IV (first 16 bytes) and ciphertext
+    const iv = combined.slice(0, 16)
+    const ciphertext = combined.slice(16)
     
     // Decrypt the data
     const decrypted = await crypto.subtle.decrypt(
-      { name: 'AES-GCM', iv, tagLength: 128 },
+      { name: 'AES-GCM', iv },
       cryptoKey,
       ciphertext
     )
@@ -106,7 +96,7 @@ export function isEmailEncrypted(email: string): boolean {
   try {
     // Encrypted emails are base64 encoded and longer than typical plaintext
     const decoded = atob(email)
-    return decoded.length >= 12 && /^[\x00-\xFF]*$/.test(decoded)
+    return decoded.length >= 16 && /^[\x00-\xFF]*$/.test(decoded)
   } catch {
     return false
   }
