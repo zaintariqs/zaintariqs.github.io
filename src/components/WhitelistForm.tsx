@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 import { Loader2 } from 'lucide-react'
 import { useAccount, useSignMessage } from 'wagmi'
+import { WalletConnect } from './WalletConnect'
 
 export function WhitelistForm() {
   const { toast } = useToast()
@@ -121,41 +122,48 @@ export function WhitelistForm() {
 
   return (
     <div className="w-full">
-      <form onSubmit={handleSubmit} className="space-y-4">
-          {!isConnected && (
-            <div className="p-4 bg-muted/30 rounded-lg border border-primary/20">
-              <p className="text-sm text-muted-foreground">
-                Please connect your wallet to submit a whitelist request
-              </p>
-            </div>
-          )}
-          {isConnected && (
-            <div className="space-y-2">
-              <Label htmlFor="walletAddress">Connected Wallet</Label>
-              <Input
-                id="walletAddress"
-                type="text"
-                value={address || ''}
-                disabled
-                className="font-mono text-sm"
-              />
-            </div>
-          )}
+      {!isConnected ? (
+        <div className="space-y-4">
+          <div className="p-4 bg-muted/30 rounded-lg border border-primary/20">
+            <p className="text-sm text-muted-foreground mb-4">
+              Please connect your wallet to submit a whitelist request. You'll need to sign a message to verify wallet ownership.
+            </p>
+            <WalletConnect />
+          </div>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Email Address</Label>
+            <Label htmlFor="walletAddress">Connected Wallet</Label>
+            <Input
+              id="walletAddress"
+              type="text"
+              value={address || ''}
+              disabled
+              className="font-mono text-sm bg-muted"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="email">
+              Email Address <span className="text-destructive">*</span>
+            </Label>
             <Input
               id="email"
               type="email"
               placeholder="your@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              disabled={isSubmitting || !isConnected}
+              disabled={isSubmitting}
+              required
             />
+            <p className="text-xs text-muted-foreground">
+              You'll receive updates about your whitelist status at this email
+            </p>
           </div>
           <Button 
             type="submit" 
             className="w-full"
-            disabled={isSubmitting || !isConnected}
+            disabled={isSubmitting || !email.trim()}
           >
             {isSubmitting ? (
               <>
@@ -163,10 +171,11 @@ export function WhitelistForm() {
                 Submitting...
               </>
             ) : (
-          'Submit Request'
+              'Submit Request'
             )}
           </Button>
         </form>
+      )}
     </div>
   )
 }
