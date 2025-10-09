@@ -53,12 +53,19 @@ export default function LoginAttempts() {
 
       const attempts = attemptsResp?.attempts || []
 
-      // Fetch whitelist requests to get emails
+      // Fetch whitelist requests to get emails (using GET with headers)
       const { data: whitelist, error: whitelistError } = await supabase
-        .functions.invoke('whitelist-requests', { body: {} })
+        .functions.invoke('whitelist-requests', {
+          method: 'GET',
+          headers: {
+            'x-wallet-address': address
+          }
+        })
 
       if (whitelistError) {
         console.error('Error fetching whitelist:', whitelistError)
+      } else {
+        console.log('Whitelist data fetched:', whitelist?.requests?.length, 'requests')
       }
 
       // Create a map of wallet addresses to emails from whitelist
