@@ -4,10 +4,10 @@ export default function AllDepositsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-foreground mb-2">
+        <h1 className="text-3xl font-bold text-white mb-2">
           All Deposits
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-white/70">
           Review and approve user deposits
         </p>
       </div>

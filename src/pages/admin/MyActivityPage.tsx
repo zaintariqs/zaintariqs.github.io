@@ -6,10 +6,10 @@ export default function MyActivityPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-foreground mb-2">
+        <h1 className="text-3xl font-bold text-white mb-2">
           My Activity
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-white/70">
           View your personal deposits and redemptions
         </p>
       </div>

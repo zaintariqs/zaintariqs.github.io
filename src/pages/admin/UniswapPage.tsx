@@ -4,10 +4,10 @@ export default function UniswapPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-foreground mb-2">
+        <h1 className="text-3xl font-bold text-white mb-2">
           Uniswap Trading
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-white/70">
           Trade PKRSC tokens on Uniswap
         </p>
       </div>
