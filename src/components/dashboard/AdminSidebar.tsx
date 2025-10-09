@@ -97,7 +97,7 @@ export function AdminSidebar() {
 
   return (
     <Sidebar className="w-64">
-      <SidebarContent>
+      <SidebarContent className="mt-20">
         <SidebarGroup>
           <SidebarGroupLabel>
             Admin Panel
