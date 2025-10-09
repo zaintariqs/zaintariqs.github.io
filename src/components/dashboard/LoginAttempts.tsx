@@ -63,9 +63,7 @@ export default function LoginAttempts() {
         })
 
       if (whitelistError) {
-        console.error('Error fetching whitelist:', whitelistError)
-      } else {
-        console.log('Whitelist data fetched:', whitelist?.requests?.length, 'requests')
+        console.error('Error fetching whitelist')
       }
 
       // Create a map of wallet addresses to emails from whitelist

@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    console.log(`[get-login-attempts] Returning ${attempts?.length || 0} attempts`)
+    console.log(`[get-login-attempts] Admin ${walletAddress.slice(0, 8)}... fetching ${attempts?.length || 0} attempts`)
 
     return new Response(
       JSON.stringify({ attempts: attempts || [] }),

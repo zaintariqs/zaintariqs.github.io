@@ -48,19 +48,37 @@ export function WalletConnect() {
         const result = await fp.get()
         const fingerprint = result.visitorId
 
-        // Log login attempt
-        console.log('Logging login attempt for wallet:', address, 'fingerprint:', fingerprint)
-        const { data: logData, error: logError } = await supabase.functions.invoke('log-login-attempt', {
+        // Sign a message to verify wallet ownership
+        const message = `Login to PKRSC at ${new Date().toISOString()}`
+        let signature: string
+        
+        try {
+          // @ts-ignore - wagmi provides this
+          const provider = await window.ethereum
+          if (!provider) throw new Error('No wallet provider found')
+          
+          signature = await provider.request({
+            method: 'personal_sign',
+            params: [message, address]
+          })
+        } catch (signError) {
+          console.error('Failed to sign login message:', signError)
+          // Continue without logging if user rejects signature
+          return
+        }
+
+        // Log verified login attempt
+        const { error: logError } = await supabase.functions.invoke('log-login-attempt', {
           body: { 
             walletAddress: address,
-            fingerprint 
+            fingerprint,
+            signature,
+            message
           }
         })
         
         if (logError) {
-          console.error('Error logging login attempt:', logError)
-        } else {
-          console.log('Login attempt logged successfully:', logData)
+          console.error('Failed to log login attempt:', logError)
         }
 
         // Check blacklist
