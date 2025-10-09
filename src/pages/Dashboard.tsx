@@ -1,6 +1,6 @@
 import { useAccount } from 'wagmi'
 import { useEffect, useState } from 'react'
-import { Navigate, Routes, Route } from 'react-router-dom'
+import { Navigate, Routes, Route, useLocation } from 'react-router-dom'
 import PKRHeader from '@/components/PKRHeader'
 import PKRFooter from '@/components/PKRFooter'
 import { BalanceCard } from '@/components/dashboard/BalanceCard'
@@ -25,6 +25,7 @@ import MyActivityPage from './admin/MyActivityPage'
 
 export default function Dashboard() {
   const { isConnected, address } = useAccount()
+  const location = useLocation()
   const [isAdmin, setIsAdmin] = useState(false)
   const [isCheckingAdmin, setIsCheckingAdmin] = useState(true)
 
@@ -102,17 +103,15 @@ export default function Dashboard() {
               
               <main className="flex-1 p-6 overflow-auto">
                 <div className="max-w-7xl mx-auto">
-                  <Routes>
-                    <Route path="/" element={<AdminOverview />} />
-                    <Route path="/market-maker" element={<MarketMakerPage />} />
-                    <Route path="/uniswap" element={<UniswapPage />} />
-                    <Route path="/whitelisting" element={<WhitelistingPage />} />
-                    <Route path="/login-attempts" element={<LoginAttemptsPage />} />
-                    <Route path="/all-deposits" element={<AllDepositsPage />} />
-                    <Route path="/all-redemptions" element={<AllRedemptionsPage />} />
-                    <Route path="/fees" element={<TransactionFeesPage />} />
-                    <Route path="/my-activity" element={<MyActivityPage />} />
-                  </Routes>
+                  {location.pathname === '/dashboard' && <AdminOverview />}
+                  {location.pathname === '/dashboard/market-maker' && <MarketMakerPage />}
+                  {location.pathname === '/dashboard/uniswap' && <UniswapPage />}
+                  {location.pathname === '/dashboard/whitelisting' && <WhitelistingPage />}
+                  {location.pathname === '/dashboard/login-attempts' && <LoginAttemptsPage />}
+                  {location.pathname === '/dashboard/all-deposits' && <AllDepositsPage />}
+                  {location.pathname === '/dashboard/all-redemptions' && <AllRedemptionsPage />}
+                  {location.pathname === '/dashboard/fees' && <TransactionFeesPage />}
+                  {location.pathname === '/dashboard/my-activity' && <MyActivityPage />}
                 </div>
               </main>
             </div>

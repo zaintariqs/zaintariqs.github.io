@@ -23,14 +23,14 @@ const PKRHeader = () => {
   const { language, setLanguage, isUrdu } = useLanguage();
   const t = translations[language];
   const location = useLocation();
-  const isDashboard = location.pathname === '/dashboard';
+  const isDashboard = location.pathname.startsWith('/dashboard');
 
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-crypto-gray bg-crypto-dark/95 backdrop-blur supports-[backdrop-filter]:bg-crypto-dark/80">
       <div className="container flex h-16 items-center justify-between">
         {/* Logo */}
-        <Link to="/" className="flex items-center space-x-3">
+        <Link to={address && isDashboard ? "/dashboard" : "/"} className="flex items-center space-x-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-r from-crypto-green to-crypto-green/80">
             <span className="text-sm font-bold text-white">₨</span>
           </div>
