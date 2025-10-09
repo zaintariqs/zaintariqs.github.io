@@ -1,23 +1,27 @@
 import { useAccount } from 'wagmi'
 import { useEffect, useState } from 'react'
+import { Navigate, Routes, Route } from 'react-router-dom'
 import PKRHeader from '@/components/PKRHeader'
 import PKRFooter from '@/components/PKRFooter'
 import { BalanceCard } from '@/components/dashboard/BalanceCard'
 import { TopUpSection } from '@/components/dashboard/TopUpSection'
 import { UniswapSection } from '@/components/dashboard/UniswapSection'
 import { RedeemSection } from '@/components/dashboard/RedeemSection'
-import { AdminSection } from '@/components/dashboard/AdminSection'
-import { MarketMakerSection } from '@/components/dashboard/MarketMakerSection'
 import { MyDeposits } from '@/components/dashboard/MyDeposits'
 import { MyRedemptions } from '@/components/dashboard/MyRedemptions'
-import { WhitelistingRequests } from '@/components/dashboard/WhitelistingRequests'
-import { AdminDeposits } from '@/components/dashboard/AdminDeposits'
-import { AdminRedemptions } from '@/components/dashboard/AdminRedemptions'
-import { TransactionFees } from '@/components/dashboard/TransactionFees'
-import LoginAttempts from '@/components/dashboard/LoginAttempts'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Navigate } from 'react-router-dom'
+import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
+import { AdminSidebar } from '@/components/dashboard/AdminSidebar'
 import { supabase } from '@/integrations/supabase/client'
+import AdminOverview from './admin/AdminOverview'
+import MarketMakerPage from './admin/MarketMakerPage'
+import UniswapPage from './admin/UniswapPage'
+import WhitelistingPage from './admin/WhitelistingPage'
+import LoginAttemptsPage from './admin/LoginAttemptsPage'
+import AllDepositsPage from './admin/AllDepositsPage'
+import AllRedemptionsPage from './admin/AllRedemptionsPage'
+import TransactionFeesPage from './admin/TransactionFeesPage'
+import MyActivityPage from './admin/MyActivityPage'
 
 export default function Dashboard() {
   const { isConnected, address } = useAccount()
@@ -83,92 +87,82 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-gradient-dark">
       <PKRHeader />
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-6xl mx-auto space-y-8">
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-foreground mb-4">
-              PKRSC Dashboard
-            </h1>
-            <p className="text-muted-foreground">
-              Manage your Pakistani Rupee Stablecoin balance and trading
-            </p>
-          </div>
-
-          <BalanceCard />
-
-          {isAdmin ? (
-            // Admin view with admin sections at top
-            <div className="space-y-8">
-              <AdminSection />
-              <MarketMakerSection />
-              <UniswapSection />
+      
+      {isAdmin ? (
+        // Admin view with sidebar layout
+        <SidebarProvider>
+          <div className="flex min-h-[calc(100vh-64px)] w-full">
+            <AdminSidebar />
+            
+            <div className="flex-1 flex flex-col">
+              <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4">
+                <SidebarTrigger />
+                <div className="flex-1" />
+              </header>
               
-              <Tabs defaultValue="whitelisting" className="w-full">
-                <TabsList className="flex flex-wrap w-full gap-2 h-auto justify-start p-2">
-                  <TabsTrigger value="whitelisting" className="flex-1 min-w-[140px]">Whitelisting</TabsTrigger>
-                  <TabsTrigger value="login-attempts" className="flex-1 min-w-[140px]">Login Attempts</TabsTrigger>
-                  <TabsTrigger value="admin-deposits" className="flex-1 min-w-[140px]">All Deposits</TabsTrigger>
-                  <TabsTrigger value="admin-redemptions" className="flex-1 min-w-[140px]">All Redemptions</TabsTrigger>
-                  <TabsTrigger value="fees" className="flex-1 min-w-[140px]">Transaction Fees</TabsTrigger>
-                  <TabsTrigger value="deposits" className="flex-1 min-w-[140px]">My Deposits</TabsTrigger>
-                  <TabsTrigger value="redemptions" className="flex-1 min-w-[140px]">My Redemptions</TabsTrigger>
-                </TabsList>
-                <TabsContent value="whitelisting" className="mt-6">
-                  <WhitelistingRequests />
-                </TabsContent>
-                <TabsContent value="login-attempts" className="mt-6">
-                  <LoginAttempts />
-                </TabsContent>
-                <TabsContent value="admin-deposits" className="mt-6">
-                  <AdminDeposits />
-                </TabsContent>
-                <TabsContent value="admin-redemptions" className="mt-6">
-                  <AdminRedemptions />
-                </TabsContent>
-                <TabsContent value="fees" className="mt-6">
-                  <TransactionFees />
-                </TabsContent>
-                <TabsContent value="deposits" className="mt-6">
-                  <MyDeposits />
-                </TabsContent>
-                <TabsContent value="redemptions" className="mt-6">
-                  <MyRedemptions />
-                </TabsContent>
-              </Tabs>
+              <main className="flex-1 p-6 overflow-auto">
+                <div className="max-w-7xl mx-auto">
+                  <Routes>
+                    <Route path="/" element={<AdminOverview />} />
+                    <Route path="/market-maker" element={<MarketMakerPage />} />
+                    <Route path="/uniswap" element={<UniswapPage />} />
+                    <Route path="/whitelisting" element={<WhitelistingPage />} />
+                    <Route path="/login-attempts" element={<LoginAttemptsPage />} />
+                    <Route path="/all-deposits" element={<AllDepositsPage />} />
+                    <Route path="/all-redemptions" element={<AllRedemptionsPage />} />
+                    <Route path="/fees" element={<TransactionFeesPage />} />
+                    <Route path="/my-activity" element={<MyActivityPage />} />
+                  </Routes>
+                </div>
+              </main>
             </div>
-          ) : (
-            // Regular user view with tabs
-            <div className="space-y-8">
-              <Tabs defaultValue="topup" className="w-full">
-                <TabsList className="grid w-full grid-cols-4">
-                  <TabsTrigger value="topup">Top-up</TabsTrigger>
-                  <TabsTrigger value="redeem">Redeem</TabsTrigger>
-                  <TabsTrigger value="deposits">My Deposits</TabsTrigger>
-                  <TabsTrigger value="redemptions">My Redemptions</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="topup" className="mt-6">
-                  <TopUpSection />
-                </TabsContent>
-                
-                <TabsContent value="redeem" className="mt-6">
-                  <RedeemSection />
-                </TabsContent>
-                
-                <TabsContent value="deposits" className="mt-6">
-                  <MyDeposits />
-                </TabsContent>
-                
-                <TabsContent value="redemptions" className="mt-6">
-                  <MyRedemptions />
-                </TabsContent>
-              </Tabs>
+          </div>
+        </SidebarProvider>
+      ) : (
+        // Regular user view
+        <main className="container mx-auto px-4 py-8">
+          <div className="max-w-6xl mx-auto space-y-8">
+            <div className="text-center mb-8">
+              <h1 className="text-4xl font-bold text-foreground mb-4">
+                PKRSC Dashboard
+              </h1>
+              <p className="text-muted-foreground">
+                Manage your Pakistani Rupee Stablecoin balance and trading
+              </p>
+            </div>
 
-              <UniswapSection />
-            </div>
-          )}
-        </div>
-      </main>
+            <BalanceCard />
+
+            <Tabs defaultValue="topup" className="w-full">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="topup">Top-up</TabsTrigger>
+                <TabsTrigger value="redeem">Redeem</TabsTrigger>
+                <TabsTrigger value="deposits">My Deposits</TabsTrigger>
+                <TabsTrigger value="redemptions">My Redemptions</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="topup" className="mt-6">
+                <TopUpSection />
+              </TabsContent>
+              
+              <TabsContent value="redeem" className="mt-6">
+                <RedeemSection />
+              </TabsContent>
+              
+              <TabsContent value="deposits" className="mt-6">
+                <MyDeposits />
+              </TabsContent>
+              
+              <TabsContent value="redemptions" className="mt-6">
+                <MyRedemptions />
+              </TabsContent>
+            </Tabs>
+
+            <UniswapSection />
+          </div>
+        </main>
+      )}
+      
       <PKRFooter />
     </div>
   )
