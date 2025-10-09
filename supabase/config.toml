@@ -68,3 +68,6 @@ verify_jwt = false
 
 [functions.log-login-attempt]
 verify_jwt = false
+
+[functions.get-login-attempts]
+verify_jwt = false

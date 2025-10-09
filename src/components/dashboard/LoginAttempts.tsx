@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { supabase } from '@/integrations/supabase/client'
 import { Loader2, Monitor, MapPin, Calendar } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { useAccount } from 'wagmi'
 
 interface LoginAttempt {
   id: string
@@ -23,17 +24,22 @@ export default function LoginAttempts() {
   const [loginAttempts, setLoginAttempts] = useState<LoginAttemptWithEmail[]>([])
   const [loading, setLoading] = useState(true)
   const { toast } = useToast()
+  const { address } = useAccount()
 
   const fetchLoginAttempts = async () => {
     try {
       setLoading(true)
+
+      if (!address) {
+        setLoginAttempts([])
+        return
+      }
       
-      // Fetch login attempts
-      const { data: attempts, error: attemptsError } = await supabase
-        .from('login_attempts')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(100)
+      // Fetch login attempts via edge function (RLS-safe)
+      const { data: attemptsResp, error: attemptsError } = await supabase
+        .functions.invoke('get-login-attempts', {
+          body: { walletAddress: address }
+        })
 
       if (attemptsError) {
         console.error('Error fetching login attempts:', attemptsError)
@@ -45,9 +51,11 @@ export default function LoginAttempts() {
         return
       }
 
+      const attempts = attemptsResp?.attempts || []
+
       // Fetch whitelist requests to get emails
       const { data: whitelist, error: whitelistError } = await supabase
-        .functions.invoke('whitelist-requests')
+        .functions.invoke('whitelist-requests', { body: {} })
 
       if (whitelistError) {
         console.error('Error fetching whitelist:', whitelistError)
