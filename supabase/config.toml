@@ -59,3 +59,6 @@ verify_jwt = false
 
 [functions.update-bank-reserves]
 verify_jwt = false
+
+[functions.encrypt-existing-phones]
+verify_jwt = false

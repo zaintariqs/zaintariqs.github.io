@@ -188,8 +188,28 @@ serve(async (req) => {
         )
       }
 
+      // Decrypt phone numbers for user's own deposits
+      const { decryptPhoneNumber, isPhoneEncrypted } = await import('../_shared/phone-encryption.ts')
+      
+      const depositsWithDecryptedPhones = await Promise.all(
+        (data || []).map(async (deposit) => {
+          try {
+            // Only decrypt if phone is marked as encrypted
+            if (deposit.phone_encrypted && isPhoneEncrypted(deposit.phone_number)) {
+              const decryptedPhone = await decryptPhoneNumber(deposit.phone_number)
+              return { ...deposit, phone_number: decryptedPhone }
+            }
+            return deposit
+          } catch (error) {
+            console.error(`Failed to decrypt phone for deposit ${deposit.id}:`, error)
+            // Return original if decryption fails
+            return deposit
+          }
+        })
+      )
+
       return new Response(
-        JSON.stringify({ data }),
+        JSON.stringify({ data: depositsWithDecryptedPhones }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }

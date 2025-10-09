@@ -121,6 +121,37 @@ serve(async (req) => {
         )
       }
 
+      // Decrypt phone numbers for admin view and log PII access
+      const { decryptPhoneNumber, isPhoneEncrypted } = await import('../_shared/phone-encryption.ts')
+      
+      const depositsWithDecryptedPhones = await Promise.all(
+        (data || []).map(async (deposit) => {
+          try {
+            // Only decrypt if phone is marked as encrypted
+            if (deposit.phone_encrypted && isPhoneEncrypted(deposit.phone_number)) {
+              const decryptedPhone = await decryptPhoneNumber(deposit.phone_number)
+              
+              // Log PII access for audit trail
+              await supabase.rpc('log_pii_access', {
+                p_table: 'deposits',
+                p_record_id: deposit.id,
+                p_fields: ['phone_number'],
+                p_accessed_by: walletAddress.toLowerCase(),
+                p_reason: 'admin_deposit_review',
+                p_ip: null
+              }).catch(err => console.warn('Failed to log PII access:', err))
+              
+              return { ...deposit, phone_number: decryptedPhone }
+            }
+            return deposit
+          } catch (error) {
+            console.error(`Failed to decrypt phone for deposit ${deposit.id}:`, error)
+            // Return masked version if decryption fails
+            return { ...deposit, phone_number: '********' + deposit.phone_number.slice(-4) }
+          }
+        })
+      )
+
       // Log admin action
       await supabase.from('admin_actions').insert({
         action_type: 'admin_viewed_all_deposits',
@@ -129,7 +160,7 @@ serve(async (req) => {
       })
 
       return new Response(
-        JSON.stringify({ data }),
+        JSON.stringify({ data: depositsWithDecryptedPhones }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
