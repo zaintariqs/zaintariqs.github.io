@@ -132,14 +132,15 @@ serve(async (req) => {
               const decryptedPhone = await decryptPhoneNumber(deposit.phone_number)
               
               // Log PII access for audit trail
-              await supabase.rpc('log_pii_access', {
+              const { error: piiErr } = await supabase.rpc('log_pii_access', {
                 p_table: 'deposits',
                 p_record_id: deposit.id,
                 p_fields: ['phone_number'],
                 p_accessed_by: walletAddress.toLowerCase(),
                 p_reason: 'admin_deposit_review',
                 p_ip: null
-              }).catch(err => console.warn('Failed to log PII access:', err))
+              })
+              if (piiErr) console.warn('Failed to log PII access:', piiErr)
               
               return { ...deposit, phone_number: decryptedPhone }
             }

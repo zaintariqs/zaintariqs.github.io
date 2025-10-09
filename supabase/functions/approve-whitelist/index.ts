@@ -77,14 +77,15 @@ serve(async (req) => {
           userEmail = await decryptEmail(emailData.encrypted_email)
           
           // Log PII access for audit trail
-          await supabase.rpc('log_pii_access', {
+          const { error: piiErr } = await supabase.rpc('log_pii_access', {
             p_table: 'encrypted_emails',
             p_record_id: request.id,
             p_fields: ['email'],
             p_accessed_by: walletAddress,
             p_reason: `whitelist_${action}_email_notification`,
             p_ip: null
-          }).catch(err => console.warn('Failed to log PII access:', err))
+          })
+          if (piiErr) console.warn('Failed to log PII access:', piiErr)
         } catch (error) {
           console.error('Failed to decrypt email:', error)
           // Continue without email - don't fail the approval

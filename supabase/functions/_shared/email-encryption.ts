@@ -1,21 +1,19 @@
 /**
- * Email Encryption Utilities
+ * Email Encryption Utilities (Backward Compatible)
  * 
- * Encrypts email addresses using AES-256-GCM for PII protection
- * IMPORTANT: Uses same method as original encryption for compatibility
+ * Supports both historical and current schemes used in this project:
+ * - Scheme A (original): 16-byte IV, key = BANK_DATA_ENCRYPTION_KEY padded to 32 bytes
+ * - Scheme B (transient): 12-byte IV, key = SHA-256(BANK_DATA_ENCRYPTION_KEY)
+ * 
+ * Decryption tries Scheme A first, then falls back to Scheme B.
  */
 
-// Get encryption key from environment (matches original implementation)
-async function getEncryptionKey(): Promise<CryptoKey> {
+// Scheme A: padded key (original implementation)
+async function getCryptoKeyPadded(): Promise<CryptoKey> {
   const keyString = Deno.env.get('BANK_DATA_ENCRYPTION_KEY')
-  if (!keyString) {
-    throw new Error('BANK_DATA_ENCRYPTION_KEY not configured')
-  }
-  
-  // Match original key derivation: pad to 32 bytes
+  if (!keyString) throw new Error('BANK_DATA_ENCRYPTION_KEY not configured')
   const encoder = new TextEncoder()
   const paddedKey = keyString.padEnd(32, '0').slice(0, 32)
-  
   return await crypto.subtle.importKey(
     'raw',
     encoder.encode(paddedKey),
@@ -25,78 +23,86 @@ async function getEncryptionKey(): Promise<CryptoKey> {
   )
 }
 
+// Scheme B: SHA-256 derived key (transient implementation)
+async function getCryptoKeySHA256(): Promise<CryptoKey> {
+  const keyString = Deno.env.get('BANK_DATA_ENCRYPTION_KEY')
+  if (!keyString) throw new Error('BANK_DATA_ENCRYPTION_KEY not configured')
+  const encoder = new TextEncoder()
+  const keyData = encoder.encode(keyString)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', keyData)
+  return await crypto.subtle.importKey(
+    'raw',
+    new Uint8Array(hashBuffer),
+    { name: 'AES-GCM' },
+    false,
+    ['encrypt', 'decrypt']
+  )
+}
+
 /**
- * Encrypt email address using AES-256-GCM
- * Uses 16-byte IV to match original implementation
+ * Encrypt email (uses Scheme A going forward)
  */
 export async function encryptEmail(email: string): Promise<string> {
-  try {
-    const cryptoKey = await getEncryptionKey()
-    
-    // Generate random 16-byte IV (matches original)
-    const iv = crypto.getRandomValues(new Uint8Array(16))
-    
-    // Encrypt the email
-    const encoder = new TextEncoder()
-    const data = encoder.encode(email.toLowerCase())
-    const encrypted = await crypto.subtle.encrypt(
-      { name: 'AES-GCM', iv },
-      cryptoKey,
-      data
-    )
-    
-    // Combine IV + encrypted data
-    const combined = new Uint8Array(iv.length + encrypted.byteLength)
-    combined.set(iv, 0)
-    combined.set(new Uint8Array(encrypted), iv.length)
-    
-    // Return as base64
-    return btoa(String.fromCharCode(...combined))
-  } catch (error) {
-    console.error('Email encryption error:', error)
-    throw new Error('Failed to encrypt email')
-  }
+  const cryptoKey = await getCryptoKeyPadded()
+  const iv = crypto.getRandomValues(new Uint8Array(16)) // Scheme A IV length
+  const encoder = new TextEncoder()
+  const data = encoder.encode(email.toLowerCase())
+  const encrypted = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    cryptoKey,
+    data
+  )
+  const combined = new Uint8Array(iv.length + encrypted.byteLength)
+  combined.set(iv, 0)
+  combined.set(new Uint8Array(encrypted), iv.length)
+  return btoa(String.fromCharCode(...combined))
 }
 
 /**
- * Decrypt email address
- * Uses 16-byte IV to match original implementation
+ * Decrypt email with backward compatibility
  */
 export async function decryptEmail(encryptedBase64: string): Promise<string> {
+  // Decode once
+  const combined = Uint8Array.from(atob(encryptedBase64), c => c.charCodeAt(0))
+
+  // Try Scheme A first (16-byte IV, padded key)
   try {
-    const cryptoKey = await getEncryptionKey()
-    
-    // Decode from base64
-    const combined = Uint8Array.from(atob(encryptedBase64), c => c.charCodeAt(0))
-    
-    // Extract IV (first 16 bytes) and ciphertext
-    const iv = combined.slice(0, 16)
-    const ciphertext = combined.slice(16)
-    
-    // Decrypt the data
-    const decrypted = await crypto.subtle.decrypt(
-      { name: 'AES-GCM', iv },
-      cryptoKey,
-      ciphertext
+    const cryptoKeyA = await getCryptoKeyPadded()
+    const ivA = combined.slice(0, 16)
+    const ciphertextA = combined.slice(16)
+    const decryptedA = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: ivA },
+      cryptoKeyA,
+      ciphertextA
     )
-    
-    // Convert back to string
-    const decoder = new TextDecoder()
-    return decoder.decode(decrypted)
-  } catch (error) {
-    console.error('Email decryption error:', error)
-    throw new Error('Failed to decrypt email')
+    return new TextDecoder().decode(decryptedA)
+  } catch (e) {
+    // Fallback to Scheme B (12-byte IV, SHA-256 key)
+    try {
+      const cryptoKeyB = await getCryptoKeySHA256()
+      const ivB = combined.slice(0, 12)
+      const ciphertextB = combined.slice(12)
+      const decryptedB = await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: ivB },
+        cryptoKeyB,
+        ciphertextB
+      )
+      return new TextDecoder().decode(decryptedB)
+    } catch (e2) {
+      console.error('Email decryption failed for both schemes:', { e, e2 })
+      throw new Error('Failed to decrypt email')
+    }
   }
 }
 
 /**
- * Check if email is encrypted (heuristic check)
+ * Heuristic check if a string looks like encrypted base64
  */
 export function isEmailEncrypted(email: string): boolean {
   try {
-    // Encrypted emails are base64 encoded and longer than typical plaintext
     const decoded = atob(email)
-    return decoded.length >= 16 && /^[\x00-\xFF]*$/.test(decoded)
+    // Accept both 16+ and 12+ prefixes for IV lengths
+    return decoded.length >= 12 && /^[\x00-\xFF]*$/.test(decoded)
   } catch {
     return false
   }
