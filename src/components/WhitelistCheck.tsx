@@ -5,6 +5,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Loader2, AlertCircle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { WhitelistForm } from './WhitelistForm'
 
 interface WhitelistCheckProps {
   children: React.ReactNode
@@ -103,7 +104,7 @@ export function WhitelistCheck({ children }: WhitelistCheckProps) {
             Your wallet address is not whitelisted
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
           <Alert variant="destructive">
             <AlertDescription>
               {whitelistStatus?.status === 'pending' ? (
@@ -118,22 +119,24 @@ export function WhitelistCheck({ children }: WhitelistCheckProps) {
                   )}
                 </>
               ) : (
-                'Your wallet address is not whitelisted. Please apply for whitelist approval on the home page.'
+                'Your wallet address is not whitelisted. Please apply for whitelist approval below.'
               )}
             </AlertDescription>
           </Alert>
 
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">
-              To access PKRSC services, you need to:
+              To access PKRSC services, you can:
             </p>
             <ol className="list-decimal list-inside text-sm text-muted-foreground space-y-1 ml-2">
-              <li>Disconnect your current wallet</li>
-              <li>Go to the home page</li>
-              <li>Submit a whitelist application with your wallet address and email</li>
-              <li>Wait for admin approval</li>
-              <li>Check your email for approval notification</li>
+              <li>Fill the form below with your email to request whitelisting</li>
+              <li>Wait for admin approval (you'll get an email notification)</li>
             </ol>
+          </div>
+
+          <div className="border-t pt-4">
+            <div className="text-sm font-medium mb-2">Apply for Whitelist Now</div>
+            <WhitelistForm />
           </div>
 
           <div className="flex gap-2">
