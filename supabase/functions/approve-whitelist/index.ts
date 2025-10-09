@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { Resend } from "npm:resend@2.0.0";
 import { corsHeaders, responseHeaders } from '../_shared/cors.ts';
+import { decryptEmail } from '../_shared/email-encryption.ts';
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -63,6 +64,37 @@ serve(async (req) => {
         );
       }
 
+      // Fetch and decrypt email from encrypted_emails table
+      const { data: emailData } = await supabase
+        .from('encrypted_emails')
+        .select('encrypted_email')
+        .eq('wallet_address', request.wallet_address)
+        .single()
+
+      let userEmail = null
+      if (emailData?.encrypted_email) {
+        try {
+          userEmail = await decryptEmail(emailData.encrypted_email)
+          
+          // Log PII access for audit trail
+          await supabase.rpc('log_pii_access', {
+            p_table: 'encrypted_emails',
+            p_record_id: request.id,
+            p_fields: ['email'],
+            p_accessed_by: walletAddress,
+            p_reason: `whitelist_${action}_email_notification`,
+            p_ip: null
+          }).catch(err => console.warn('Failed to log PII access:', err))
+        } catch (error) {
+          console.error('Failed to decrypt email:', error)
+          // Continue without email - don't fail the approval
+        }
+      }
+
+      if (!userEmail) {
+        console.warn(`No email found for wallet ${request.wallet_address}`)
+      }
+
       // Update the request status
       const newStatus = action === "approve" ? "approved" : "rejected";
       const { error: updateError } = await supabase
@@ -120,53 +152,53 @@ serve(async (req) => {
         `;
       }
 
-      try {
-        console.log(`Attempting to send email to: ${request.email}`);
-        console.log(`Using from address: ${FROM_EMAIL}`);
-        
-        const emailResponse = await resend.emails.send({
-          from: FROM_EMAIL,
-          to: [request.email],
-          subject: emailSubject,
-          html: emailHtml,
-        });
+      // Send email notification if email exists
+      if (userEmail) {
+        try {
+          console.log(`Attempting to send email to: ${userEmail}`);
+          console.log(`Using from address: ${FROM_EMAIL}`);
+          
+          const emailResponse = await resend.emails.send({
+            from: FROM_EMAIL,
+            to: [userEmail],
+            subject: emailSubject,
+            html: emailHtml,
+          });
 
-        console.log("Email sent successfully:", JSON.stringify(emailResponse));
-        
-        // Log successful email in admin_actions for tracking
-        await supabase.from("admin_actions").insert({
-          action_type: 'email_sent_whitelist',
-          wallet_address: walletAddress,
-          details: {
-            request_id: requestId,
-            email: request.email,
-            email_id: emailResponse.id,
-            action: action
-          },
-        });
-        
-      } catch (emailError: any) {
-        console.error("❌ Error sending email:", {
-          error: emailError.message,
-          statusCode: emailError.statusCode,
-          name: emailError.name,
-          to: request.email,
-          from: FROM_EMAIL,
-        });
-        
-        // Log failed email attempt
-        await supabase.from("admin_actions").insert({
-          action_type: 'email_failed_whitelist',
-          wallet_address: walletAddress,
-          details: {
-            request_id: requestId,
-            email: request.email,
+          console.log("Email sent successfully:", JSON.stringify(emailResponse));
+          
+          // Log successful email in admin_actions for tracking
+          await supabase.from("admin_actions").insert({
+            action_type: 'email_sent_whitelist',
+            wallet_address: walletAddress,
+            details: {
+              request_id: requestId,
+              email_id: emailResponse.id,
+              action: action
+            },
+          });
+          
+        } catch (emailError: any) {
+          console.error("❌ Error sending email:", {
             error: emailError.message,
-            action: action
-          },
-        });
-        
-        // Don't fail the request if email fails, but include warning in response
+            statusCode: emailError.statusCode,
+            name: emailError.name,
+            from: FROM_EMAIL,
+          });
+          
+          // Log failed email attempt
+          await supabase.from("admin_actions").insert({
+            action_type: 'email_failed_whitelist',
+            wallet_address: walletAddress,
+            details: {
+              request_id: requestId,
+              error: emailError.message,
+              action: action
+            },
+          });
+        }
+      } else {
+        console.warn(`Skipping email notification - no email found for wallet ${request.wallet_address}`)
       }
 
       // Log admin action

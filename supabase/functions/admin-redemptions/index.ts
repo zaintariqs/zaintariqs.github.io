@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { Resend } from 'npm:resend@2.0.0'
+import { decryptEmail } from '../_shared/email-encryption.ts'
 import { decryptBankDetails, isEncrypted } from '../_shared/encryption_v2.ts'
 
 const resend = new Resend(Deno.env.get('RESEND_API_KEY'))
@@ -212,17 +213,45 @@ serve(async (req) => {
       // Send email notification
       const { data: whitelistData } = await supabase
         .from('whitelist_requests')
-        .select('email')
+        .select('wallet_address')
         .ilike('wallet_address', data.user_id)
         .single()
 
-      if (whitelistData?.email) {
+      // Fetch and decrypt email if available
+      let userEmail = null
+      if (whitelistData) {
+        const { data: emailData } = await supabase
+          .from('encrypted_emails')
+          .select('encrypted_email')
+          .eq('wallet_address', whitelistData.wallet_address)
+          .single()
+        
+        if (emailData?.encrypted_email) {
+          try {
+            userEmail = await decryptEmail(emailData.encrypted_email)
+            
+            // Log PII access for audit trail
+            await supabase.rpc('log_pii_access', {
+              p_table: 'encrypted_emails',
+              p_record_id: data.id,
+              p_fields: ['email'],
+              p_accessed_by: walletAddress.toLowerCase(),
+              p_reason: `redemption_${status}_email_notification`,
+              p_ip: null
+            }).catch(err => console.warn('Failed to log PII access:', err))
+          } catch (error) {
+            console.error('Failed to decrypt email:', error)
+          }
+        }
+      }
+
+      if (userEmail) {
         try {
           if (status === 'completed') {
             // Success email
             await resend.emails.send({
               from: FROM_EMAIL,
-              to: [whitelistData.email],
+              to: [userEmail],
               subject: 'PKRSC Redemption Completed',
               html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -271,12 +300,12 @@ serve(async (req) => {
                 </div>
               `,
             })
-            console.log(`Redemption success email sent to ${whitelistData.email}`)
+            console.log(`Redemption success email sent to ${userEmail}`)
           } else if (status === 'cancelled') {
             // Cancellation email
             await resend.emails.send({
               from: FROM_EMAIL,
-              to: [whitelistData.email],
+              to: [userEmail],
               subject: 'PKRSC Redemption Cancelled',
               html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -321,7 +350,7 @@ serve(async (req) => {
                 </div>
               `,
             })
-            console.log(`Redemption cancellation email sent to ${whitelistData.email}`)
+            console.log(`Redemption cancellation email sent to ${userEmail}`)
           }
         } catch (emailError) {
           console.error('Error sending redemption email:', emailError)

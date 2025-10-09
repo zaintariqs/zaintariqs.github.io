@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { Resend } from 'npm:resend@2.0.0'
+import { decryptEmail } from '../_shared/email-encryption.ts'
 import { 
   verifyWalletSignature, 
   hasAdminPermission, 
@@ -351,7 +352,7 @@ serve(async (req) => {
               </div>
             `,
           })
-          console.log(`Deposit success email sent to ${whitelistData.email}`)
+          console.log(`Deposit success email sent to ${userEmail}`)
         } catch (emailError) {
           console.error('Error sending deposit success email:', emailError)
         }
@@ -460,7 +461,7 @@ serve(async (req) => {
               </div>
             `,
           })
-          console.log(`Deposit rejection email sent to ${whitelistData.email}`)
+          console.log(`Deposit rejection email sent to ${userEmail}`)
         } catch (emailError) {
           console.error('Error sending deposit rejection email:', emailError)
         }

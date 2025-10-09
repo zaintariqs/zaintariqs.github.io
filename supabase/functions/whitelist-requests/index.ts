@@ -22,35 +22,8 @@ async function verifyWalletSignature(
   }
 }
 
-// Encrypt email for PII protection
-async function encryptEmail(email: string): Promise<string> {
-  const key = Deno.env.get('BANK_DATA_ENCRYPTION_KEY')
-  if (!key) throw new Error('Encryption key not configured')
-  
-  const encoder = new TextEncoder()
-  const data = encoder.encode(email)
-  const iv = crypto.getRandomValues(new Uint8Array(16))
-  
-  const cryptoKey = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(key.padEnd(32, '0').slice(0, 32)),
-    { name: 'AES-GCM' },
-    false,
-    ['encrypt']
-  )
-  
-  const encrypted = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv },
-    cryptoKey,
-    data
-  )
-  
-  const combined = new Uint8Array(iv.length + encrypted.byteLength)
-  combined.set(iv)
-  combined.set(new Uint8Array(encrypted), iv.length)
-  
-  return btoa(String.fromCharCode(...combined))
-}
+// Import email encryption utilities
+import { encryptEmail, decryptEmail } from '../_shared/email-encryption.ts'
 
 // Rate limiting configuration
 const RATE_LIMIT_MS = 60000; // 1 minute
@@ -125,8 +98,43 @@ serve(async (req) => {
         );
       }
 
+      // Fetch and decrypt emails for each request
+      const requestsWithEmails = await Promise.all(
+        (data || []).map(async (request) => {
+          try {
+            // Fetch encrypted email from encrypted_emails table
+            const { data: emailData } = await supabase
+              .from('encrypted_emails')
+              .select('encrypted_email')
+              .eq('wallet_address', request.wallet_address)
+              .single()
+
+            if (emailData?.encrypted_email) {
+              const decryptedEmail = await decryptEmail(emailData.encrypted_email)
+              
+              // Log PII access for audit trail
+              await supabase.rpc('log_pii_access', {
+                p_table: 'encrypted_emails',
+                p_record_id: request.id,
+                p_fields: ['email'],
+                p_accessed_by: walletAddress.toLowerCase(),
+                p_reason: 'admin_whitelist_review',
+                p_ip: null
+              }).catch(err => console.warn('Failed to log PII access:', err))
+              
+              return { ...request, email: decryptedEmail }
+            }
+            
+            return { ...request, email: null }
+          } catch (error) {
+            console.error(`Failed to decrypt email for request ${request.id}:`, error)
+            return { ...request, email: '[decryption failed]' }
+          }
+        })
+      )
+
       return new Response(
-        JSON.stringify({ requests: data }),
+        JSON.stringify({ requests: requestsWithEmails }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -211,12 +219,11 @@ serve(async (req) => {
         encrypted_email: encryptedEmail
       })
 
-      // Create new whitelist request with signature tracking (clientIp already defined above)
+      // Create new whitelist request without email (stored separately encrypted)
       const { data, error } = await supabase
         .from("whitelist_requests")
         .insert({
           wallet_address: walletAddress.toLowerCase(),
-          email: email.toLowerCase(),
           status: "pending",
           signature: signatureHeader,
           nonce: nonceHeader,

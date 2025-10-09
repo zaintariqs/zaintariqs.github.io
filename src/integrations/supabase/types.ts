@@ -674,7 +674,6 @@ export type Database = {
         Row: {
           client_ip: string | null
           created_at: string
-          email: string
           id: string
           nonce: string | null
           rejection_reason: string | null
@@ -689,7 +688,6 @@ export type Database = {
         Insert: {
           client_ip?: string | null
           created_at?: string
-          email: string
           id?: string
           nonce?: string | null
           rejection_reason?: string | null
@@ -704,7 +702,6 @@ export type Database = {
         Update: {
           client_ip?: string | null
           created_at?: string
-          email?: string
           id?: string
           nonce?: string | null
           rejection_reason?: string | null

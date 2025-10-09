@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { Resend } from 'npm:resend@2.0.0'
+import { decryptEmail } from '../_shared/email-encryption.ts'
 
 const resend = new Resend(Deno.env.get('RESEND_API_KEY'))
 const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'team@pkrsc.org'
@@ -51,13 +52,6 @@ serve(async (req) => {
       )
     }
 
-    // Get user email from whitelist_requests
-    const { data: whitelistData } = await supabase
-      .from('whitelist_requests')
-      .select('email')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
     // Add to blacklist (upsert to handle already blacklisted addresses)
     const { error: blacklistError } = await supabase
       .from('blacklisted_addresses')
@@ -97,12 +91,47 @@ serve(async (req) => {
       console.log('Whitelist status updated for:', walletAddress.toLowerCase(), 'rows affected:', updateData?.length ?? 0)
     }
 
+    // Fetch whitelist data for email notification
+    const { data: whitelistData } = await supabase
+      .from('whitelist_requests')
+      .select('wallet_address')
+      .ilike('wallet_address', walletAddress)
+      .single()
+
+    // Fetch and decrypt email if available
+    let userEmail = null
+    if (whitelistData) {
+      const { data: emailData } = await supabase
+        .from('encrypted_emails')
+        .select('encrypted_email')
+        .eq('wallet_address', whitelistData.wallet_address)
+        .single()
+      
+      if (emailData?.encrypted_email) {
+        try {
+          userEmail = await decryptEmail(emailData.encrypted_email)
+          
+          // Log PII access for audit trail
+          await supabase.rpc('log_pii_access', {
+            p_table: 'encrypted_emails',
+            p_record_id: whitelistData.wallet_address,
+            p_fields: ['email'],
+            p_accessed_by: adminWallet.toLowerCase(),
+            p_reason: 'blacklist_email_notification',
+            p_ip: null
+          }).catch(err => console.warn('Failed to log PII access:', err))
+        } catch (error) {
+          console.error('Failed to decrypt email:', error)
+        }
+      }
+    }
+
     // Send email notification if email exists
-    if (whitelistData?.email) {
+    if (userEmail) {
       try {
         await resend.emails.send({
           from: FROM_EMAIL,
-          to: [whitelistData.email],
+          to: [userEmail],
           subject: 'PKRSC Account Status - Urgent Action Required',
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -141,7 +170,7 @@ serve(async (req) => {
           `,
         })
         
-        console.log(`Blacklist notification sent to ${whitelistData.email}`)
+        console.log(`Blacklist notification sent to ${userEmail}`)
       } catch (emailError) {
         console.error('Error sending blacklist email:', emailError)
         // Don't fail the blacklist action if email fails
@@ -155,7 +184,7 @@ serve(async (req) => {
       details: { 
         blacklistedAddress: walletAddress.toLowerCase(),
         reason,
-        emailSent: !!whitelistData?.email,
+        emailSent: !!userEmail,
         timestamp: new Date().toISOString()
       }
     })
@@ -163,7 +192,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        emailSent: !!whitelistData?.email 
+        emailSent: !!userEmail 
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
