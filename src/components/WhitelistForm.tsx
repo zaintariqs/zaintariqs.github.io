@@ -133,6 +133,11 @@ export function WhitelistForm() {
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="p-3 bg-crypto-green/10 border border-crypto-green/20 rounded-lg mb-4">
+            <p className="text-sm text-crypto-green">
+              ✓ Wallet Connected! Please enter your email below to submit your whitelist request.
+            </p>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="walletAddress">Connected Wallet</Label>
             <Input
@@ -155,6 +160,7 @@ export function WhitelistForm() {
               onChange={(e) => setEmail(e.target.value)}
               disabled={isSubmitting}
               required
+              autoFocus
             />
             <p className="text-xs text-muted-foreground">
               You'll receive updates about your whitelist status at this email
