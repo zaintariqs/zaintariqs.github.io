@@ -22,7 +22,7 @@ import { Label } from '@/components/ui/label'
 interface WhitelistRequest {
   id: string
   wallet_address: string
-  email: string
+  email: string | null
   status: 'pending' | 'approved' | 'rejected'
   rejection_reason?: string
   requested_at: string
@@ -378,6 +378,51 @@ export function WhitelistingRequests() {
                                 <XCircle className="h-4 w-4" />
                               </Button>
                             </>
+                          )}
+                          {(!request.email || request.email === '[decryption failed]') && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={async () => {
+                                if (!address) return
+                                const input = window.prompt('Enter user email for this wallet:')
+                                if (!input) return
+                                const email = input.trim().toLowerCase()
+                                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+                                if (!emailRegex.test(email) || email.length > 254) {
+                                  toast({ title: 'Invalid email', description: 'Please enter a valid email address', variant: 'destructive' })
+                                  return
+                                }
+                                setProcessingId(request.id)
+                                try {
+                                  const resp = await fetch('https://jdjreuxhvzmzockuduyq.supabase.co/functions/v1/set-whitelist-email', {
+                                    method: 'POST',
+                                    headers: {
+                                      'Content-Type': 'application/json',
+                                      'x-wallet-address': address,
+                                    },
+                                    body: JSON.stringify({ requestId: request.id, email }),
+                                  })
+                                  if (!resp.ok) {
+                                    const err = await resp.json().catch(() => ({ error: 'Failed to set email' }))
+                                    throw new Error(err.error || 'Failed to set email')
+                                  }
+                                  toast({ title: 'Email saved', description: 'The email was stored securely.' })
+                                  await fetchRequests()
+                                } catch (e: any) {
+                                  toast({ title: 'Error', description: e.message, variant: 'destructive' })
+                                } finally {
+                                  setProcessingId(null)
+                                }
+                              }}
+                              disabled={processingId === request.id}
+                            >
+                              {processingId === request.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                'Add Email'
+                              )}
+                            </Button>
                           )}
                           {request.status === 'rejected' && request.rejection_reason && (
                             <span className="text-xs text-muted-foreground mr-2">
