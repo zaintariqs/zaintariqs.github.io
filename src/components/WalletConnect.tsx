@@ -49,12 +49,19 @@ export function WalletConnect() {
         const fingerprint = result.visitorId
 
         // Log login attempt
-        await supabase.functions.invoke('log-login-attempt', {
+        console.log('Logging login attempt for wallet:', address, 'fingerprint:', fingerprint)
+        const { data: logData, error: logError } = await supabase.functions.invoke('log-login-attempt', {
           body: { 
             walletAddress: address,
             fingerprint 
           }
         })
+        
+        if (logError) {
+          console.error('Error logging login attempt:', logError)
+        } else {
+          console.log('Login attempt logged successfully:', logData)
+        }
 
         // Check blacklist
         const { data, error } = await supabase.functions.invoke('check-blacklist', {
