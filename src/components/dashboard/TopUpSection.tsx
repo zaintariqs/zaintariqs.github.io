@@ -5,7 +5,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
-import { CreditCard, Smartphone, ArrowRight } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
+import { CreditCard, Smartphone, ArrowRight, Mail } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { useAccount, useSignMessage } from 'wagmi'
 
@@ -13,6 +14,10 @@ export function TopUpSection() {
   const [amount, setAmount] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
+  const [verificationDialog, setVerificationDialog] = useState(false)
+  const [verificationCode, setVerificationCode] = useState('')
+  const [currentDepositId, setCurrentDepositId] = useState<string | null>(null)
+  const [isVerifying, setIsVerifying] = useState(false)
   const { toast } = useToast()
   const { address } = useAccount()
   const { signMessageAsync } = useSignMessage()
@@ -68,10 +73,15 @@ export function TopUpSection() {
         throw new Error('Failed to create deposit request')
       }
 
+      const result = await response.json()
+      setCurrentDepositId(result.data.id)
+      
       toast({
-        title: "Deposit Request Created",
-        description: `${method === 'easypaisa' ? 'EasyPaisa' : 'JazzCash'} payment of PKR ${amount} initiated. Check "My Deposits" tab for status.`,
+        title: "Check Your Email",
+        description: "We've sent a verification code to your email address.",
       })
+      
+      setVerificationDialog(true)
       setAmount('')
       setPhoneNumber('')
     } catch (error) {
@@ -86,7 +96,101 @@ export function TopUpSection() {
     }
   }
 
+  const handleVerifyCode = async () => {
+    if (!verificationCode || !currentDepositId) {
+      toast({
+        title: "Missing Code",
+        description: "Please enter the verification code",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setIsVerifying(true)
+    try {
+      const response = await fetch(
+        'https://jdjreuxhvzmzockuduyq.supabase.co/functions/v1/verify-deposit',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            depositId: currentDepositId,
+            code: verificationCode,
+          }),
+        }
+      )
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Verification failed')
+      }
+
+      toast({
+        title: "Success",
+        description: "Deposit verified! Now submit your payment proof in the My Deposits section.",
+      })
+      
+      setVerificationDialog(false)
+      setVerificationCode('')
+      setCurrentDepositId(null)
+    } catch (error) {
+      console.error('Error verifying code:', error)
+      toast({
+        title: "Verification Failed",
+        description: error instanceof Error ? error.message : "Invalid or expired code",
+        variant: "destructive",
+      })
+    } finally {
+      setIsVerifying(false)
+    }
+  }
+
   return (
+    <>
+      <Dialog open={verificationDialog} onOpenChange={setVerificationDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-primary" />
+              Verify Your Email
+            </DialogTitle>
+            <DialogDescription>
+              Enter the 6-digit verification code sent to your email address
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="verification-code">Verification Code</Label>
+              <Input
+                id="verification-code"
+                placeholder="000000"
+                value={verificationCode}
+                onChange={(e) => setVerificationCode(e.target.value)}
+                maxLength={6}
+                className="text-center text-lg tracking-widest"
+              />
+              <p className="text-xs text-muted-foreground">
+                Code expires in 15 minutes. You have 5 attempts.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setVerificationDialog(false)} 
+              disabled={isVerifying}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleVerifyCode} disabled={isVerifying || !verificationCode}>
+              {isVerifying ? 'Verifying...' : 'Verify'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     <Card className="bg-card border-border">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-card-foreground">
@@ -225,6 +329,7 @@ export function TopUpSection() {
           </div>
         </div>
       </CardContent>
-    </Card>
+      </Card>
+    </>
   )
 }

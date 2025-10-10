@@ -35,10 +35,13 @@ export function MyDeposits() {
   const [deposits, setDeposits] = useState<Deposit[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [verificationDialogOpen, setVerificationDialogOpen] = useState(false)
   const [selectedDeposit, setSelectedDeposit] = useState<Deposit | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isVerifying, setIsVerifying] = useState(false)
   const [transactionId, setTransactionId] = useState('')
   const [receiptFile, setReceiptFile] = useState<File | null>(null)
+  const [verificationCode, setVerificationCode] = useState('')
 
   const fetchDeposits = async () => {
     if (!address) return
@@ -161,8 +164,66 @@ export function MyDeposits() {
     }
   }
 
+  const handleVerifyEmail = (deposit: Deposit) => {
+    setSelectedDeposit(deposit)
+    setVerificationCode('')
+    setVerificationDialogOpen(true)
+  }
+
+  const handleVerifyCode = async () => {
+    if (!selectedDeposit || !verificationCode) {
+      toast({
+        title: "Missing Code",
+        description: "Please enter the verification code",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setIsVerifying(true)
+    try {
+      const response = await fetch(
+        'https://jdjreuxhvzmzockuduyq.supabase.co/functions/v1/verify-deposit',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            depositId: selectedDeposit.id,
+            code: verificationCode,
+          }),
+        }
+      )
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Verification failed')
+      }
+
+      toast({
+        title: "Success",
+        description: "Email verified! Now submit your payment proof.",
+      })
+      
+      setVerificationDialogOpen(false)
+      fetchDeposits()
+    } catch (error) {
+      console.error('Error verifying code:', error)
+      toast({
+        title: "Verification Failed",
+        description: error instanceof Error ? error.message : "Invalid or expired code",
+        variant: "destructive",
+      })
+    } finally {
+      setIsVerifying(false)
+    }
+  }
+
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline", className: string }> = {
+      draft: { variant: "secondary", className: "bg-gray-500/10 text-gray-500 border-gray-500/20" },
       pending: { variant: "secondary", className: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" },
       processing: { variant: "secondary", className: "bg-blue-500/10 text-blue-500 border-blue-500/20" },
       completed: { variant: "default", className: "bg-crypto-green/10 text-crypto-green border-crypto-green/20" },
@@ -262,6 +323,15 @@ export function MyDeposits() {
                       )}
                     </TableCell>
                     <TableCell>
+                      {deposit.status === 'draft' && (
+                        <Button
+                          size="sm"
+                          onClick={() => handleVerifyEmail(deposit)}
+                          className="w-full"
+                        >
+                          Verify Email
+                        </Button>
+                      )}
                       {deposit.status === 'pending' && !deposit.submitted_at && (
                         <Button
                           size="sm"
@@ -325,6 +395,51 @@ export function MyDeposits() {
             </Button>
             <Button onClick={handleUploadProof} disabled={isSubmitting}>
               {isSubmitting ? 'Uploading...' : 'Submit Proof'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={verificationDialogOpen} onOpenChange={setVerificationDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Verify Your Email</DialogTitle>
+          </DialogHeader>
+          {selectedDeposit && (
+            <div className="space-y-4 py-4">
+              <div className="bg-muted/50 rounded-lg p-3 space-y-1">
+                <p className="text-sm font-medium">Amount: PKR {selectedDeposit.amount_pkr}</p>
+                <p className="text-xs text-muted-foreground">
+                  Enter the 6-digit verification code sent to your email
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="verify-code">Verification Code</Label>
+                <Input
+                  id="verify-code"
+                  placeholder="000000"
+                  value={verificationCode}
+                  onChange={(e) => setVerificationCode(e.target.value)}
+                  maxLength={6}
+                  className="text-center text-lg tracking-widest"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Code expires in 15 minutes. You have 5 attempts.
+                </p>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setVerificationDialogOpen(false)} 
+              disabled={isVerifying}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleVerifyCode} disabled={isVerifying || !verificationCode}>
+              {isVerifying ? 'Verifying...' : 'Verify'}
             </Button>
           </DialogFooter>
         </DialogContent>
