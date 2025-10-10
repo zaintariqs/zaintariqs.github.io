@@ -121,18 +121,25 @@ serve(async (req) => {
         try {
           console.log(`Triggering welcome bonus for ${request.wallet_address}`);
           
-          const bonusResponse = await supabase.functions.invoke('distribute-welcome-bonus', {
-            body: {
+          const functionUrl = `${supabaseUrl}/functions/v1/distribute-welcome-bonus`;
+          const resp = await fetch(functionUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${supabaseServiceKey}`,
+            },
+            body: JSON.stringify({
               walletAddress: request.wallet_address,
-              triggeredBy: walletAddress
-            }
+              triggeredBy: walletAddress,
+            }),
           });
 
-          if (bonusResponse.error) {
-            console.error("Error distributing welcome bonus:", bonusResponse.error);
-            // Don't fail the approval, just log the error
+          if (!resp.ok) {
+            const errText = await resp.text();
+            console.error("Error distributing welcome bonus:", resp.status, errText);
           } else {
-            console.log("Welcome bonus distributed:", bonusResponse.data);
+            const data = await resp.json();
+            console.log("Welcome bonus distributed:", data);
           }
         } catch (bonusError: any) {
           console.error("Failed to trigger welcome bonus:", bonusError);
