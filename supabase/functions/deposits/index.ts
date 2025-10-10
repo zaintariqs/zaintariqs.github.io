@@ -8,7 +8,7 @@ const corsHeaders = {
 }
 
 // Valid payment methods for deposits
-const VALID_PAYMENT_METHODS = ['easypaisa', 'jazzcash']
+const VALID_PAYMENT_METHODS = ['easypaisa', 'jazzcash', 'bank']
 
 // Validate Ethereum address format
 function isValidEthAddress(address: string): boolean {
@@ -220,7 +220,8 @@ serve(async (req) => {
       const { amount, paymentMethod, phoneNumber } = body
 
       // Comprehensive input validation
-      if (!amount || !paymentMethod || !phoneNumber) {
+      const normalizedMethod = (paymentMethod || '').toLowerCase()
+      if (!amount || !paymentMethod || (normalizedMethod !== 'bank' && !phoneNumber)) {
         return new Response(
           JSON.stringify({ error: 'Missing required fields' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -244,13 +245,15 @@ serve(async (req) => {
         )
       }
       
-      // Validate phone number
-      const phoneValidation = validatePhoneNumber(phoneNumber)
-      if (!phoneValidation.valid) {
-        return new Response(
-          JSON.stringify({ error: phoneValidation.error }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
+      // Validate phone number (optional for bank)
+      if (normalizedMethod !== 'bank') {
+        const phoneValidation = validatePhoneNumber(phoneNumber)
+        if (!phoneValidation.valid) {
+          return new Response(
+            JSON.stringify({ error: phoneValidation.error }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
       }
 
       console.log(`Creating deposit for wallet: ${walletAddressHeader}, amount: ${amount}, method: ${paymentMethod}`)
@@ -279,7 +282,10 @@ serve(async (req) => {
 
       // Encrypt phone number for PII protection
       const { encryptPhoneNumber } = await import('../_shared/phone-encryption.ts')
-      const encryptedPhone = await encryptPhoneNumber(sanitizeString(phoneNumber))
+      const phoneToStore = normalizedMethod === 'bank' && (!phoneNumber || phoneNumber.trim().length === 0)
+        ? '+923000000000'
+        : sanitizeString(phoneNumber)
+      const encryptedPhone = await encryptPhoneNumber(phoneToStore)
 
       const { data, error } = await supabase
         .from('deposits')
