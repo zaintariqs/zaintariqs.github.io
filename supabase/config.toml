@@ -71,3 +71,12 @@ verify_jwt = false
 
 [functions.get-login-attempts]
 verify_jwt = false
+
+[functions.distribute-welcome-bonus]
+verify_jwt = false
+
+[functions.get-market-maker-transactions]
+verify_jwt = false
+
+[functions.list-blacklisted]
+verify_jwt = false

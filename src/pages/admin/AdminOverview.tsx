@@ -1,5 +1,6 @@
 import { BalanceCard } from '@/components/dashboard/BalanceCard'
 import { AdminSection } from '@/components/dashboard/AdminSection'
+import { WelcomeBonusMonitor } from '@/components/dashboard/WelcomeBonusMonitor'
 
 export default function AdminOverview() {
   return (
@@ -14,6 +15,7 @@ export default function AdminOverview() {
       </div>
 
       <BalanceCard />
+      <WelcomeBonusMonitor />
       <AdminSection />
     </div>
   )

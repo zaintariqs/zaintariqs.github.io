@@ -673,6 +673,39 @@ export type Database = {
         }
         Relationships: []
       }
+      welcome_bonuses: {
+        Row: {
+          amount: number
+          created_at: string
+          distributed_at: string | null
+          error_message: string | null
+          id: string
+          status: Database["public"]["Enums"]["bonus_status"]
+          transaction_hash: string | null
+          wallet_address: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          distributed_at?: string | null
+          error_message?: string | null
+          id?: string
+          status?: Database["public"]["Enums"]["bonus_status"]
+          transaction_hash?: string | null
+          wallet_address: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          distributed_at?: string | null
+          error_message?: string | null
+          id?: string
+          status?: Database["public"]["Enums"]["bonus_status"]
+          transaction_hash?: string | null
+          wallet_address?: string
+        }
+        Relationships: []
+      }
       whitelist_access_log: {
         Row: {
           access_type: string
@@ -784,6 +817,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_promotional_reserve_balance: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       has_admin_permission: {
         Args: {
           _permission: Database["public"]["Enums"]["admin_permission"]
@@ -837,6 +874,10 @@ export type Database = {
         Args: { amount_change: number; updated_by_wallet: string }
         Returns: undefined
       }
+      update_promotional_reserves: {
+        Args: { amount_change: number; updated_by_wallet: string }
+        Returns: undefined
+      }
     }
     Enums: {
       admin_permission:
@@ -853,6 +894,7 @@ export type Database = {
         | "view_transaction_fees"
         | "view_audit_logs"
       app_role: "admin" | "user"
+      bonus_status: "pending" | "completed" | "failed" | "insufficient_funds"
       bot_status: "active" | "paused" | "error"
       redemption_status:
         | "pending"
@@ -1003,6 +1045,7 @@ export const Constants = {
         "view_audit_logs",
       ],
       app_role: ["admin", "user"],
+      bonus_status: ["pending", "completed", "failed", "insufficient_funds"],
       bot_status: ["active", "paused", "error"],
       redemption_status: [
         "pending",

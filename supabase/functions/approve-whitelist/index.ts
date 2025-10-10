@@ -116,23 +116,55 @@ serve(async (req) => {
         );
       }
 
+      // Trigger welcome bonus distribution if approved
+      if (action === "approve") {
+        try {
+          console.log(`Triggering welcome bonus for ${request.wallet_address}`);
+          
+          const bonusResponse = await supabase.functions.invoke('distribute-welcome-bonus', {
+            body: {
+              walletAddress: request.wallet_address,
+              triggeredBy: walletAddress
+            }
+          });
+
+          if (bonusResponse.error) {
+            console.error("Error distributing welcome bonus:", bonusResponse.error);
+            // Don't fail the approval, just log the error
+          } else {
+            console.log("Welcome bonus distributed:", bonusResponse.data);
+          }
+        } catch (bonusError: any) {
+          console.error("Failed to trigger welcome bonus:", bonusError);
+          // Don't fail the approval process
+        }
+      }
+
       // Send email notification
       let emailSubject = "";
       let emailHtml = "";
 
       if (action === "approve") {
-        emailSubject = "Welcome to PKRSC! 🎉";
+        emailSubject = "Welcome to PKRSC! 🎉 + Your 300 PKRSC Welcome Bonus";
         emailHtml = `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h1 style="color: #00875A;">Welcome Onboard!</h1>
             <p>Congratulations! Your whitelist request has been approved.</p>
             <p><strong>Wallet Address:</strong> <code style="background: #f4f4f4; padding: 4px 8px; border-radius: 4px;">${request.wallet_address}</code></p>
-            <p>You're now part of the PKRSC community and can start using our services. Connect your wallet to get started!</p>
+            
+            <div style="margin: 30px 0; padding: 20px; background: #e6f7f0; border: 2px solid #00875A; border-radius: 8px; text-align: center;">
+              <h2 style="color: #00875A; margin: 0 0 10px 0;">🎁 Welcome Bonus!</h2>
+              <p style="font-size: 24px; font-weight: bold; margin: 10px 0; color: #00875A;">300 PKRSC</p>
+              <p style="margin: 5px 0; color: #333;">has been credited to your wallet!</p>
+            </div>
+
+            <p>You're now part of the PKRSC community and can start using our services. Connect your wallet to see your welcome bonus!</p>
             <div style="margin: 30px 0; padding: 20px; background: #f9f9f9; border-left: 4px solid #00875A; border-radius: 4px;">
               <p style="margin: 0;"><strong>Next Steps:</strong></p>
               <ol style="margin: 10px 0;">
                 <li>Visit our platform</li>
                 <li>Connect your approved wallet</li>
+                <li>Check your 300 PKRSC welcome bonus</li>
                 <li>Start exploring PKRSC features</li>
               </ol>
             </div>
