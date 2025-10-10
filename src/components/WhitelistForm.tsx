@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Mail, CheckCircle } from 'lucide-react'
 import { useAccount, useSignMessage } from 'wagmi'
 import { WalletConnect } from './WalletConnect'
 
@@ -14,6 +14,10 @@ export function WhitelistForm() {
   const { signMessageAsync } = useSignMessage()
   const [email, setEmail] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showVerification, setShowVerification] = useState(false)
+  const [verificationCode, setVerificationCode] = useState('')
+  const [isVerifying, setIsVerifying] = useState(false)
+  const [isVerified, setIsVerified] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -102,12 +106,13 @@ export function WhitelistForm() {
         throw new Error(data.error || 'Failed to submit whitelist request')
       }
 
+      // Show verification UI
+      setShowVerification(true)
       toast({
-        title: "Success",
-        description: "Your whitelist request has been submitted. You will receive an email once it's reviewed.",
+        title: "Verification Email Sent! 📧",
+        description: data.message || "Please check your email for the 6-digit verification code.",
       })
 
-      setEmail('')
     } catch (error: any) {
       console.error('Error submitting whitelist request:', error)
       toast({
@@ -118,6 +123,74 @@ export function WhitelistForm() {
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!verificationCode || !/^\d{6}$/.test(verificationCode)) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid 6-digit verification code",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setIsVerifying(true)
+
+    try {
+      const response = await fetch(
+        'https://jdjreuxhvzmzockuduyq.supabase.co/functions/v1/verify-email',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            walletAddress: address?.toLowerCase(),
+            verificationCode,
+          }),
+        }
+      )
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to verify email')
+      }
+
+      setIsVerified(true)
+      toast({
+        title: "Email Verified! ✅",
+        description: data.message || "Your whitelist request is now pending admin approval.",
+      })
+
+      // Reset form after a delay
+      setTimeout(() => {
+        setEmail('')
+        setVerificationCode('')
+        setShowVerification(false)
+        setIsVerified(false)
+      }, 3000)
+
+    } catch (error: any) {
+      console.error('Error verifying email:', error)
+      toast({
+        title: "Verification Failed",
+        description: error.message || "Invalid code. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsVerifying(false)
+    }
+  }
+
+  const handleResendCode = async () => {
+    // Re-submit the form to get a new code
+    setShowVerification(false)
+    setVerificationCode('')
+    await handleSubmit(new Event('submit') as any)
   }
 
   return (
@@ -131,6 +204,76 @@ export function WhitelistForm() {
             <WalletConnect />
           </div>
         </div>
+      ) : isVerified ? (
+        <div className="text-center space-y-4 p-8">
+          <div className="flex justify-center">
+            <CheckCircle className="h-16 w-16 text-crypto-green animate-in zoom-in duration-300" />
+          </div>
+          <h3 className="text-2xl font-bold text-crypto-green">Email Verified!</h3>
+          <p className="text-muted-foreground">
+            Your whitelist request is now pending admin approval. We'll notify you via email.
+          </p>
+        </div>
+      ) : showVerification ? (
+        <form onSubmit={handleVerify} className="space-y-4">
+          <div className="p-4 bg-crypto-green/10 border border-crypto-green/20 rounded-lg mb-4 space-y-2">
+            <div className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-crypto-green" />
+              <p className="text-sm font-semibold text-crypto-green">
+                Verification Code Sent
+              </p>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              We've sent a 6-digit code to <strong>{email}</strong>. Please enter it below.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="verificationCode">
+              Verification Code <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="verificationCode"
+              type="text"
+              placeholder="000000"
+              value={verificationCode}
+              onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              disabled={isVerifying}
+              required
+              maxLength={6}
+              className="text-center text-2xl tracking-widest font-mono"
+              autoFocus
+            />
+            <p className="text-xs text-muted-foreground">
+              ⏱️ Code expires in 15 minutes. Maximum 5 attempts.
+            </p>
+          </div>
+
+          <Button 
+            type="submit" 
+            className="w-full"
+            disabled={isVerifying || verificationCode.length !== 6}
+          >
+            {isVerifying ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Verifying...
+              </>
+            ) : (
+              'Verify Email'
+            )}
+          </Button>
+
+          <Button 
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={handleResendCode}
+            disabled={isVerifying}
+          >
+            Didn't receive code? Resend
+          </Button>
+        </form>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="p-3 bg-crypto-green/10 border border-crypto-green/20 rounded-lg mb-4">
@@ -163,7 +306,7 @@ export function WhitelistForm() {
               autoFocus
             />
             <p className="text-xs text-muted-foreground">
-              You'll receive updates about your whitelist status at this email
+              You'll receive a verification code and updates about your whitelist status
             </p>
           </div>
           <Button 

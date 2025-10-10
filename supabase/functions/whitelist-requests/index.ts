@@ -281,8 +281,12 @@ serve(async (req) => {
         }
       }
 
+      // Generate 6-digit verification code
+      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
+
       // Encrypt email and store separately
-      const encryptedEmail = await encryptEmail(email.toLowerCase())
+      const encryptedEmail = await encryptEmail(emailStr.toLowerCase())
       
       // Store encrypted email
       await supabase.from('encrypted_emails').insert({
@@ -290,7 +294,7 @@ serve(async (req) => {
         encrypted_email: encryptedEmail
       })
 
-      // Create new whitelist request without email (stored separately encrypted)
+      // Create new whitelist request with verification code
       const { data, error } = await supabase
         .from("whitelist_requests")
         .insert({
@@ -298,7 +302,11 @@ serve(async (req) => {
           status: "pending",
           signature: signatureHeader,
           nonce: nonceHeader,
-          client_ip: clientIp
+          client_ip: clientIp,
+          email_verified: false,
+          verification_code: verificationCode,
+          verification_expires_at: expiresAt.toISOString(),
+          verification_attempts: 0
         })
         .select()
         .single();
@@ -311,12 +319,92 @@ serve(async (req) => {
         );
       }
 
+      // Send verification email
+      try {
+        const { Resend } = await import('npm:resend@2.0.0')
+        const resend = new Resend(Deno.env.get('RESEND_API_KEY'))
+        const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'PKRSC <onboarding@resend.dev>'
+
+        await resend.emails.send({
+          from: FROM_EMAIL,
+          to: [emailStr],
+          subject: 'Verify Your Email - PKRSC Whitelist',
+          html: `
+            <!DOCTYPE html>
+            <html>
+              <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              </head>
+              <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+                <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+                  <div style="background: linear-gradient(135deg, #00a86b 0%, #008f5b 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+                    <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">
+                      🇵🇰 PKRSC Email Verification
+                    </h1>
+                  </div>
+                  
+                  <div style="background: white; padding: 40px; border-radius: 0 0 12px 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                    <p style="font-size: 16px; color: #333; line-height: 1.6; margin-bottom: 30px;">
+                      Thank you for requesting whitelist access to PKRSC! To complete your request, please verify your email address.
+                    </p>
+                    
+                    <div style="background: #f8f9fa; border-left: 4px solid #00a86b; padding: 20px; margin: 30px 0; border-radius: 4px;">
+                      <p style="margin: 0 0 10px 0; font-size: 14px; color: #666; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                        Your Verification Code
+                      </p>
+                      <p style="margin: 0; font-size: 36px; font-weight: 700; color: #00a86b; letter-spacing: 4px; font-family: 'Courier New', monospace;">
+                        ${verificationCode}
+                      </p>
+                    </div>
+                    
+                    <p style="font-size: 14px; color: #666; margin: 20px 0;">
+                      <strong>⏱️ This code expires in 15 minutes.</strong>
+                    </p>
+                    
+                    <p style="font-size: 14px; color: #666; line-height: 1.6;">
+                      Enter this code on the verification page to complete your whitelist request. After verification, an admin will review your application.
+                    </p>
+                    
+                    <div style="margin-top: 40px; padding-top: 30px; border-top: 1px solid #eee;">
+                      <p style="font-size: 14px; color: #999; margin: 0 0 10px 0;">
+                        <strong>Wallet Address:</strong> ${walletAddress}
+                      </p>
+                      <p style="font-size: 12px; color: #999; margin: 20px 0 0 0;">
+                        If you didn't request this verification, please ignore this email.
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div style="text-align: center; margin-top: 30px; color: #999; font-size: 12px;">
+                    <p style="margin: 5px 0;">
+                      © ${new Date().getFullYear()} PKRSC - Pakistan Rupee Stable Coin
+                    </p>
+                    <p style="margin: 5px 0;">
+                      Securing the future of digital PKR
+                    </p>
+                  </div>
+                </div>
+              </body>
+            </html>
+          `,
+        })
+
+        console.log(`Verification email sent to ${emailStr} for wallet ${walletAddress}`)
+      } catch (emailError) {
+        console.error('Failed to send verification email:', emailError)
+        // Don't fail the request, user can request resend
+      }
+
       console.log("Whitelist request created:", data);
 
       return new Response(
         JSON.stringify({ 
-          message: "Whitelist request submitted successfully",
-          request: data 
+          message: "Verification code sent! Please check your email and enter the 6-digit code to complete your whitelist request.",
+          request: {
+            ...data,
+            requiresVerification: true
+          }
         }),
         { status: 201, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );

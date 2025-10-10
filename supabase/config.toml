@@ -1,5 +1,8 @@
 project_id = "jdjreuxhvzmzockuduyq"
 
+[functions.verify-email]
+verify_jwt = false
+
 [functions.market-maker]
 verify_jwt = false
 

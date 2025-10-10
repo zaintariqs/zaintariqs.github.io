@@ -734,6 +734,7 @@ export type Database = {
         Row: {
           client_ip: string | null
           created_at: string
+          email_verified: boolean | null
           id: string
           nonce: string | null
           rejection_reason: string | null
@@ -743,11 +744,15 @@ export type Database = {
           signature: string | null
           status: string
           updated_at: string
+          verification_attempts: number | null
+          verification_code: string | null
+          verification_expires_at: string | null
           wallet_address: string
         }
         Insert: {
           client_ip?: string | null
           created_at?: string
+          email_verified?: boolean | null
           id?: string
           nonce?: string | null
           rejection_reason?: string | null
@@ -757,11 +762,15 @@ export type Database = {
           signature?: string | null
           status?: string
           updated_at?: string
+          verification_attempts?: number | null
+          verification_code?: string | null
+          verification_expires_at?: string | null
           wallet_address: string
         }
         Update: {
           client_ip?: string | null
           created_at?: string
+          email_verified?: boolean | null
           id?: string
           nonce?: string | null
           rejection_reason?: string | null
@@ -771,6 +780,9 @@ export type Database = {
           signature?: string | null
           status?: string
           updated_at?: string
+          verification_attempts?: number | null
+          verification_code?: string | null
+          verification_expires_at?: string | null
           wallet_address?: string
         }
         Relationships: []
