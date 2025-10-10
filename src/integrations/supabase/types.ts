@@ -194,6 +194,7 @@ export type Database = {
         Row: {
           amount_pkr: number
           created_at: string
+          email_verified: boolean | null
           full_phone_accessed_at: string | null
           full_phone_accessed_by: string | null
           id: string
@@ -212,10 +213,14 @@ export type Database = {
           updated_at: string
           user_id: string
           user_transaction_id: string | null
+          verification_attempts: number | null
+          verification_code: string | null
+          verification_expires_at: string | null
         }
         Insert: {
           amount_pkr: number
           created_at?: string
+          email_verified?: boolean | null
           full_phone_accessed_at?: string | null
           full_phone_accessed_by?: string | null
           id?: string
@@ -234,10 +239,14 @@ export type Database = {
           updated_at?: string
           user_id: string
           user_transaction_id?: string | null
+          verification_attempts?: number | null
+          verification_code?: string | null
+          verification_expires_at?: string | null
         }
         Update: {
           amount_pkr?: number
           created_at?: string
+          email_verified?: boolean | null
           full_phone_accessed_at?: string | null
           full_phone_accessed_by?: string | null
           id?: string
@@ -256,6 +265,9 @@ export type Database = {
           updated_at?: string
           user_id?: string
           user_transaction_id?: string | null
+          verification_attempts?: number | null
+          verification_code?: string | null
+          verification_expires_at?: string | null
         }
         Relationships: []
       }
@@ -543,12 +555,16 @@ export type Database = {
           burn_address: string
           cancellation_reason: string | null
           created_at: string
+          email_verified: boolean | null
           id: string
           pkrsc_amount: number
           status: Database["public"]["Enums"]["redemption_status"]
           transaction_hash: string | null
           updated_at: string
           user_id: string
+          verification_attempts: number | null
+          verification_code: string | null
+          verification_expires_at: string | null
         }
         Insert: {
           account_number: string
@@ -560,12 +576,16 @@ export type Database = {
           burn_address?: string
           cancellation_reason?: string | null
           created_at?: string
+          email_verified?: boolean | null
           id?: string
           pkrsc_amount: number
           status?: Database["public"]["Enums"]["redemption_status"]
           transaction_hash?: string | null
           updated_at?: string
           user_id: string
+          verification_attempts?: number | null
+          verification_code?: string | null
+          verification_expires_at?: string | null
         }
         Update: {
           account_number?: string
@@ -577,12 +597,16 @@ export type Database = {
           burn_address?: string
           cancellation_reason?: string | null
           created_at?: string
+          email_verified?: boolean | null
           id?: string
           pkrsc_amount?: number
           status?: Database["public"]["Enums"]["redemption_status"]
           transaction_hash?: string | null
           updated_at?: string
           user_id?: string
+          verification_attempts?: number | null
+          verification_code?: string | null
+          verification_expires_at?: string | null
         }
         Relationships: []
       }

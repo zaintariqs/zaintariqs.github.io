@@ -83,3 +83,9 @@ verify_jwt = false
 
 [functions.list-blacklisted]
 verify_jwt = false
+
+[functions.verify-deposit]
+verify_jwt = false
+
+[functions.verify-redemption]
+verify_jwt = false

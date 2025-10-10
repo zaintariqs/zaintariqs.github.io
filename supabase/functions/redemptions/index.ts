@@ -314,6 +314,28 @@ serve(async (req) => {
 
           console.log(`[redemptions] Fee calculation (existing burn, v2): Original=${amount} PKRSC, Fee=${feeAmount} PKRSC (${FEE_PERCENTAGE}%), Net=${netAmount} PKRSC`)
 
+          // Get user's email for verification
+          const { data: emailData, error: emailFetchError } = await supabase
+            .from('encrypted_emails')
+            .select('encrypted_email')
+            .eq('wallet_address', body.walletAddress.toLowerCase())
+            .single()
+
+          if (emailFetchError || !emailData) {
+            return new Response(
+              JSON.stringify({ error: 'Email not found. Please complete whitelist verification first.' }),
+              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            )
+          }
+
+          // Decrypt email
+          const { decryptEmail } = await import('../_shared/email-encryption.ts')
+          const userEmail = await decryptEmail(emailData.encrypted_email)
+
+          // Generate 6-digit verification code
+          const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
+          const expiresAt = new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
+
           // Encrypt bank details before storing
           const encryptedBankDetails = await encryptBankDetails({
             bankName: sanitizeString(body.bankName),
@@ -331,7 +353,11 @@ serve(async (req) => {
               account_title: encryptedBankDetails.accountTitle,
               burn_address: BURN_ADDRESS,
               transaction_hash: burnTx,
-              status: 'burn_confirmed',
+              status: 'draft',
+              email_verified: false,
+              verification_code: verificationCode,
+              verification_expires_at: expiresAt.toISOString(),
+              verification_attempts: 0
             })
             .select()
             .single()
@@ -342,6 +368,38 @@ serve(async (req) => {
               JSON.stringify({ error: 'Failed to create redemption with existing burn' }),
               { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
             )
+          }
+
+          // Send verification email
+          const { Resend } = await import('npm:resend@2.0.0')
+          const resend = new Resend(Deno.env.get('RESEND_API_KEY'))
+          const fromEmail = Deno.env.get('FROM_EMAIL') || 'team@pkrsc.org'
+
+          try {
+            await resend.emails.send({
+              from: `PKRSC <${fromEmail}>`,
+              to: [userEmail],
+              subject: 'Verify Your PKRSC Redemption Request',
+              html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                  <h2 style="color: #00A86B;">Verify Your Redemption Request</h2>
+                  <p>Hi,</p>
+                  <p>You've initiated a redemption request of <strong>${amount} PKRSC</strong>.</p>
+                  <p>Transaction Hash: <code>${burnTx}</code></p>
+                  <p>Please use the following verification code to confirm your request:</p>
+                  <div style="background-color: #f4f4f4; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; margin: 20px 0;">
+                    ${verificationCode}
+                  </div>
+                  <p style="color: #666; font-size: 14px;">This code expires in 15 minutes. You have 5 attempts to verify.</p>
+                  <p style="color: #999; font-size: 12px; margin-top: 30px;">
+                    If you didn't request this, please ignore this email.
+                  </p>
+                </div>
+              `,
+            })
+            console.log('Verification email sent to:', userEmail)
+          } catch (emailSendError) {
+            console.error('Failed to send verification email:', emailSendError)
           }
 
           // Record transaction fee
@@ -389,6 +447,28 @@ serve(async (req) => {
 
       console.log(`[redemptions] Fee calculation (v2): Original=${body.pkrscAmount} PKRSC, Fee=${feeAmount} PKRSC (${FEE_PERCENTAGE}%), Net=${netAmount} PKRSC`)
 
+      // Get user's email for verification
+      const { data: emailData, error: emailFetchError } = await supabase
+        .from('encrypted_emails')
+        .select('encrypted_email')
+        .eq('wallet_address', body.walletAddress.toLowerCase())
+        .single()
+
+      if (emailFetchError || !emailData) {
+        return new Response(
+          JSON.stringify({ error: 'Email not found. Please complete whitelist verification first.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Decrypt email
+      const { decryptEmail } = await import('../_shared/email-encryption.ts')
+      const userEmail = await decryptEmail(emailData.encrypted_email)
+
+      // Generate 6-digit verification code
+      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
+
       // Encrypt bank details before storing
       const encryptedBankDetails = await encryptBankDetails({
         bankName: sanitizeString(body.bankName),
@@ -405,7 +485,11 @@ serve(async (req) => {
           account_number: encryptedBankDetails.accountNumber,
           account_title: encryptedBankDetails.accountTitle,
           burn_address: BURN_ADDRESS,
-          status: 'pending'
+          status: 'draft',
+          email_verified: false,
+          verification_code: verificationCode,
+          verification_expires_at: expiresAt.toISOString(),
+          verification_attempts: 0
         })
         .select()
         .single()
@@ -425,6 +509,37 @@ serve(async (req) => {
           JSON.stringify({ error: 'Failed to create redemption request' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
+      }
+
+      // Send verification email
+      const { Resend } = await import('npm:resend@2.0.0')
+      const resend = new Resend(Deno.env.get('RESEND_API_KEY'))
+      const fromEmail = Deno.env.get('FROM_EMAIL') || 'team@pkrsc.org'
+
+      try {
+        await resend.emails.send({
+          from: `PKRSC <${fromEmail}>`,
+          to: [userEmail],
+          subject: 'Verify Your PKRSC Redemption Request',
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #00A86B;">Verify Your Redemption Request</h2>
+              <p>Hi,</p>
+              <p>You've initiated a redemption request of <strong>${body.pkrscAmount} PKRSC</strong>.</p>
+              <p>Please use the following verification code to confirm your request:</p>
+              <div style="background-color: #f4f4f4; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; margin: 20px 0;">
+                ${verificationCode}
+              </div>
+              <p style="color: #666; font-size: 14px;">This code expires in 15 minutes. You have 5 attempts to verify.</p>
+              <p style="color: #999; font-size: 12px; margin-top: 30px;">
+                If you didn't request this, please ignore this email.
+              </p>
+            </div>
+          `,
+        })
+        console.log('Verification email sent to:', userEmail)
+      } catch (emailSendError) {
+        console.error('Failed to send verification email:', emailSendError)
       }
 
       // Record transaction fee

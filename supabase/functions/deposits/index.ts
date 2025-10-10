@@ -255,6 +255,28 @@ serve(async (req) => {
 
       console.log(`Creating deposit for wallet: ${walletAddressHeader}, amount: ${amount}, method: ${paymentMethod}`)
 
+      // Get user's email for verification
+      const { data: emailData, error: emailError } = await supabase
+        .from('encrypted_emails')
+        .select('encrypted_email')
+        .eq('wallet_address', walletAddressHeader.toLowerCase())
+        .single()
+
+      if (emailError || !emailData) {
+        return new Response(
+          JSON.stringify({ error: 'Email not found. Please complete whitelist verification first.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Decrypt email
+      const { decryptEmail } = await import('../_shared/email-encryption.ts')
+      const userEmail = await decryptEmail(emailData.encrypted_email)
+
+      // Generate 6-digit verification code
+      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
+
       // Encrypt phone number for PII protection
       const { encryptPhoneNumber } = await import('../_shared/phone-encryption.ts')
       const encryptedPhone = await encryptPhoneNumber(sanitizeString(phoneNumber))
@@ -268,7 +290,11 @@ serve(async (req) => {
           phone_number: encryptedPhone,
           phone_encrypted: true,
           phone_encryption_version: 1,
-          status: 'pending'
+          status: 'draft',
+          email_verified: false,
+          verification_code: verificationCode,
+          verification_expires_at: expiresAt.toISOString(),
+          verification_attempts: 0
         })
         .select()
         .single()
@@ -281,8 +307,42 @@ serve(async (req) => {
         )
       }
 
+      // Send verification email
+      const { Resend } = await import('npm:resend@2.0.0')
+      const resend = new Resend(Deno.env.get('RESEND_API_KEY'))
+      const fromEmail = Deno.env.get('FROM_EMAIL') || 'team@pkrsc.org'
+
+      try {
+        await resend.emails.send({
+          from: `PKRSC <${fromEmail}>`,
+          to: [userEmail],
+          subject: 'Verify Your PKRSC Deposit Request',
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #00A86B;">Verify Your Deposit Request</h2>
+              <p>Hi,</p>
+              <p>You've initiated a deposit request of <strong>PKR ${amount}</strong> via ${paymentMethod}.</p>
+              <p>Please use the following verification code to confirm your request:</p>
+              <div style="background-color: #f4f4f4; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; margin: 20px 0;">
+                ${verificationCode}
+              </div>
+              <p style="color: #666; font-size: 14px;">This code expires in 15 minutes. You have 5 attempts to verify.</p>
+              <p style="color: #999; font-size: 12px; margin-top: 30px;">
+                If you didn't request this, please ignore this email.
+              </p>
+            </div>
+          `,
+        })
+        console.log('Verification email sent to:', userEmail)
+      } catch (emailSendError) {
+        console.error('Failed to send verification email:', emailSendError)
+      }
+
       return new Response(
-        JSON.stringify({ data }),
+        JSON.stringify({ 
+          data, 
+          message: 'Deposit created. Please check your email for verification code.' 
+        }),
         { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
