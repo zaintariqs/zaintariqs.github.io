@@ -16,10 +16,9 @@ const ERC20_ABI = [
   {
     constant: false,
     inputs: [
-      { name: '_to', type: 'address' },
-      { name: '_value', type: 'uint256' }
+      { name: 'amount', type: 'uint256' }
     ],
-    name: 'transfer',
+    name: 'burn',
     outputs: [{ name: '', type: 'bool' }],
     type: 'function'
   }
@@ -40,7 +39,6 @@ export function RedeemSection() {
   const [pendingTxHash, setPendingTxHash] = useState<string | null>(null)
   const [redemptionId, setRedemptionId] = useState<string | null>(null)
 
-  const burnAddress = '0x000000000000000000000000000000000000dEaD'
   const PKRSC_TOKEN_ADDRESS = '0x1f192CB7B36d7acfBBdCA1E0C1d697361508F9D5'
 
   // Monitor transaction confirmation
@@ -176,8 +174,8 @@ export function RedeemSection() {
       const txHash = await writeContractAsync({
         address: PKRSC_TOKEN_ADDRESS as `0x${string}`,
         abi: ERC20_ABI,
-        functionName: 'transfer',
-        args: [burnAddress as `0x${string}`, parseUnits(formData.amount, 6)],
+        functionName: 'burn',
+        args: [parseUnits(formData.amount, 6)],
         account: address,
         chain: base,
       })
