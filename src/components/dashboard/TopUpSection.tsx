@@ -22,11 +22,21 @@ export function TopUpSection() {
   const { address } = useAccount()
   const { signMessageAsync } = useSignMessage()
 
-  const handleTopUp = async (method: 'easypaisa' | 'jazzcash') => {
-    if (!amount || !phoneNumber) {
+  const handleTopUp = async (method: 'easypaisa' | 'jazzcash' | 'bank') => {
+    if (!amount) {
       toast({
         title: "Missing Information",
-        description: "Please enter amount and phone number",
+        description: "Please enter amount",
+        variant: "destructive"
+      })
+      return
+    }
+
+    // Phone number only required for mobile payments
+    if ((method === 'easypaisa' || method === 'jazzcash') && !phoneNumber) {
+      toast({
+        title: "Missing Information",
+        description: "Please enter phone number",
         variant: "destructive"
       })
       return
@@ -64,7 +74,7 @@ export function TopUpSection() {
           body: JSON.stringify({
             amount: parseFloat(amount),
             paymentMethod: method,
-            phoneNumber: phoneNumber,
+            phoneNumber: method === 'bank' ? '+92000000000' : phoneNumber,
           }),
         }
       )
@@ -312,9 +322,17 @@ export function TopUpSection() {
               </div>
               <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
                 <p className="text-xs text-yellow-600 dark:text-yellow-500">
-                  ⚠️ Disclaimer: Upload the proof of payment to complete the transaction
+                  ⚠️ After making the payment, click "Made Payment" to create your deposit request
                 </p>
               </div>
+              <Button 
+                onClick={() => handleTopUp('bank')}
+                disabled={isProcessing || !amount}
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+              >
+                {isProcessing ? 'Processing...' : 'Made Payment'}
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
             </TabsContent>
           </Tabs>
 
