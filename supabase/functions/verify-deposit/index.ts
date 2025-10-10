@@ -84,8 +84,7 @@ serve(async (req) => {
       .from('deposits')
       .update({
         email_verified: true,
-        status: 'pending',
-        submitted_at: new Date().toISOString()
+        status: 'pending'
       })
       .eq('id', depositId);
 

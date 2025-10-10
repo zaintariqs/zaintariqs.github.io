@@ -191,7 +191,7 @@ export function MyDeposits() {
           },
           body: JSON.stringify({
             depositId: selectedDeposit.id,
-            code: verificationCode,
+            verificationCode: verificationCode,
           }),
         }
       )
