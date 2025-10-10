@@ -74,7 +74,7 @@ export function TopUpSection() {
           body: JSON.stringify({
             amount: parseFloat(amount),
             paymentMethod: method,
-            phoneNumber: method === 'bank' ? '+92000000000' : phoneNumber,
+            phoneNumber: method === 'bank' ? '+923000000000' : phoneNumber,
           }),
         }
       )
