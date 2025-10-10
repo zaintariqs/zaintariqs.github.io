@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { encryptEmail } from '../_shared/email-encryption.ts'
+import { isDisposableEmail, getDisposableEmailError } from '../_shared/disposable-email-checker.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -54,6 +55,15 @@ serve(async (req) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(emailStr) || emailStr.length > 254) {
       return new Response(JSON.stringify({ error: 'Invalid email format' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    // Check for disposable email addresses
+    if (isDisposableEmail(emailStr)) {
+      console.warn('Disposable email rejected:', emailStr)
+      return new Response(JSON.stringify({ error: getDisposableEmailError() }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
