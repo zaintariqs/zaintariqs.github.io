@@ -15,7 +15,9 @@ export const WelcomeBonusMonitor = () => {
         .from("bank_reserves")
         .select("*")
         .eq("reserve_type", "promotional")
-        .single();
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
       
       if (error) throw error;
       return data;

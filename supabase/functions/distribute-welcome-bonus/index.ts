@@ -115,8 +115,8 @@ serve(async (req) => {
         masterMinterWallet
       );
 
-      // Convert 300 PKRSC to wei (18 decimals)
-      const amountWei = ethers.parseUnits(BONUS_AMOUNT.toString(), 18);
+      // Convert 300 PKRSC to smallest unit (6 decimals)
+      const amountWei = ethers.parseUnits(BONUS_AMOUNT.toString(), 6);
 
       console.log(`Minting ${BONUS_AMOUNT} PKRSC to ${walletAddress}`);
       
