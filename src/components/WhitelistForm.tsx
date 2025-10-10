@@ -163,16 +163,8 @@ export function WhitelistForm() {
       setIsVerified(true)
       toast({
         title: "Email Verified! ✅",
-        description: data.message || "Your whitelist request is now pending admin approval.",
+        description: "Your request is now under review by our admin team.",
       })
-
-      // Reset form after a delay
-      setTimeout(() => {
-        setEmail('')
-        setVerificationCode('')
-        setShowVerification(false)
-        setIsVerified(false)
-      }, 3000)
 
     } catch (error: any) {
       console.error('Error verifying email:', error)
@@ -209,10 +201,15 @@ export function WhitelistForm() {
           <div className="flex justify-center">
             <CheckCircle className="h-16 w-16 text-crypto-green animate-in zoom-in duration-300" />
           </div>
-          <h3 className="text-2xl font-bold text-crypto-green">Email Verified!</h3>
+          <h3 className="text-2xl font-bold text-crypto-green">Request Under Review</h3>
           <p className="text-muted-foreground">
-            Your whitelist request is now pending admin approval. We'll notify you via email.
+            Your whitelist request is being processed by our admin team. We'll notify you via email once approved.
           </p>
+          <div className="mt-6 p-4 bg-muted/30 rounded-lg border border-primary/20">
+            <p className="text-sm text-muted-foreground">
+              <strong>Wallet:</strong> {address}
+            </p>
+          </div>
         </div>
       ) : showVerification ? (
         <form onSubmit={handleVerify} className="space-y-4">
