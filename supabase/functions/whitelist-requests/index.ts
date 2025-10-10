@@ -24,6 +24,7 @@ async function verifyWalletSignature(
 
 // Import email encryption utilities
 import { encryptEmail, decryptEmail } from '../_shared/email-encryption.ts'
+import { isDisposableEmail, getDisposableEmailError } from '../_shared/disposable-email-checker.ts'
 
 // Rate limiting configuration
 const RATE_LIMIT_MS = 60000; // 1 minute
@@ -153,6 +154,25 @@ serve(async (req) => {
           JSON.stringify({ error: "Wallet address and email are required" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
+      }
+
+      // Validate email format
+      const emailStr = String(email).trim().toLowerCase()
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(emailStr) || emailStr.length > 254) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid email format' }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        )
+      }
+
+      // Check for disposable email addresses
+      if (isDisposableEmail(emailStr)) {
+        console.warn('Disposable email rejected:', emailStr)
+        return new Response(
+          JSON.stringify({ error: getDisposableEmailError() }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        )
       }
 
       // Require signature verification to prevent spam/harvesting

@@ -65,6 +65,7 @@ const DISPOSABLE_DOMAINS = new Set([
   'emailtemp.org',
   'throwawaymail.com',
   'mailtemp.net',
+  'gimpmail.com',
 ])
 
 // Suspicious patterns that might indicate disposable emails
