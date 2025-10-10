@@ -27,11 +27,12 @@ serve(async (req) => {
 
     console.log(`Starting welcome bonus distribution for ${walletAddress}`);
 
-    // Check if user already received bonus
+    // Check if user already received a completed bonus (allow retries for failed bonuses)
     const { data: existingBonus } = await supabase
       .from("welcome_bonuses")
       .select("*")
       .eq("wallet_address", walletAddress.toLowerCase())
+      .eq("status", "completed")
       .single();
 
     if (existingBonus) {
