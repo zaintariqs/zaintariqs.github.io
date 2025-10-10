@@ -27,20 +27,19 @@ export const WelcomeBonusMonitor = () => {
     refetchInterval: 5000, // Refetch every 5 seconds
   });
 
-  // Fetch welcome bonuses
+  // Fetch welcome bonuses via edge function (bypasses RLS)
   const { data: bonuses } = useQuery({
-    queryKey: ["welcome-bonuses"],
+    queryKey: ["welcome-bonuses", address],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("welcome_bonuses")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(20);
-      
+      if (!address) return [] as any[];
+      const { data, error } = await supabase.functions.invoke('get-welcome-bonuses', {
+        body: { walletAddress: address }
+      });
       if (error) throw error;
-      return data;
+      return (data?.bonuses as any[]) || [];
     },
-    refetchInterval: 5000, // Refetch every 5 seconds
+    enabled: !!address,
+    refetchInterval: 5000,
   });
 
   const promotionalBalance = reservesData?.amount ? parseFloat(reservesData.amount.toString()) : 0;
