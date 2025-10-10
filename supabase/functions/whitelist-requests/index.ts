@@ -211,6 +211,52 @@ serve(async (req) => {
         }
       }
 
+      // Check if email is already used for another wallet address
+      const { data: allEncryptedEmails } = await supabase
+        .from('encrypted_emails')
+        .select('wallet_address, encrypted_email');
+
+      if (allEncryptedEmails && allEncryptedEmails.length > 0) {
+        for (const emailRecord of allEncryptedEmails) {
+          try {
+            const decryptedEmail = await decryptEmail(emailRecord.encrypted_email);
+            
+            if (decryptedEmail.toLowerCase() === email.toLowerCase()) {
+              // Found matching email - check if it's for a different wallet
+              if (emailRecord.wallet_address.toLowerCase() !== walletAddress.toLowerCase()) {
+                // Check if this wallet is blacklisted
+                const { data: blacklistCheck } = await supabase
+                  .from('blacklisted_addresses')
+                  .select('*')
+                  .eq('wallet_address', emailRecord.wallet_address.toLowerCase())
+                  .eq('is_active', true)
+                  .single();
+
+                if (blacklistCheck) {
+                  return new Response(
+                    JSON.stringify({ 
+                      error: "This email address is associated with a blacklisted wallet address and cannot be used for whitelisting." 
+                    }),
+                    { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+                  );
+                }
+
+                // Email is already used for a different, non-blacklisted wallet
+                return new Response(
+                  JSON.stringify({ 
+                    error: "This email address is already registered with another wallet address. Each email can only be used once." 
+                  }),
+                  { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+                );
+              }
+            }
+          } catch (decryptError) {
+            console.error('Error decrypting email during validation:', decryptError);
+            // Continue checking other emails
+          }
+        }
+      }
+
       // Encrypt email and store separately
       const encryptedEmail = await encryptEmail(email.toLowerCase())
       
