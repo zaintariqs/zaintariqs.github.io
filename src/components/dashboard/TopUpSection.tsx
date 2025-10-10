@@ -18,6 +18,7 @@ export function TopUpSection() {
   const [verificationCode, setVerificationCode] = useState('')
   const [currentDepositId, setCurrentDepositId] = useState<string | null>(null)
   const [isVerifying, setIsVerifying] = useState(false)
+  const [activeTab, setActiveTab] = useState('easypaisa')
   const { toast } = useToast()
   const { address } = useAccount()
   const { signMessageAsync } = useSignMessage()
@@ -229,20 +230,22 @@ export function TopUpSection() {
             </div>
           </div>
 
-          {/* Phone Number */}
-          <div className="space-y-2">
-            <Label htmlFor="phone">Phone Number</Label>
-            <Input
-              id="phone"
-              type="tel"
-              placeholder="+92 300 1234567"
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
-            />
-          </div>
+          {/* Phone Number - Only show for mobile payments */}
+          {activeTab !== 'bank' && (
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone Number</Label>
+              <Input
+                id="phone"
+                type="tel"
+                placeholder="+92 300 1234567"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+              />
+            </div>
+          )}
 
           {/* Payment Methods */}
-          <Tabs defaultValue="easypaisa" className="w-full">
+          <Tabs defaultValue="easypaisa" className="w-full" onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="easypaisa" className="flex items-center gap-2">
                 <Smartphone className="h-4 w-4" />
