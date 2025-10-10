@@ -22,6 +22,7 @@ export const WelcomeBonusMonitor = () => {
       if (error) throw error;
       return data;
     },
+    refetchInterval: 5000, // Refetch every 5 seconds
   });
 
   // Fetch welcome bonuses
@@ -37,6 +38,7 @@ export const WelcomeBonusMonitor = () => {
       if (error) throw error;
       return data;
     },
+    refetchInterval: 5000, // Refetch every 5 seconds
   });
 
   const promotionalBalance = reserves?.amount ? parseFloat(reserves.amount.toString()) : 0;
