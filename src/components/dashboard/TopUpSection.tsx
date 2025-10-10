@@ -75,13 +75,18 @@ export function TopUpSection() {
           body: JSON.stringify({
             amount: parseFloat(amount),
             paymentMethod: method,
-            phoneNumber: method === 'bank' ? '+923000000000' : phoneNumber,
+            phoneNumber: method === 'bank' ? undefined : phoneNumber,
           }),
         }
       )
 
       if (!response.ok) {
-        throw new Error('Failed to create deposit request')
+        let serverError = 'Failed to create deposit request'
+        try {
+          const errJson = await response.json()
+          if (errJson?.error) serverError = errJson.error
+        } catch {}
+        throw new Error(serverError)
       }
 
       const result = await response.json()
@@ -99,7 +104,7 @@ export function TopUpSection() {
       console.error('Error creating deposit:', error)
       toast({
         title: "Error",
-        description: "Failed to create deposit request",
+        description: error instanceof Error ? error.message : "Failed to create deposit request",
         variant: "destructive",
       })
     } finally {
