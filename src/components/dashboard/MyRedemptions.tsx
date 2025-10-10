@@ -202,41 +202,6 @@ export function MyRedemptions() {
     }
   }
 
-  useEffect(() => {
-    const fetchRedemptions = async () => {
-      if (!address) return
-
-      try {
-        const response = await fetch(
-          'https://jdjreuxhvzmzockuduyq.supabase.co/functions/v1/redemptions',
-          {
-            method: 'GET',
-            headers: {
-              'x-wallet-address': address,
-            },
-          }
-        )
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch redemptions')
-        }
-
-        const { data } = await response.json()
-        setRedemptions(data || [])
-      } catch (error) {
-        console.error('Error fetching redemptions:', error)
-        toast({
-          title: "Error",
-          description: "Failed to load redemption history",
-          variant: "destructive",
-        })
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchRedemptions()
-  }, [address, toast])
 
   const getStatusBadge = (status: string) => {
     const statusLabels: Record<string, string> = {
