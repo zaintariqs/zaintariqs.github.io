@@ -166,9 +166,13 @@ serve(async (req) => {
         )
       }
 
+      // Log only the domain (no PII)
+      const domain = emailStr.split('@').pop() || ''
+      console.info(`Whitelist email domain received: ${domain}`)
+
       // Check for disposable email addresses
       if (isDisposableEmail(emailStr)) {
-        console.warn('Disposable email rejected:', emailStr)
+        console.warn('Disposable email rejected:', domain)
         return new Response(
           JSON.stringify({ error: getDisposableEmailError() }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
