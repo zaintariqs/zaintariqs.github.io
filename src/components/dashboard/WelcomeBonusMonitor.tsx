@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAccount } from "wagmi";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Gift, TrendingDown, Users, AlertCircle } from "lucide-react";
@@ -7,21 +8,22 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { format } from "date-fns";
 
 export const WelcomeBonusMonitor = () => {
-  // Fetch promotional reserves
-  const { data: reserves } = useQuery({
-    queryKey: ["promotional-reserves"],
+  const { address } = useAccount();
+
+  // Fetch promotional reserves via edge function
+  const { data: reservesData } = useQuery({
+    queryKey: ["promotional-reserves", address],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("bank_reserves")
-        .select("*")
-        .eq("reserve_type", "promotional")
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      if (!address) return null;
+      
+      const { data, error } = await supabase.functions.invoke('get-bank-reserves', {
+        body: { walletAddress: address }
+      });
       
       if (error) throw error;
-      return data;
+      return data?.reserves?.find((r: any) => r.reserve_type === 'promotional');
     },
+    enabled: !!address,
     refetchInterval: 5000, // Refetch every 5 seconds
   });
 
@@ -41,7 +43,7 @@ export const WelcomeBonusMonitor = () => {
     refetchInterval: 5000, // Refetch every 5 seconds
   });
 
-  const promotionalBalance = reserves?.amount ? parseFloat(reserves.amount.toString()) : 0;
+  const promotionalBalance = reservesData?.amount ? parseFloat(reservesData.amount.toString()) : 0;
   const totalDistributed = bonuses?.filter(b => b.status === "completed").length || 0;
   const remainingBonuses = Math.floor(promotionalBalance / 300);
   const totalBudget = 30000; // Initial budget
