@@ -117,7 +117,7 @@ export function TopUpSection() {
           },
           body: JSON.stringify({
             depositId: currentDepositId,
-            code: verificationCode,
+            verificationCode: verificationCode,
           }),
         }
       )
