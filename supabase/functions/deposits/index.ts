@@ -4,7 +4,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-wallet-address, x-wallet-signature, x-signature-message',
-  'Access-Control-Allow-Methods': 'POST,GET,PATCH,OPTIONS',
+  'Access-Control-Allow-Methods': 'POST,GET,PATCH,DELETE,OPTIONS',
 }
 
 // Valid payment methods for deposits
@@ -405,6 +405,63 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ data }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // DELETE: Cancel draft deposit
+    if (req.method === 'DELETE') {
+      const url = new URL(req.url)
+      const depositId = url.searchParams.get('depositId')
+
+      if (!depositId) {
+        return new Response(
+          JSON.stringify({ error: 'Deposit ID is required' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      console.log(`Cancelling deposit: ${depositId}`)
+
+      // Verify deposit belongs to user and is in draft status
+      const { data: deposit, error: fetchError } = await supabase
+        .from('deposits')
+        .select('*')
+        .eq('id', depositId)
+        .eq('user_id', walletAddressHeader.toLowerCase())
+        .eq('status', 'draft')
+        .single()
+
+      if (fetchError || !deposit) {
+        return new Response(
+          JSON.stringify({ error: 'Deposit not found, unauthorized, or cannot be cancelled' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Update deposit status to cancelled
+      const { data, error } = await supabase
+        .from('deposits')
+        .update({
+          status: 'cancelled',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', depositId)
+        .select()
+        .single()
+
+      if (error) {
+        console.error('Error cancelling deposit:', error)
+        return new Response(
+          JSON.stringify({ error: 'Failed to cancel deposit' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      console.log(`Deposit ${depositId} successfully cancelled`)
+
+      return new Response(
+        JSON.stringify({ data, message: 'Deposit cancelled successfully' }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }

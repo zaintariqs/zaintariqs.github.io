@@ -42,6 +42,8 @@ export function MyDeposits() {
   const [transactionId, setTransactionId] = useState('')
   const [receiptFile, setReceiptFile] = useState<File | null>(null)
   const [verificationCode, setVerificationCode] = useState('')
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
+  const [isCancelling, setIsCancelling] = useState(false)
 
   const fetchDeposits = async () => {
     if (!address) return
@@ -221,6 +223,59 @@ export function MyDeposits() {
     }
   }
 
+  const handleCancelDeposit = (deposit: Deposit) => {
+    setSelectedDeposit(deposit)
+    setCancelDialogOpen(true)
+  }
+
+  const handleConfirmCancel = async () => {
+    if (!selectedDeposit || !address) return
+
+    setIsCancelling(true)
+    try {
+      // Sign message to prove wallet ownership
+      const message = `Cancel deposit ${selectedDeposit.id} at ${new Date().toISOString()}`
+      const signature = await signMessageAsync({ 
+        message,
+        account: address
+      })
+
+      const response = await fetch(
+        `https://jdjreuxhvzmzockuduyq.supabase.co/functions/v1/deposits?depositId=${selectedDeposit.id}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'x-wallet-address': address,
+            'x-wallet-signature': signature,
+            'x-signature-message': btoa(message),
+          },
+        }
+      )
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to cancel deposit')
+      }
+
+      toast({
+        title: "Success",
+        description: "Deposit cancelled successfully",
+      })
+
+      setCancelDialogOpen(false)
+      fetchDeposits()
+    } catch (error) {
+      console.error('Error cancelling deposit:', error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to cancel deposit",
+        variant: "destructive",
+      })
+    } finally {
+      setIsCancelling(false)
+    }
+  }
+
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline", className: string }> = {
       draft: { variant: "secondary", className: "bg-gray-500/10 text-gray-500 border-gray-500/20" },
@@ -325,13 +380,23 @@ export function MyDeposits() {
                     <TableCell>
                       <div className="flex flex-col gap-2">
                         {deposit.status === 'draft' && (
-                          <Button
-                            size="sm"
-                            onClick={() => handleVerifyEmail(deposit)}
-                            className="w-full"
-                          >
-                            Verify Email
-                          </Button>
+                          <>
+                            <Button
+                              size="sm"
+                              onClick={() => handleVerifyEmail(deposit)}
+                              className="w-full"
+                            >
+                              Verify Email
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleCancelDeposit(deposit)}
+                              className="w-full"
+                            >
+                              Cancel
+                            </Button>
+                          </>
                         )}
                         {deposit.status === 'pending' && !deposit.submitted_at && (
                           <Button
@@ -453,6 +518,43 @@ export function MyDeposits() {
             </Button>
             <Button onClick={handleVerifyCode} disabled={isVerifying || !verificationCode}>
               {isVerifying ? 'Verifying...' : 'Verify'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel Deposit Request</DialogTitle>
+          </DialogHeader>
+          {selectedDeposit && (
+            <div className="space-y-4 py-4">
+              <div className="bg-muted/50 rounded-lg p-3 space-y-1">
+                <p className="text-sm font-medium">Amount: PKR {selectedDeposit.amount_pkr.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">
+                  Payment Method: {selectedDeposit.payment_method === 'easypaisa' ? 'EasyPaisa' : 'JazzCash'}
+                </p>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Are you sure you want to cancel this deposit request? This action cannot be undone.
+              </p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setCancelDialogOpen(false)} 
+              disabled={isCancelling}
+            >
+              Keep Deposit
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleConfirmCancel} 
+              disabled={isCancelling}
+            >
+              {isCancelling ? 'Cancelling...' : 'Cancel Deposit'}
             </Button>
           </DialogFooter>
         </DialogContent>
