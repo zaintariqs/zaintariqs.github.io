@@ -166,6 +166,23 @@ Deno.serve(async (req) => {
     }
     const divisor = Math.pow(10, decimals);
 
+    // Try BaseScan first for fast and reliable results
+    try {
+      const bsHolders = await fetchHoldersFromBaseScan(decimals);
+      if (bsHolders.length > 0) {
+        console.log('Returning holders from BaseScan:', bsHolders.length);
+        return new Response(
+          JSON.stringify({ holders: bsHolders }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200 
+          }
+        );
+      }
+    } catch (e) {
+      console.warn('BaseScan primary fetch failed:', e instanceof Error ? e.message : String(e));
+    }
+
     // Get the current block number
     const blockData = await rpcFetch('eth_blockNumber', []);
     const currentBlock = parseInt(blockData.result, 16);
