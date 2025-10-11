@@ -22,6 +22,7 @@ import AllDepositsPage from './admin/AllDepositsPage'
 import AllRedemptionsPage from './admin/AllRedemptionsPage'
 import TransactionFeesPage from './admin/TransactionFeesPage'
 import MyActivityPage from './admin/MyActivityPage'
+import UserBalancesPage from './admin/UserBalancesPage'
 
 export default function Dashboard() {
   const { isConnected, address } = useAccount()
@@ -112,6 +113,7 @@ export default function Dashboard() {
                   {location.pathname === '/dashboard/all-redemptions' && <AllRedemptionsPage />}
                   {location.pathname === '/dashboard/fees' && <TransactionFeesPage />}
                   {location.pathname === '/dashboard/my-activity' && <MyActivityPage />}
+                  {location.pathname === '/dashboard/user-balances' && <UserBalancesPage />}
                 </div>
               </main>
             </div>

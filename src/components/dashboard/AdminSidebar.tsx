@@ -8,7 +8,8 @@ import {
   Wallet, 
   Receipt, 
   DollarSign,
-  Activity
+  Activity,
+  PieChart
 } from 'lucide-react'
 
 import {
@@ -76,6 +77,12 @@ const adminMenuItems = [
     url: '/dashboard/my-activity', 
     icon: Activity,
     description: 'Personal transactions'
+  },
+  { 
+    title: 'User Balances', 
+    url: '/dashboard/user-balances', 
+    icon: PieChart,
+    description: 'Token holder balances'
   },
 ]
 
