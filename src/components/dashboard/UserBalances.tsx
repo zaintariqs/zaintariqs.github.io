@@ -75,7 +75,16 @@ export function UserBalances() {
     }
   }, [address]);
 
-  const calculateTotalSupply = () => {
+  const calculateCirculatingSupply = () => {
+    // Correct calculation: Total Minted - Treasury - Burned
+    const totalMinted = parseFloat(metrics.totalMinted);
+    const treasury = parseFloat(metrics.treasury);
+    const burned = parseFloat(metrics.burned);
+    return (totalMinted - treasury - burned).toFixed(2);
+  };
+
+  const calculateTotalHolderBalances = () => {
+    // This is just the sum of fetched holder balances (may be incomplete if BaseScan fails)
     return holders.reduce((sum, holder) => {
       return sum + parseFloat(holder.balanceFormatted);
     }, 0).toFixed(2);
@@ -140,7 +149,10 @@ export function UserBalances() {
         <div className="mb-6 p-4 bg-white/5 rounded-lg border border-white/10">
           <p className="text-sm text-white/70 mb-1">Circulating Supply</p>
           <p className="text-2xl font-bold text-white">
-            {loading ? '...' : holders.length > 0 ? `${calculateTotalSupply()} PKRSC` : '0.00 PKRSC'}
+            {loading ? '...' : `${parseFloat(calculateCirculatingSupply()).toLocaleString()} PKRSC`}
+          </p>
+          <p className="text-xs text-white/50 mt-1">
+            Total Minted - Treasury - Burned
           </p>
         </div>
 
@@ -177,9 +189,9 @@ export function UserBalances() {
               </TableHeader>
               <TableBody>
                 {holders.map((holder, index) => {
-                  const totalSupply = parseFloat(calculateTotalSupply());
-                  const percentage = totalSupply > 0 
-                    ? ((parseFloat(holder.balanceFormatted) / totalSupply) * 100).toFixed(2)
+                  const circulatingSupply = parseFloat(calculateCirculatingSupply());
+                  const percentage = circulatingSupply > 0 
+                    ? ((parseFloat(holder.balanceFormatted) / circulatingSupply) * 100).toFixed(2)
                     : '0.00';
                   
                   return (

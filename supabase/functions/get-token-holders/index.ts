@@ -95,13 +95,25 @@ async function calculateBurnedTokens(decimals: number): Promise<string> {
 }
 
 async function fetchHoldersFromBaseScan(decimals: number): Promise<TokenHolder[]> {
-  if (!BASESCAN_API_KEY) return [];
+  if (!BASESCAN_API_KEY) {
+    console.log('⚠️ No BASESCAN_API_KEY found, skipping BaseScan');
+    return [];
+  }
+  
+  console.log('📡 BaseScan API Key present, attempting tokenholderlist...');
   
   // Try tokenholderlist first (most reliable)
   try {
     const url = `https://api.basescan.org/api?module=token&action=tokenholderlist&contractaddress=${PKRSC_CONTRACT_ADDRESS}&page=1&offset=1000&apikey=${BASESCAN_API_KEY}`;
+    console.log('📡 Calling BaseScan tokenholderlist endpoint...');
     const res = await fetch(url);
     const json = await res.json();
+    
+    console.log('📡 BaseScan tokenholderlist response:', {
+      status: json.status,
+      message: json.message,
+      resultCount: Array.isArray(json.result) ? json.result.length : 0
+    });
 
     if (json.status === '1' && Array.isArray(json.result) && json.result.length > 0) {
       const divisor = Math.pow(10, decimals);
@@ -129,15 +141,17 @@ async function fetchHoldersFromBaseScan(decimals: number): Promise<TokenHolder[]
         .filter((h) => Number(h.balance) > 0)
         .sort((a, b) => (BigInt(b.balance) > BigInt(a.balance) ? 1 : -1));
       
-      console.log(`BaseScan tokenholderlist returned ${holders.length} holders`);
+      console.log(`✅ BaseScan tokenholderlist returned ${holders.length} holders`);
       return holders;
+    } else {
+      console.log(`⚠️ BaseScan tokenholderlist failed: status=${json.status}, message=${json.message}`);
     }
   } catch (e) {
-    console.warn('tokenholderlist failed:', e);
+    console.warn('❌ tokenholderlist request failed:', e);
   }
 
   // Fallback: Comprehensive tokentx scan
-  console.log('Falling back to tokentx analysis...');
+  console.log('📡 Falling back to tokentx analysis...');
   const addrSet = new Set<string>();
   
   // Scan more pages to catch all holders
@@ -147,7 +161,14 @@ async function fetchHoldersFromBaseScan(decimals: number): Promise<TokenHolder[]
       const txRes = await fetch(txUrl);
       const txJson = await txRes.json();
       
-      if (txJson.status !== '1' || !Array.isArray(txJson.result) || txJson.result.length === 0) break;
+      console.log(`📡 tokentx page ${page}: status=${txJson.status}, results=${Array.isArray(txJson.result) ? txJson.result.length : 0}`);
+      
+      if (txJson.status !== '1' || !Array.isArray(txJson.result) || txJson.result.length === 0) {
+        if (page === 1) {
+          console.log(`⚠️ tokentx page 1 failed: status=${txJson.status}, message=${txJson.message}`);
+        }
+        break;
+      }
       
       for (const t of txJson.result) {
         if (t.from) addrSet.add(String(t.from).toLowerCase());
