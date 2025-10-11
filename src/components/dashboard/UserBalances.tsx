@@ -15,13 +15,14 @@ interface TokenHolder {
   email?: string;
   label?: string;
   labelType?: string;
-  lpType?: 'provider' | 'uniswap' | 'master-minter';
+  lpType?: 'provider' | 'uniswap' | 'master-minter' | 'market-maker';
   isLiquidityPool?: boolean;
 }
 
 const LP_PROVIDER_ADDRESS = '0xcfbdcbfd1312a2d85545a88ca95c93c7523dd11b';
 const UNISWAP_POOL_ADDRESS = '0x1bc6fb786b7b5ba4d31a7f47a75ec3fd3b26690e';
 const MASTER_MINTER_ADDRESS = '0x50c46b0286028c3ab12b947003129feb39ccf082';
+const MARKET_MAKER_ADDRESS = '0x65706aa69b3613bfc6926561ef332118d20cbc41';
 
 interface TokenMetrics {
   totalMinted: string;
@@ -255,6 +256,7 @@ export function UserBalances() {
                                 holder.labelType === 'provider' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
                                 holder.labelType === 'uniswap' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
                                 holder.labelType === 'master-minter' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
+                                holder.labelType === 'market-maker' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' :
                                 'bg-gray-500/20 text-gray-400 border border-gray-500/30'
                               }`}>
                                 {holder.label}
@@ -280,6 +282,13 @@ export function UserBalances() {
                             <div className="mt-1">
                               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/30">
                                 MASTER MINTER ADDRESS
+                              </span>
+                            </div>
+                          )}
+                          {!holder.label && (holder.lpType === 'market-maker' || holder.address.toLowerCase() === MARKET_MAKER_ADDRESS) && (
+                            <div className="mt-1">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                                MARKET MAKER ADDRESS
                               </span>
                             </div>
                           )}

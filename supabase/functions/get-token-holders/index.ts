@@ -545,6 +545,9 @@ Deno.serve(async (req) => {
           console.warn('Failed to check special addresses:', e);
         }
 
+        // Sort by balance (highest first)
+        holdersArr.sort((a, b) => (BigInt(b.balance) > BigInt(a.balance) ? 1 : -1));
+
         return new Response(
           JSON.stringify({ holders: holdersArr, metrics }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
@@ -680,6 +683,9 @@ Deno.serve(async (req) => {
     } catch (e) {
       console.warn('Failed to compute treasury in fallback path:', e);
     }
+
+    // Sort by balance (highest first)
+    holders.sort((a, b) => (BigInt(b.balance) > BigInt(a.balance) ? 1 : -1));
 
     return new Response(
       JSON.stringify({ holders, metrics }),
