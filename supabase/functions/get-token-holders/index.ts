@@ -4,7 +4,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-const PKRSC_CONTRACT_ADDRESS = '0x220ac54e22056b834522cd1a6a3dfeca63bc3c6e';
+const PKRSC_CONTRACT_ADDRESS = '0x220aC54E22056B834522cD1A6A3DfeCA63bC3C6e';
 const BASE_MAINNET_RPC = 'https://mainnet.base.org';
 
 // ERC20 Transfer event signature
