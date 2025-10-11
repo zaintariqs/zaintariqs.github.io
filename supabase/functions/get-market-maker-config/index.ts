@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { ethers } from 'https://esm.sh/ethers@6.7.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -51,8 +52,23 @@ Deno.serve(async (req) => {
       )
     }
 
+    // Derive wallet address from private key
+    let botWalletAddress = null
+    try {
+      const privateKey = Deno.env.get('MARKET_MAKER_PRIVATE_KEY')
+      if (privateKey) {
+        const wallet = new ethers.Wallet(privateKey)
+        botWalletAddress = wallet.address
+      }
+    } catch (error) {
+      console.error('Error deriving wallet address:', error)
+    }
+
     return new Response(
-      JSON.stringify(config),
+      JSON.stringify({
+        ...config,
+        bot_wallet_address: botWalletAddress
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {

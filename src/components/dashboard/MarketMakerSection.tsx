@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Bot, TrendingUp, Activity, AlertCircle, ExternalLink, Clock } from 'lucide-react'
+import { Bot, TrendingUp, Activity, AlertCircle, ExternalLink, Clock, Wallet } from 'lucide-react'
 import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/hooks/use-toast'
 import { useAccount } from 'wagmi'
@@ -18,6 +18,7 @@ interface BotConfig {
   min_trade_interval_seconds: number
   status: 'active' | 'paused' | 'error'
   last_trade_at: string | null
+  bot_wallet_address?: string
 }
 
 interface Transaction {
@@ -328,6 +329,29 @@ export function MarketMakerSection() {
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Bot Wallet Address */}
+        {config?.bot_wallet_address && (
+          <div className="p-4 bg-primary/10 rounded-lg border border-primary/20">
+            <div className="flex items-center gap-2 mb-2">
+              <Wallet className="h-4 w-4 text-primary" />
+              <span className="font-medium text-sm">Bot Wallet Address</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <code className="text-xs bg-background/50 px-2 py-1 rounded font-mono">
+                {config.bot_wallet_address}
+              </code>
+              <a 
+                href={`https://sepolia.basescan.org/address/${config.bot_wallet_address}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:text-primary/80 transition-colors"
+              >
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
+          </div>
+        )}
+
         {/* Automation Status */}
         <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-primary/20">
           <div className="flex items-center gap-3">
