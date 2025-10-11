@@ -20,16 +20,9 @@ export function UniswapSection() {
       try {
         // Query Uniswap V3 subgraph for Base network
         // USDT on Base: 0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2
+        // Pool address: 0x1bC6fB786B7B5BA4D31A7F47a75eC3Fd3B26690E
         const query = `{
-          pools(
-            where: {
-              token0_: { id: "${PKRSC_CONTRACT_ADDRESS.toLowerCase()}" }
-              token1_: { id: "0xfde4c96c8593536e31f229ea8f37b2ada2699bb2" }
-            }
-            orderBy: totalValueLockedUSD
-            orderDirection: desc
-            first: 1
-          ) {
+          pool(id: "0x1bc6fb786b7b5ba4d31a7f47a75ec3fd3b26690e") {
             id
             totalValueLockedUSD
             volumeUSD
@@ -56,8 +49,8 @@ export function UniswapSection() {
 
         if (response.ok) {
           const data = await response.json()
-          if (data.data?.pools && data.data.pools.length > 0) {
-            const pool = data.data.pools[0]
+          if (data.data?.pool) {
+            const pool = data.data.pool
             setPoolData({
               tvl: `$${parseFloat(pool.totalValueLockedUSD).toLocaleString('en-US', { maximumFractionDigits: 0 })}`,
               volume24h: `$${parseFloat(pool.volumeUSD).toLocaleString('en-US', { maximumFractionDigits: 0 })}`,
