@@ -52,13 +52,13 @@ interface TokenHolder {
   balance: string;
   balanceFormatted: string;
   email?: string;
-  lpType?: 'provider' | 'uniswap' | 'master-minter';
+  label?: string;
+  labelType?: string;
 }
 
-const LP_PROVIDER_ADDRESS = '0xCFBDCBFD1312a2D85545A88Ca95C93C7523dd11b'.toLowerCase();
-const UNISWAP_POOL_ADDRESS = '0x1bC6fB786B7B5BA4D31A7F47a75eC3Fd3B26690E'.toLowerCase();
-const MASTER_MINTER_ADDRESS = '0x50c46b0286028c3ab12b947003129feb39ccf082'.toLowerCase();
-const KNOWN_LP_ADDRESSES = [LP_PROVIDER_ADDRESS, UNISWAP_POOL_ADDRESS, MASTER_MINTER_ADDRESS];
+const LP_PROVIDER_ADDRESS = '0xcfbdcbfd1312a2d85545a88ca95c93c7523dd11b';
+const UNISWAP_POOL_ADDRESS = '0x1bc6fb786b7b5ba4d31a7f47a75ec3fd3b26690e';
+const MASTER_MINTER_ADDRESS = '0x50c46b0286028c3ab12b947003129feb39ccf082';
 
 // Optional BaseScan API key for reliable holder lookup
 const BASESCAN_API_KEY = Deno.env.get('BASESCAN_API_KEY');
@@ -297,8 +297,8 @@ async function fetchHoldersFromRpcLogs(decimals: number): Promise<TokenHolder[]>
   }
 }
 
-// Enrich holders array with emails from database and decrypt them
-async function enrichHoldersWithEmails(supabase: any, holders: TokenHolder[]): Promise<void> {
+// Enrich holders array with emails and special address labels from database
+async function enrichHoldersWithEmails(supabase: any, holders: TokenHolder[]): Promise<string[]> {
   try {
     const addresses = holders.map(h => h.address.toLowerCase());
     
@@ -308,7 +308,12 @@ async function enrichHoldersWithEmails(supabase: any, holders: TokenHolder[]): P
       .select('wallet_address, encrypted_email')
       .in('wallet_address', addresses);
 
-    // Create lookup map with encrypted emails
+    // Fetch special addresses from database
+    const { data: specialAddresses } = await supabase
+      .from('special_addresses')
+      .select('address, label, label_type');
+
+    // Create email lookup map
     const emailMap = new Map<string, string>();
     if (encryptedEmails) {
       for (const record of encryptedEmails) {
@@ -318,7 +323,23 @@ async function enrichHoldersWithEmails(supabase: any, holders: TokenHolder[]): P
       }
     }
 
-    // Enrich holders with DECRYPTED emails and mark LP type
+    // Create special addresses lookup map
+    const specialAddressMap = new Map<string, { label: string; labelType: string }>();
+    const knownSpecialAddresses: string[] = [];
+    if (specialAddresses) {
+      for (const record of specialAddresses) {
+        if (record.address) {
+          const addr = record.address.toLowerCase();
+          specialAddressMap.set(addr, {
+            label: record.label,
+            labelType: record.label_type
+          });
+          knownSpecialAddresses.push(addr);
+        }
+      }
+    }
+
+    // Enrich holders with DECRYPTED emails and special address labels
     for (const holder of holders) {
       const addr = holder.address.toLowerCase();
       const encryptedEmail = emailMap.get(addr);
@@ -329,23 +350,23 @@ async function enrichHoldersWithEmails(supabase: any, holders: TokenHolder[]): P
           holder.email = await decryptEmail(encryptedEmail);
         } catch (e) {
           console.warn(`Failed to decrypt email for ${addr}:`, e);
-          holder.email = undefined; // Don't show encrypted email if decryption fails
+          holder.email = undefined;
         }
       }
       
-      // Mark LP type
-      if (addr === LP_PROVIDER_ADDRESS) {
-        holder.lpType = 'provider';
-      } else if (addr === UNISWAP_POOL_ADDRESS) {
-        holder.lpType = 'uniswap';
-      } else if (addr === MASTER_MINTER_ADDRESS) {
-        holder.lpType = 'master-minter';
+      // Apply special address label if exists
+      const specialInfo = specialAddressMap.get(addr);
+      if (specialInfo) {
+        holder.label = specialInfo.label;
+        holder.labelType = specialInfo.labelType;
       }
     }
 
-    console.log(`Enriched ${holders.length} holders with decrypted email data`);
+    console.log(`Enriched ${holders.length} holders with decrypted email data and special labels`);
+    return knownSpecialAddresses;
   } catch (e) {
     console.warn('Failed to enrich holders with emails:', e);
+    return [];
   }
 }
 
@@ -488,34 +509,41 @@ Deno.serve(async (req) => {
           console.log('Merged holders count:', holdersArr.length);
         }
 
-        // Always ensure LP addresses are checked and included
+        // Always ensure special addresses from DB are included
+        let knownSpecialAddresses: string[] = [];
         try {
-          for (const lpLower of KNOWN_LP_ADDRESSES) {
-            const lpExists = holdersArr.find(h => h.address.toLowerCase() === lpLower);
-            if (!lpExists) {
+          knownSpecialAddresses = await enrichHoldersWithEmails(supabase, holdersArr);
+          
+          // Check and add any missing special addresses
+          for (const specialAddr of knownSpecialAddresses) {
+            const exists = holdersArr.find(h => h.address.toLowerCase() === specialAddr);
+            if (!exists) {
               let wei = 0n;
               try {
-                const lpBal = await rpcFetch('eth_call', [{
+                const bal = await rpcFetch('eth_call', [{
                   to: PKRSC_CONTRACT_ADDRESS,
-                  data: '0x70a08231' + lpLower.slice(2).padStart(64, '0')
+                  data: '0x70a08231' + specialAddr.slice(2).padStart(64, '0')
                 }, 'latest']);
-                if (lpBal?.result) {
-                  wei = BigInt(lpBal.result);
+                if (bal?.result) {
+                  wei = BigInt(bal.result);
                 }
               } catch (e) {
-                console.warn('LP balance fetch failed:', lpLower, e);
+                console.warn('Special address balance fetch failed:', specialAddr, e);
               }
               holdersArr.push({
-                address: lpLower,
+                address: specialAddr,
                 balance: wei.toString(),
                 balanceFormatted: (Number(wei) / divisor).toFixed(2)
               });
-              console.log('Ensured LP address is present:', lpLower, (Number(wei) / divisor).toFixed(2));
+              console.log('Ensured special address is present:', specialAddr, (Number(wei) / divisor).toFixed(2));
             }
           }
-
-        // Enrich holders with emails and mark LP addresses
-        await enrichHoldersWithEmails(supabase, holdersArr);
+          
+          // Re-enrich after adding missing addresses
+          await enrichHoldersWithEmails(supabase, holdersArr);
+        } catch (e) {
+          console.warn('Failed to check special addresses:', e);
+        }
 
         return new Response(
           JSON.stringify({ holders: holdersArr, metrics }),
@@ -574,37 +602,41 @@ Deno.serve(async (req) => {
 
     holders.sort((a, b) => (BigInt(b.balance) > BigInt(a.balance) ? 1 : -1));
 
-    // Always ensure LP addresses are checked and included
+    // Always ensure special addresses from DB are included
+    let knownSpecialAddresses: string[] = [];
     try {
-      for (const lpLower of KNOWN_LP_ADDRESSES) {
-        const lpExists = holders.find(h => h.address.toLowerCase() === lpLower);
-        if (!lpExists) {
+      knownSpecialAddresses = await enrichHoldersWithEmails(supabase, holders);
+      
+      // Check and add any missing special addresses
+      for (const specialAddr of knownSpecialAddresses) {
+        const exists = holders.find(h => h.address.toLowerCase() === specialAddr);
+        if (!exists) {
           let wei = 0n;
           try {
-            const lpBal = await rpcFetch('eth_call', [{
+            const bal = await rpcFetch('eth_call', [{
               to: PKRSC_CONTRACT_ADDRESS,
-              data: '0x70a08231' + lpLower.slice(2).padStart(64, '0')
+              data: '0x70a08231' + specialAddr.slice(2).padStart(64, '0')
             }, 'latest']);
-            if (lpBal?.result) {
-              wei = BigInt(lpBal.result);
+            if (bal?.result) {
+              wei = BigInt(bal.result);
             }
           } catch (e) {
-            console.warn('LP balance fetch failed (fallback path):', lpLower, e);
+            console.warn('Special address balance fetch failed (fallback):', specialAddr, e);
           }
           holders.push({
-            address: lpLower,
+            address: specialAddr,
             balance: wei.toString(),
             balanceFormatted: (Number(wei) / divisor).toFixed(2)
           });
-          console.log('Ensured LP address is present (fallback path):', lpLower, (Number(wei) / divisor).toFixed(2));
+          console.log('Ensured special address is present (fallback):', specialAddr, (Number(wei) / divisor).toFixed(2));
         }
       }
+      
+      // Re-enrich after adding missing addresses
+      await enrichHoldersWithEmails(supabase, holders);
     } catch (e) {
-      console.warn('Failed to check LP addresses balance (fallback path):', e);
+      console.warn('Failed to check special addresses (fallback):', e);
     }
-
-    // Enrich holders with emails and mark LP addresses
-    await enrichHoldersWithEmails(supabase, holders);
 
     // Compute metrics from contract state + BaseScan burns
     const metrics = { totalMinted: '0', burned: '0', treasury: '0' };

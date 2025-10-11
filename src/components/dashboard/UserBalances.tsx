@@ -13,6 +13,8 @@ interface TokenHolder {
   balance: string;
   balanceFormatted: string;
   email?: string;
+  label?: string;
+  labelType?: string;
   lpType?: 'provider' | 'uniswap' | 'master-minter';
   isLiquidityPool?: boolean;
 }
@@ -247,28 +249,41 @@ export function UserBalances() {
                       <TableCell className="font-mono text-white/90">
                         <div>
                           {holder.address}
-                          {(holder.lpType === 'provider' || holder.address.toLowerCase() === LP_PROVIDER_ADDRESS) && (
+                          {holder.label && (
+                            <div className="mt-1">
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                holder.labelType === 'provider' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
+                                holder.labelType === 'uniswap' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
+                                holder.labelType === 'master-minter' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
+                                'bg-gray-500/20 text-gray-400 border border-gray-500/30'
+                              }`}>
+                                {holder.label}
+                              </span>
+                            </div>
+                          )}
+                          {/* Fallback for old API format */}
+                          {!holder.label && (holder.lpType === 'provider' || holder.address.toLowerCase() === LP_PROVIDER_ADDRESS) && (
                             <div className="mt-1">
                               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-500/20 text-purple-400 border border-purple-500/30">
                                 LIQUIDITY PROVIDER ADDRESS
                               </span>
                             </div>
                           )}
-                          {(holder.lpType === 'uniswap' || holder.address.toLowerCase() === UNISWAP_POOL_ADDRESS) && (
+                          {!holder.label && (holder.lpType === 'uniswap' || holder.address.toLowerCase() === UNISWAP_POOL_ADDRESS) && (
                             <div className="mt-1">
                               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30">
                                 UNISWAP POOL ADDRESS
                               </span>
                             </div>
                           )}
-                          {(holder.lpType === 'master-minter' || holder.address.toLowerCase() === MASTER_MINTER_ADDRESS) && (
+                          {!holder.label && (holder.lpType === 'master-minter' || holder.address.toLowerCase() === MASTER_MINTER_ADDRESS) && (
                             <div className="mt-1">
                               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/30">
                                 MASTER MINTER ADDRESS
                               </span>
                             </div>
                           )}
-                          {!holder.lpType && holder.isLiquidityPool && (
+                          {!holder.label && !holder.lpType && holder.isLiquidityPool && (
                             <div className="mt-1">
                               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30">
                                 LIQUIDITY POOL ADDRESS

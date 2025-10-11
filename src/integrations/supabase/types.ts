@@ -610,6 +610,33 @@ export type Database = {
         }
         Relationships: []
       }
+      special_addresses: {
+        Row: {
+          address: string
+          created_at: string
+          id: string
+          label: string
+          label_type: string
+          updated_at: string
+        }
+        Insert: {
+          address: string
+          created_at?: string
+          id?: string
+          label: string
+          label_type: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          created_at?: string
+          id?: string
+          label?: string
+          label_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       transaction_fees: {
         Row: {
           created_at: string
