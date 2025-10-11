@@ -421,14 +421,18 @@ Deno.serve(async (req) => {
 
     // Calculate dynamic trade amount based on price deviation
     // Larger deviation = larger trade to bring price back to target faster
-    const baseAmount = 10 // Base trade amount in USDT
-    const scaleFactor = 500 // Multiplier for deviation
-    const maxTradeAmount = 1000 // Maximum trade size in USDT
+    const minTradeAmount = 1 // Minimum trade amount in USDT
+    const maxTradeAmount = 10 // Maximum trade size in USDT
     
     const deviationPercent = Math.abs(deviation)
-    let tradeAmountUsdt = baseAmount + (deviationPercent * scaleFactor)
+    // Scale trade amount between 1-10 USDT based on deviation
+    // At 0% deviation: 1 USDT, At 2%+ deviation: 10 USDT
+    let tradeAmountUsdt = minTradeAmount + (deviationPercent * 450) // 450 = (10-1)/0.02
     
-    // Cap at maximum
+    // Clamp between min and max
+    if (tradeAmountUsdt < minTradeAmount) {
+      tradeAmountUsdt = minTradeAmount
+    }
     if (tradeAmountUsdt > maxTradeAmount) {
       tradeAmountUsdt = maxTradeAmount
     }
