@@ -14,7 +14,12 @@ interface TokenHolder {
   balanceFormatted: string;
   email?: string;
   lpType?: 'provider' | 'uniswap' | 'master-minter';
+  isLiquidityPool?: boolean;
 }
+
+const LP_PROVIDER_ADDRESS = '0xcfbdcbfd1312a2d85545a88ca95c93c7523dd11b';
+const UNISWAP_POOL_ADDRESS = '0x1bc6fb786b7b5ba4d31a7f47a75ec3fd3b26690e';
+const MASTER_MINTER_ADDRESS = '0x50c46b0286028c3ab12b947003129feb39ccf082';
 
 interface TokenMetrics {
   totalMinted: string;
@@ -242,24 +247,31 @@ export function UserBalances() {
                       <TableCell className="font-mono text-white/90">
                         <div>
                           {holder.address}
-                          {holder.lpType === 'provider' && (
+                          {(holder.lpType === 'provider' || holder.address.toLowerCase() === LP_PROVIDER_ADDRESS) && (
                             <div className="mt-1">
                               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-500/20 text-purple-400 border border-purple-500/30">
                                 LIQUIDITY PROVIDER ADDRESS
                               </span>
                             </div>
                           )}
-                          {holder.lpType === 'uniswap' && (
+                          {(holder.lpType === 'uniswap' || holder.address.toLowerCase() === UNISWAP_POOL_ADDRESS) && (
                             <div className="mt-1">
                               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30">
                                 UNISWAP POOL ADDRESS
                               </span>
                             </div>
                           )}
-                          {holder.lpType === 'master-minter' && (
+                          {(holder.lpType === 'master-minter' || holder.address.toLowerCase() === MASTER_MINTER_ADDRESS) && (
                             <div className="mt-1">
                               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/30">
                                 MASTER MINTER ADDRESS
+                              </span>
+                            </div>
+                          )}
+                          {!holder.lpType && holder.isLiquidityPool && (
+                            <div className="mt-1">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                                LIQUIDITY POOL ADDRESS
                               </span>
                             </div>
                           )}
