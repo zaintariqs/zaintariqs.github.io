@@ -50,7 +50,7 @@ serve(async (req) => {
 
     // GET or POST: Fetch all redemptions (admin only)
     if (req.method === 'GET' || req.method === 'POST') {
-      console.log(`Admin ${walletAddress} fetching all redemptions (method: ${req.method})`)
+      console.log(`Admin ${walletAddress} fetching all redemptions`)
       
       const { data, error } = await supabase
         .from('redemptions')
