@@ -80,12 +80,12 @@ export function UserBalances() {
             </div>
           </div>
           
-          {holders.length > 0 && (
-            <div className="text-right">
-              <p className="text-sm text-white/70">Total Supply in Circulation</p>
-              <p className="text-2xl font-bold text-white">{calculateTotalSupply()} PKRSC</p>
-            </div>
-          )}
+          <div className="text-right">
+            <p className="text-sm text-white/70">Circulating Supply</p>
+            <p className="text-2xl font-bold text-white">
+              {holders.length > 0 ? calculateTotalSupply() : '0.00'} PKRSC
+            </p>
+          </div>
         </div>
 
         <Button 
