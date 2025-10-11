@@ -40,6 +40,20 @@ serve(async (req) => {
       );
     }
 
+    // Check if wallet is the master minter (bypass whitelist)
+    const { data: masterMinter } = await supabase.rpc('get_master_minter_address');
+    if (masterMinter && masterMinter.toLowerCase() === walletAddress.toLowerCase()) {
+      return new Response(
+        JSON.stringify({
+          isWhitelisted: true,
+          isAdmin: false,
+          isMasterMinter: true,
+          message: 'Master minter access granted'
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Check if wallet is whitelisted
     const { data: isWhitelisted } = await supabase
       .rpc("is_wallet_whitelisted", { wallet_addr: walletAddress });
