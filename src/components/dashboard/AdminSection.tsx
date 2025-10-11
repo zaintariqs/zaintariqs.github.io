@@ -148,7 +148,7 @@ export function AdminSection() {
 
   // Read dead address balance (burned tokens)
   const DEAD_ADDRESS = '0x000000000000000000000000000000000000dEaD'
-  const { data: deadBalance, refetch: refetchDeadBalance } = useReadContract({
+  const { data: deadBalance, error: deadBalanceError, refetch: refetchDeadBalance, isLoading: deadBalanceLoading } = useReadContract({
     address: PKRSC_CONTRACT_ADDRESS as `0x${string}`,
     abi: pkrscAbi,
     functionName: 'balanceOf',
@@ -158,6 +158,12 @@ export function AdminSection() {
       refetchInterval: 10000, // Refetch every 10 seconds
     }
   })
+
+  // Log dead balance for debugging
+  useEffect(() => {
+    if (deadBalanceError) console.error('Error reading dead balance:', deadBalanceError)
+    console.log('Dead balance (burned tokens):', deadBalance?.toString(), 'Loading:', deadBalanceLoading)
+  }, [deadBalance, deadBalanceError, deadBalanceLoading])
 
   // Log contract read errors
   useEffect(() => {
@@ -739,7 +745,13 @@ ${Object.entries(blacklistedAddresses.reduce((acc, entry) => {
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">Burned</Label>
                 <div className="text-lg font-semibold text-orange-500">
-                  {deadBalance ? formatUnits(deadBalance, tokenDecimals) : '...'}
+                  {deadBalanceLoading ? (
+                    <span className="animate-pulse">Loading...</span>
+                  ) : deadBalance ? (
+                    formatUnits(deadBalance, tokenDecimals)
+                  ) : (
+                    '0.00'
+                  )}
                 </div>
               </div>
             </div>
