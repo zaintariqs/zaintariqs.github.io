@@ -468,8 +468,8 @@ Deno.serve(async (req) => {
       details: { 
         deviation: (deviationPercent * 100).toFixed(2) + '%',
         calculatedTradeAmount: tradeAmountUsdt,
-        baseAmount,
-        scaleFactor
+        minTradeAmount,
+        maxTradeAmount
       }
     })
     
