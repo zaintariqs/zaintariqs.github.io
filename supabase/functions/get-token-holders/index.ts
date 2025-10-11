@@ -507,12 +507,6 @@ Deno.serve(async (req) => {
               }
             }
           }
-        } catch (e) {
-          console.warn('Failed to check LP addresses balance:', e);
-        }
-        } catch (e) {
-          console.warn('Failed to check LP address balance:', e);
-        }
 
         // Enrich holders with emails and mark LP addresses
         await enrichHoldersWithEmails(supabase, holdersArr);
