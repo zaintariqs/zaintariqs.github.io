@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useAccount } from "wagmi";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { DollarSign, TrendingUp, Calendar } from "lucide-react";
@@ -33,6 +33,7 @@ interface FeeStats {
 }
 
 export const TransactionFees = () => {
+  const { address } = useAccount();
   const [fees, setFees] = useState<TransactionFee[]>([]);
   const [stats, setStats] = useState<FeeStats>({
     totalFees: 0,
@@ -44,41 +45,38 @@ export const TransactionFees = () => {
   const { toast } = useToast();
 
   const fetchFees = async () => {
+    if (!address) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       
-      const { data, error } = await supabase
-        .from("transaction_fees")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(50);
+      const response = await fetch(
+        'https://jdjreuxhvzmzockuduyq.supabase.co/functions/v1/get-transaction-fees',
+        {
+          method: 'GET',
+          headers: {
+            'x-wallet-address': address,
+          },
+        }
+      );
 
-      if (error) throw error;
-
-      if (data) {
-        setFees(data);
-        
-        // Calculate stats
-        const totalFees = data.reduce((sum, fee) => sum + Number(fee.fee_amount), 0);
-        const depositFees = data
-          .filter((fee) => fee.transaction_type === "deposit")
-          .reduce((sum, fee) => sum + Number(fee.fee_amount), 0);
-        const redemptionFees = data
-          .filter((fee) => fee.transaction_type === "redemption")
-          .reduce((sum, fee) => sum + Number(fee.fee_amount), 0);
-
-        setStats({
-          totalFees,
-          depositFees,
-          redemptionFees,
-          transactionCount: data.length,
-        });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to fetch transaction fees');
       }
-    } catch (error) {
+
+      const { fees: feeData, stats: statsData } = await response.json();
+      
+      setFees(feeData);
+      setStats(statsData);
+    } catch (error: any) {
       console.error("Error fetching transaction fees:", error);
       toast({
         title: "Error",
-        description: "Failed to load transaction fees",
+        description: error.message || "Failed to load transaction fees",
         variant: "destructive",
       });
     } finally {
@@ -88,7 +86,7 @@ export const TransactionFees = () => {
 
   useEffect(() => {
     fetchFees();
-  }, []);
+  }, [address]);
 
   const formatCurrency = (amount: number, type: string) => {
     return `${amount.toFixed(2)} ${type === 'deposit' ? 'PKR' : 'PKRSC'}`;
