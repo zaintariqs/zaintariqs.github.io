@@ -171,8 +171,53 @@ Deno.serve(async (req) => {
       const bsHolders = await fetchHoldersFromBaseScan(decimals);
       if (bsHolders.length > 0) {
         console.log('Returning holders from BaseScan:', bsHolders.length);
+        
+        // Calculate metrics even when using BaseScan data
+        const metrics = { totalMinted: '0', burned: '0', treasury: '0' };
+        
+        // Get totalSupply from contract
+        try {
+          const totalSupplyData = await rpcFetch('eth_call', [{
+            to: PKRSC_CONTRACT_ADDRESS,
+            data: '0x18160ddd' // totalSupply()
+          }, 'latest']);
+          
+          if (totalSupplyData.result) {
+            const totalSupplyWei = BigInt(totalSupplyData.result);
+            metrics.totalMinted = (Number(totalSupplyWei) / divisor).toFixed(2);
+          }
+        } catch (e) {
+          console.warn('Failed to fetch totalSupply:', e);
+        }
+
+        // Check burned tokens at burn address
+        const BURN_ADDRESS = '0x000000000000000000000000000000000000dead';
+        try {
+          const burnBalanceData = await rpcFetch('eth_call', [{
+            to: PKRSC_CONTRACT_ADDRESS,
+            data: '0x70a08231' + BURN_ADDRESS.slice(2).padStart(64, '0')
+          }, 'latest']);
+          
+          if (burnBalanceData.result) {
+            const burnBalanceWei = BigInt(burnBalanceData.result);
+            metrics.burned = (Number(burnBalanceWei) / divisor).toFixed(2);
+          }
+        } catch (e) {
+          console.warn('Failed to fetch burn balance:', e);
+        }
+
+        // Find treasury wallet (largest holder excluding burn address)
+        const treasuryHolder = bsHolders.find(h => 
+          h.address.toLowerCase() !== BURN_ADDRESS.toLowerCase() &&
+          h.address.toLowerCase() !== '0x0000000000000000000000000000000000000000'
+        );
+        
+        if (treasuryHolder) {
+          metrics.treasury = treasuryHolder.balanceFormatted;
+        }
+        
         return new Response(
-          JSON.stringify({ holders: bsHolders }),
+          JSON.stringify({ holders: bsHolders, metrics }),
           { 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200 
@@ -298,8 +343,52 @@ Deno.serve(async (req) => {
       console.warn('BaseScan fallback failed:', e instanceof Error ? e.message : String(e));
     }
 
+    // Calculate metrics: totalMinted, burned, treasury
+    const metrics = { totalMinted: '0', burned: '0', treasury: '0' };
+    
+    // Get totalSupply from contract
+    try {
+      const totalSupplyData = await rpcFetch('eth_call', [{
+        to: PKRSC_CONTRACT_ADDRESS,
+        data: '0x18160ddd' // totalSupply()
+      }, 'latest']);
+      
+      if (totalSupplyData.result) {
+        const totalSupplyWei = BigInt(totalSupplyData.result);
+        metrics.totalMinted = (Number(totalSupplyWei) / divisor).toFixed(2);
+      }
+    } catch (e) {
+      console.warn('Failed to fetch totalSupply:', e);
+    }
+
+    // Check burned tokens at burn address
+    const BURN_ADDRESS = '0x000000000000000000000000000000000000dead';
+    try {
+      const burnBalanceData = await rpcFetch('eth_call', [{
+        to: PKRSC_CONTRACT_ADDRESS,
+        data: '0x70a08231' + BURN_ADDRESS.slice(2).padStart(64, '0')
+      }, 'latest']);
+      
+      if (burnBalanceData.result) {
+        const burnBalanceWei = BigInt(burnBalanceData.result);
+        metrics.burned = (Number(burnBalanceWei) / divisor).toFixed(2);
+      }
+    } catch (e) {
+      console.warn('Failed to fetch burn balance:', e);
+    }
+
+    // Find treasury wallet (largest holder excluding burn address)
+    const treasuryHolder = holders.find(h => 
+      h.address.toLowerCase() !== BURN_ADDRESS.toLowerCase() &&
+      h.address.toLowerCase() !== '0x0000000000000000000000000000000000000000'
+    );
+    
+    if (treasuryHolder) {
+      metrics.treasury = treasuryHolder.balanceFormatted;
+    }
+
     return new Response(
-      JSON.stringify({ holders }),
+      JSON.stringify({ holders, metrics }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200 
@@ -309,7 +398,11 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Error in get-token-holders:', error);
     return new Response(
-      JSON.stringify({ holders: [], error: error instanceof Error ? error.message : String(error) }),
+      JSON.stringify({ 
+        holders: [], 
+        metrics: { totalMinted: '0', burned: '0', treasury: '0' },
+        error: error instanceof Error ? error.message : String(error) 
+      }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200 

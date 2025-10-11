@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { RefreshCw, Wallet } from 'lucide-react';
+import { RefreshCw, Wallet, Flame, TrendingUp, Vault } from 'lucide-react';
 
 interface TokenHolder {
   address: string;
@@ -13,10 +13,17 @@ interface TokenHolder {
   balanceFormatted: string;
 }
 
+interface TokenMetrics {
+  totalMinted: string;
+  burned: string;
+  treasury: string;
+}
+
 export function UserBalances() {
   const { address } = useAccount();
   const { toast } = useToast();
   const [holders, setHolders] = useState<TokenHolder[]>([]);
+  const [metrics, setMetrics] = useState<TokenMetrics>({ totalMinted: '0', burned: '0', treasury: '0' });
   const [loading, setLoading] = useState(false);
 
   const fetchBalances = async () => {
@@ -38,6 +45,11 @@ export function UserBalances() {
       if (error) throw error;
 
       setHolders(data.holders || []);
+      setMetrics({
+        totalMinted: data.metrics?.totalMinted || '0',
+        burned: data.metrics?.burned || '0',
+        treasury: data.metrics?.treasury || '0'
+      });
       
       toast({
         title: "Success",
@@ -69,23 +81,59 @@ export function UserBalances() {
       </div>
 
       <Card className="p-6 bg-white/5 backdrop-blur-sm border-white/10">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="flex items-center gap-3">
             <div className="p-3 rounded-lg bg-primary/20">
-              <Wallet className="h-6 w-6 text-primary" />
+              <Wallet className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <p className="text-sm text-white/70">Total Holders</p>
-              <p className="text-2xl font-bold text-white">{holders.length}</p>
+              <p className="text-xs text-white/70">Total Holders</p>
+              <p className="text-xl font-bold text-white">{holders.length}</p>
             </div>
           </div>
           
-          <div className="text-right">
-            <p className="text-sm text-white/70">Circulating Supply</p>
-            <p className="text-2xl font-bold text-white">
-              {loading ? '...' : holders.length > 0 ? `${calculateTotalSupply()} PKRSC` : '0.00 PKRSC'}
-            </p>
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-lg bg-green-500/20">
+              <TrendingUp className="h-5 w-5 text-green-400" />
+            </div>
+            <div>
+              <p className="text-xs text-white/70">Total Minted</p>
+              <p className="text-xl font-bold text-white">
+                {loading ? '...' : `${parseFloat(metrics.totalMinted).toLocaleString()} PKRSC`}
+              </p>
+            </div>
           </div>
+          
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-lg bg-orange-500/20">
+              <Flame className="h-5 w-5 text-orange-400" />
+            </div>
+            <div>
+              <p className="text-xs text-white/70">Burned</p>
+              <p className="text-xl font-bold text-white">
+                {loading ? '...' : `${parseFloat(metrics.burned).toLocaleString()} PKRSC`}
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-lg bg-blue-500/20">
+              <Vault className="h-5 w-5 text-blue-400" />
+            </div>
+            <div>
+              <p className="text-xs text-white/70">Treasury</p>
+              <p className="text-xl font-bold text-white">
+                {loading ? '...' : `${parseFloat(metrics.treasury).toLocaleString()} PKRSC`}
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="mb-6 p-4 bg-white/5 rounded-lg border border-white/10">
+          <p className="text-sm text-white/70 mb-1">Circulating Supply</p>
+          <p className="text-2xl font-bold text-white">
+            {loading ? '...' : holders.length > 0 ? `${calculateTotalSupply()} PKRSC` : '0.00 PKRSC'}
+          </p>
         </div>
 
         <Button 
