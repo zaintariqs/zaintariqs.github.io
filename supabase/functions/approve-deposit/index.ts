@@ -269,9 +269,9 @@ serve(async (req) => {
         console.log(`Transaction fee recorded: ${feeAmount} PKR`)
       }
 
-      // Update PKR bank reserves (with net amount after fee)
+      // Update PKR bank reserves (with full deposit amount - bank receives full PKR)
       const { error: reserveError } = await supabase.rpc('update_pkr_reserves', {
-        amount_change: netAmount,
+        amount_change: deposit.amount_pkr,
         updated_by_wallet: walletAddress.toLowerCase()
       })
 
@@ -279,7 +279,7 @@ serve(async (req) => {
         console.error('Error updating PKR reserves:', reserveError)
         // Log but don't fail the approval
       } else {
-        console.log(`Updated PKR reserves: +${deposit.amount_pkr}`)
+        console.log(`Updated PKR reserves: +${deposit.amount_pkr} PKR`)
       }
 
       // Log admin action with signature
