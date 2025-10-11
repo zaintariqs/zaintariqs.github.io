@@ -82,37 +82,51 @@ Deno.serve(async (req) => {
     const currentBlock = parseInt(blockData.result, 16);
     console.log('Current block:', currentBlock);
 
-    // Try querying from a recent block range first (last 100k blocks)
-    // If contract is new, this will be faster
-    const startBlock = Math.max(0, currentBlock - 100000);
-    console.log('Querying from block:', startBlock, 'to latest');
+    // Scan Transfer logs across the entire chain in safe chunks to avoid RPC limits
+    const CHUNK_SIZE = 200000;
+    const combinedLogs: any[] = [];
+    console.log(`Scanning logs in chunks of ${CHUNK_SIZE} blocks...`);
 
-    // Fetch Transfer events to get all addresses that have interacted with the token
-    const logsResponse = await fetch(BASE_MAINNET_RPC, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        method: 'eth_getLogs',
-        params: [{
-          fromBlock: '0x' + startBlock.toString(16),
-          toBlock: 'latest',
-          address: PKRSC_CONTRACT_ADDRESS,
-          topics: [TRANSFER_EVENT_SIGNATURE]
-        }],
-        id: 3
-      })
-    });
+    for (let start = 0; start <= currentBlock; start += CHUNK_SIZE) {
+      const end = Math.min(currentBlock, start + CHUNK_SIZE - 1);
+      const fetchRange = async (from: number, to: number) => {
+        const res = await fetch(BASE_MAINNET_RPC, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            method: 'eth_getLogs',
+            params: [{
+              fromBlock: '0x' + from.toString(16),
+              toBlock: '0x' + to.toString(16),
+              address: PKRSC_CONTRACT_ADDRESS,
+              topics: [TRANSFER_EVENT_SIGNATURE]
+            }],
+            id: 3
+          })
+        });
+        return res.json();
+      };
 
-    const logsData = await logsResponse.json();
-    
-    if (logsData.error) {
-      console.error('RPC error fetching logs:', logsData.error);
-      throw new Error(`RPC error: ${logsData.error.message || 'Unknown error'}`);
+      let data = await fetchRange(start, end);
+
+      // If too many results / rate limited, split into smaller sub-chunks
+      if (data?.error && (data.error.code === -32005 || String(data.error.message || '').toLowerCase().includes('limit'))) {
+        const SUB = Math.max(20000, Math.floor(CHUNK_SIZE / 10));
+        for (let subStart = start; subStart <= end; subStart += SUB) {
+          const subEnd = Math.min(end, subStart + SUB - 1);
+          const subData = await fetchRange(subStart, subEnd);
+          if (subData?.result) combinedLogs.push(...subData.result);
+        }
+      } else if (Array.isArray(data?.result)) {
+        combinedLogs.push(...data.result);
+      } else if (data?.error) {
+        console.warn('RPC error fetching logs chunk:', data.error);
+      }
     }
-    
-    console.log('Transfer events found:', logsData.result?.length || 0);
-    console.log('Raw logs response:', JSON.stringify(logsData).substring(0, 500));
+
+    console.log('Total Transfer events found:', combinedLogs.length);
+    const logsData = { result: combinedLogs };
 
     // Extract unique addresses from Transfer events
     const addressSet = new Set<string>();
