@@ -146,8 +146,8 @@ export function AdminSection() {
     }
   })
 
-  // Read dead address balance (burned tokens)
-  const DEAD_ADDRESS = '0x000000000000000000000000000000000000dEaD'
+  // Read dead address balance (burned tokens) - standard Ethereum burn address
+  const DEAD_ADDRESS = '0x000000000000000000000000000000000000dead'
   const { data: deadBalance, error: deadBalanceError, refetch: refetchDeadBalance, isLoading: deadBalanceLoading } = useReadContract({
     address: PKRSC_CONTRACT_ADDRESS as `0x${string}`,
     abi: pkrscAbi,
@@ -158,12 +158,6 @@ export function AdminSection() {
       refetchInterval: 10000, // Refetch every 10 seconds
     }
   })
-
-  // Log dead balance for debugging
-  useEffect(() => {
-    if (deadBalanceError) console.error('Error reading dead balance:', deadBalanceError)
-    console.log('Dead balance (burned tokens):', deadBalance?.toString(), 'Loading:', deadBalanceLoading)
-  }, [deadBalance, deadBalanceError, deadBalanceLoading])
 
   // Log contract read errors
   useEffect(() => {
@@ -196,6 +190,19 @@ export function AdminSection() {
   }, [decimals, totalSupply, treasuryBalance, decimalsError, totalSupplyError, treasuryError, chainId, address])
   
   const tokenDecimals = typeof decimals === 'number' ? decimals : Number((decimals as any) ?? 6)
+  
+  // Log dead balance for debugging
+  useEffect(() => {
+    if (deadBalanceError) {
+      console.error('❌ Error reading burned tokens:', deadBalanceError)
+    }
+    console.log('🔥 Burned tokens at', DEAD_ADDRESS, ':', {
+      raw: deadBalance?.toString(),
+      formatted: deadBalance ? formatUnits(deadBalance, tokenDecimals) : '0',
+      loading: deadBalanceLoading,
+      decimals: tokenDecimals
+    })
+  }, [deadBalance, deadBalanceError, deadBalanceLoading, tokenDecimals])
   
   // State for admin functions
   const [mintTo, setMintTo] = useState('')
