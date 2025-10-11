@@ -323,25 +323,38 @@ export function MyDeposits() {
                       )}
                     </TableCell>
                     <TableCell>
-                      {deposit.status === 'draft' && (
-                        <Button
-                          size="sm"
-                          onClick={() => handleVerifyEmail(deposit)}
-                          className="w-full"
-                        >
-                          Verify Email
-                        </Button>
-                      )}
-                      {deposit.status === 'pending' && !deposit.submitted_at && (
-                        <Button
-                          size="sm"
-                          onClick={() => handleSubmitProof(deposit)}
-                          className="w-full"
-                        >
-                          <Upload className="h-3 w-3 mr-2" />
-                          Submit Proof
-                        </Button>
-                      )}
+                      <div className="flex flex-col gap-2">
+                        {deposit.status === 'draft' && (
+                          <Button
+                            size="sm"
+                            onClick={() => handleVerifyEmail(deposit)}
+                            className="w-full"
+                          >
+                            Verify Email
+                          </Button>
+                        )}
+                        {deposit.status === 'pending' && !deposit.submitted_at && (
+                          <Button
+                            size="sm"
+                            onClick={() => handleSubmitProof(deposit)}
+                            className="w-full"
+                          >
+                            <Upload className="h-3 w-3 mr-2" />
+                            Submit Proof
+                          </Button>
+                        )}
+                        {deposit.receipt_url && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => window.open(deposit.receipt_url, '_blank')}
+                            className="w-full"
+                          >
+                            <ExternalLink className="h-3 w-3 mr-2" />
+                            View Proof
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
