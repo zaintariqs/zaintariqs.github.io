@@ -490,21 +490,24 @@ Deno.serve(async (req) => {
           for (const lpLower of KNOWN_LP_ADDRESSES) {
             const lpExists = holdersArr.find(h => h.address.toLowerCase() === lpLower);
             if (!lpExists) {
-              const lpBal = await rpcFetch('eth_call', [{
-                to: PKRSC_CONTRACT_ADDRESS,
-                data: '0x70a08231' + lpLower.slice(2).padStart(64, '0')
-              }, 'latest']);
-              if (lpBal?.result) {
-                const wei = BigInt(lpBal.result);
-                if (wei > 0n) {
-                  holdersArr.push({
-                    address: lpLower,
-                    balance: wei.toString(),
-                    balanceFormatted: (Number(wei) / divisor).toFixed(2)
-                  });
-                  console.log('Added LP address with balance:', lpLower, (Number(wei) / divisor).toFixed(2));
+              let wei = 0n;
+              try {
+                const lpBal = await rpcFetch('eth_call', [{
+                  to: PKRSC_CONTRACT_ADDRESS,
+                  data: '0x70a08231' + lpLower.slice(2).padStart(64, '0')
+                }, 'latest']);
+                if (lpBal?.result) {
+                  wei = BigInt(lpBal.result);
                 }
+              } catch (e) {
+                console.warn('LP balance fetch failed:', lpLower, e);
               }
+              holdersArr.push({
+                address: lpLower,
+                balance: wei.toString(),
+                balanceFormatted: (Number(wei) / divisor).toFixed(2)
+              });
+              console.log('Ensured LP address is present:', lpLower, (Number(wei) / divisor).toFixed(2));
             }
           }
 
@@ -573,21 +576,24 @@ Deno.serve(async (req) => {
       for (const lpLower of KNOWN_LP_ADDRESSES) {
         const lpExists = holders.find(h => h.address.toLowerCase() === lpLower);
         if (!lpExists) {
-          const lpBal = await rpcFetch('eth_call', [{
-            to: PKRSC_CONTRACT_ADDRESS,
-            data: '0x70a08231' + lpLower.slice(2).padStart(64, '0')
-          }, 'latest']);
-          if (lpBal?.result) {
-            const wei = BigInt(lpBal.result);
-            if (wei > 0n) {
-              holders.push({
-                address: lpLower,
-                balance: wei.toString(),
-                balanceFormatted: (Number(wei) / divisor).toFixed(2)
-              });
-              console.log('Added LP address with balance (fallback path):', lpLower, (Number(wei) / divisor).toFixed(2));
+          let wei = 0n;
+          try {
+            const lpBal = await rpcFetch('eth_call', [{
+              to: PKRSC_CONTRACT_ADDRESS,
+              data: '0x70a08231' + lpLower.slice(2).padStart(64, '0')
+            }, 'latest']);
+            if (lpBal?.result) {
+              wei = BigInt(lpBal.result);
             }
+          } catch (e) {
+            console.warn('LP balance fetch failed (fallback path):', lpLower, e);
           }
+          holders.push({
+            address: lpLower,
+            balance: wei.toString(),
+            balanceFormatted: (Number(wei) / divisor).toFixed(2)
+          });
+          console.log('Ensured LP address is present (fallback path):', lpLower, (Number(wei) / divisor).toFixed(2));
         }
       }
     } catch (e) {
