@@ -96,73 +96,103 @@ async function calculateBurnedTokens(decimals: number): Promise<string> {
 
 async function fetchHoldersFromBaseScan(decimals: number): Promise<TokenHolder[]> {
   if (!BASESCAN_API_KEY) return [];
-  const url = `https://api.basescan.org/api?module=token&action=tokenholderlist&contractaddress=${PKRSC_CONTRACT_ADDRESS}&page=1&offset=200&apikey=${BASESCAN_API_KEY}`;
-  const res = await fetch(url);
-  const json = await res.json();
+  
+  // Try tokenholderlist first (most reliable)
+  try {
+    const url = `https://api.basescan.org/api?module=token&action=tokenholderlist&contractaddress=${PKRSC_CONTRACT_ADDRESS}&page=1&offset=1000&apikey=${BASESCAN_API_KEY}`;
+    const res = await fetch(url);
+    const json = await res.json();
 
-  if (json.status === '1' && Array.isArray(json.result) && json.result.length > 0) {
-    const divisor = Math.pow(10, decimals);
-    const holders: TokenHolder[] = json.result
-      .map((r: any) => {
-        const addr = (r.TokenHolderAddress || r.HolderAddress || r.holderAddress || r.TokenHolder || r.address || '').toLowerCase();
-        const qtyStr = String(r.TokenHolderQuantity || r.TokenBalance || r.tokenHolderQuantity || r.tokenBalance || r.balance || '0');
-        return { addr, qtyStr };
-      })
-      .filter((r: any) => r.addr)
-      .map((r: any) => {
-        let rawWei: bigint;
-        if (/^\d+$/.test(r.qtyStr)) {
-          rawWei = BigInt(r.qtyStr);
-        } else {
-          const tokens = parseFloat(r.qtyStr.replace(/,/g, '')) || 0;
-          rawWei = BigInt(Math.round(tokens * divisor));
-        }
-        return {
-          address: r.addr,
-          balance: rawWei.toString(),
-          balanceFormatted: (Number(rawWei) / divisor).toFixed(2),
-        } as TokenHolder;
-      })
-      .filter((h) => Number(h.balance) > 0)
-      .sort((a, b) => (BigInt(b.balance) > BigInt(a.balance) ? 1 : -1));
-    return holders;
-  }
-
-  // Fallback: build holders from BaseScan transaction list (tokentx)
-  const addrSet = new Set<string>();
-  for (let page = 1; page <= 3; page++) {
-    const txUrl = `https://api.basescan.org/api?module=account&action=tokentx&contractaddress=${PKRSC_CONTRACT_ADDRESS}&page=${page}&offset=100&sort=asc&apikey=${BASESCAN_API_KEY}`;
-    const txRes = await fetch(txUrl);
-    const txJson = await txRes.json();
-    if (txJson.status !== '1' || !Array.isArray(txJson.result)) break;
-    for (const t of txJson.result) {
-      if (t.from) addrSet.add(String(t.from).toLowerCase());
-      if (t.to) addrSet.add(String(t.to).toLowerCase());
+    if (json.status === '1' && Array.isArray(json.result) && json.result.length > 0) {
+      const divisor = Math.pow(10, decimals);
+      const holders: TokenHolder[] = json.result
+        .map((r: any) => {
+          const addr = (r.TokenHolderAddress || r.HolderAddress || r.holderAddress || r.TokenHolder || r.address || '').toLowerCase();
+          const qtyStr = String(r.TokenHolderQuantity || r.TokenBalance || r.tokenHolderQuantity || r.tokenBalance || r.balance || '0');
+          return { addr, qtyStr };
+        })
+        .filter((r: any) => r.addr && r.addr !== '0x0000000000000000000000000000000000000000' && r.addr !== '0x000000000000000000000000000000000000dead')
+        .map((r: any) => {
+          let rawWei: bigint;
+          if (/^\d+$/.test(r.qtyStr)) {
+            rawWei = BigInt(r.qtyStr);
+          } else {
+            const tokens = parseFloat(r.qtyStr.replace(/,/g, '')) || 0;
+            rawWei = BigInt(Math.round(tokens * divisor));
+          }
+          return {
+            address: r.addr,
+            balance: rawWei.toString(),
+            balanceFormatted: (Number(rawWei) / divisor).toFixed(2),
+          } as TokenHolder;
+        })
+        .filter((h) => Number(h.balance) > 0)
+        .sort((a, b) => (BigInt(b.balance) > BigInt(a.balance) ? 1 : -1));
+      
+      console.log(`BaseScan tokenholderlist returned ${holders.length} holders`);
+      return holders;
     }
-    if (txJson.result.length < 100) break; // no more pages
+  } catch (e) {
+    console.warn('tokenholderlist failed:', e);
   }
-  // Remove zero address
-  addrSet.delete('0x0000000000000000000000000000000000000000');
 
+  // Fallback: Comprehensive tokentx scan
+  console.log('Falling back to tokentx analysis...');
+  const addrSet = new Set<string>();
+  
+  // Scan more pages to catch all holders
+  for (let page = 1; page <= 10; page++) {
+    try {
+      const txUrl = `https://api.basescan.org/api?module=account&action=tokentx&contractaddress=${PKRSC_CONTRACT_ADDRESS}&page=${page}&offset=100&sort=asc&apikey=${BASESCAN_API_KEY}`;
+      const txRes = await fetch(txUrl);
+      const txJson = await txRes.json();
+      
+      if (txJson.status !== '1' || !Array.isArray(txJson.result) || txJson.result.length === 0) break;
+      
+      for (const t of txJson.result) {
+        if (t.from) addrSet.add(String(t.from).toLowerCase());
+        if (t.to) addrSet.add(String(t.to).toLowerCase());
+      }
+      
+      if (txJson.result.length < 100) break;
+    } catch (e) {
+      console.warn(`tokentx page ${page} failed:`, e);
+      break;
+    }
+  }
+  
+  // Remove zero addresses
+  addrSet.delete('0x0000000000000000000000000000000000000000');
+  addrSet.delete('0x000000000000000000000000000000000000dead');
+  
+  console.log(`Found ${addrSet.size} unique addresses from tokentx, checking balances...`);
+  
   const divisor = Math.pow(10, decimals);
   const holders: TokenHolder[] = [];
+  
   for (const a of addrSet) {
-    const balUrl = `https://api.basescan.org/api?module=account&action=tokenbalance&contractaddress=${PKRSC_CONTRACT_ADDRESS}&address=${a}&tag=latest&apikey=${BASESCAN_API_KEY}`;
-    const balRes = await fetch(balUrl);
-    const balJson = await balRes.json();
-    if (balJson.status === '1' && balJson.result) {
-      const raw = BigInt(balJson.result);
-      if (raw > 0n) {
-        holders.push({
-          address: a,
-          balance: raw.toString(),
-          balanceFormatted: (Number(raw) / divisor).toFixed(2),
-        });
+    try {
+      const balUrl = `https://api.basescan.org/api?module=account&action=tokenbalance&contractaddress=${PKRSC_CONTRACT_ADDRESS}&address=${a}&tag=latest&apikey=${BASESCAN_API_KEY}`;
+      const balRes = await fetch(balUrl);
+      const balJson = await balRes.json();
+      
+      if (balJson.status === '1' && balJson.result) {
+        const raw = BigInt(balJson.result);
+        if (raw > 0n) {
+          holders.push({
+            address: a,
+            balance: raw.toString(),
+            balanceFormatted: (Number(raw) / divisor).toFixed(2),
+          });
+        }
       }
+    } catch (e) {
+      console.warn(`Balance check failed for ${a}:`, e);
     }
   }
 
   holders.sort((a, b) => (BigInt(b.balance) > BigInt(a.balance) ? 1 : -1));
+  console.log(`Built ${holders.length} holders from tokentx fallback`);
   return holders;
 }
 
