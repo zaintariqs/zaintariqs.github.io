@@ -50,7 +50,11 @@ interface TokenHolder {
   address: string;
   balance: string;
   balanceFormatted: string;
+  email?: string;
+  isLiquidityPool?: boolean;
 }
+
+const LIQUIDITY_POOL_ADDRESS = '0xCFBDCBFD1312a2D85545A88Ca95C93C7523dd11b';
 
 // Optional BaseScan API key for reliable holder lookup
 const BASESCAN_API_KEY = Deno.env.get('BASESCAN_API_KEY');
@@ -289,6 +293,58 @@ async function fetchHoldersFromRpcLogs(decimals: number): Promise<TokenHolder[]>
   }
 }
 
+// Enrich holders array with emails from database
+async function enrichHoldersWithEmails(supabase: any, holders: TokenHolder[]): Promise<void> {
+  try {
+    const addresses = holders.map(h => h.address.toLowerCase());
+    
+    // Fetch emails from whitelist_requests
+    const { data: whitelistEmails } = await supabase
+      .from('whitelist_requests')
+      .select('wallet_address, email_encrypted')
+      .in('wallet_address', addresses)
+      .eq('status', 'approved');
+
+    // Create lookup map
+    const emailMap = new Map<string, string>();
+    if (whitelistEmails) {
+      for (const record of whitelistEmails) {
+        if (record.wallet_address && record.email_encrypted) {
+          emailMap.set(record.wallet_address.toLowerCase(), record.email_encrypted);
+        }
+      }
+    }
+
+    // Also check encrypted_emails table
+    const { data: encryptedEmails } = await supabase
+      .from('encrypted_emails')
+      .select('wallet_address, encrypted_email')
+      .in('wallet_address', addresses);
+
+    if (encryptedEmails) {
+      for (const record of encryptedEmails) {
+        if (record.wallet_address && record.encrypted_email) {
+          const addr = record.wallet_address.toLowerCase();
+          if (!emailMap.has(addr)) {
+            emailMap.set(addr, record.encrypted_email);
+          }
+        }
+      }
+    }
+
+    // Enrich holders with emails and mark LP
+    for (const holder of holders) {
+      const addr = holder.address.toLowerCase();
+      holder.email = emailMap.get(addr);
+      holder.isLiquidityPool = addr === LIQUIDITY_POOL_ADDRESS.toLowerCase();
+    }
+
+    console.log(`Enriched ${holders.length} holders with email data`);
+  } catch (e) {
+    console.warn('Failed to enrich holders with emails:', e);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -428,6 +484,9 @@ Deno.serve(async (req) => {
           console.log('Merged holders count:', holdersArr.length);
         }
 
+        // Enrich holders with emails and mark LP addresses
+        await enrichHoldersWithEmails(supabase, holdersArr);
+
         return new Response(
           JSON.stringify({ holders: holdersArr, metrics }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
@@ -484,6 +543,9 @@ Deno.serve(async (req) => {
     }
 
     holders.sort((a, b) => (BigInt(b.balance) > BigInt(a.balance) ? 1 : -1));
+
+    // Enrich holders with emails and mark LP addresses
+    await enrichHoldersWithEmails(supabase, holders);
 
     // Compute metrics from contract state + BaseScan burns
     const metrics = { totalMinted: '0', burned: '0', treasury: '0' };

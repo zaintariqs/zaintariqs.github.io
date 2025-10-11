@@ -3,14 +3,17 @@ import { useAccount } from 'wagmi';
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { RefreshCw, Wallet, Flame, TrendingUp, Vault } from 'lucide-react';
+import { RefreshCw, Wallet, Flame, TrendingUp, Vault, Search } from 'lucide-react';
 
 interface TokenHolder {
   address: string;
   balance: string;
   balanceFormatted: string;
+  email?: string;
+  isLiquidityPool?: boolean;
 }
 
 interface TokenMetrics {
@@ -23,6 +26,8 @@ export function UserBalances() {
   const { address } = useAccount();
   const { toast } = useToast();
   const [holders, setHolders] = useState<TokenHolder[]>([]);
+  const [filteredHolders, setFilteredHolders] = useState<TokenHolder[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [metrics, setMetrics] = useState<TokenMetrics>({ totalMinted: '0', burned: '0', treasury: '0' });
   const [loading, setLoading] = useState(false);
 
@@ -45,7 +50,9 @@ export function UserBalances() {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      setHolders(data.holders || []);
+      const holdersList = data.holders || [];
+      setHolders(holdersList);
+      setFilteredHolders(holdersList);
       setMetrics({
         totalMinted: data.metrics?.totalMinted || '0',
         burned: data.metrics?.burned || '0',
@@ -74,6 +81,21 @@ export function UserBalances() {
       fetchBalances();
     }
   }, [address]);
+
+  // Filter holders based on search query
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredHolders(holders);
+      return;
+    }
+
+    const query = searchQuery.toLowerCase();
+    const filtered = holders.filter(holder => 
+      holder.address.toLowerCase().includes(query) ||
+      holder.email?.toLowerCase().includes(query)
+    );
+    setFilteredHolders(filtered);
+  }, [searchQuery, holders]);
 
   const calculateCirculatingSupply = () => {
     // Correct calculation: Total Minted - Treasury - Burned
@@ -156,39 +178,56 @@ export function UserBalances() {
           </p>
         </div>
 
-        <Button 
-          onClick={fetchBalances} 
-          disabled={loading}
-          className="w-full"
-        >
-          {loading ? (
-            <>
-              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-              Loading Balances...
-            </>
-          ) : (
-            <>
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Fetch Token Holder Balances
-            </>
-          )}
-        </Button>
+        <div className="space-y-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/50" />
+            <Input
+              type="text"
+              placeholder="Search by wallet address or email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/50"
+            />
+          </div>
+
+          <Button 
+            onClick={fetchBalances} 
+            disabled={loading}
+            className="w-full"
+          >
+            {loading ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                Loading Balances...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Fetch Token Holder Balances
+              </>
+            )}
+          </Button>
+        </div>
       </Card>
 
       {holders.length > 0 && (
         <Card className="p-6 bg-white/5 backdrop-blur-sm border-white/10">
+          <div className="mb-4 text-sm text-white/70">
+            Showing {filteredHolders.length} of {holders.length} holders
+          </div>
           <div className="rounded-md border border-white/10">
             <Table>
               <TableHeader>
                 <TableRow className="border-white/10 hover:bg-white/5">
                   <TableHead className="text-white/70">#</TableHead>
                   <TableHead className="text-white/70">Wallet Address</TableHead>
+                  <TableHead className="text-white/70">Email</TableHead>
                   <TableHead className="text-right text-white/70">Balance (PKRSC)</TableHead>
                   <TableHead className="text-right text-white/70">% of Supply</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {holders.map((holder, index) => {
+                {filteredHolders.map((holder, index) => {
                   const circulatingSupply = parseFloat(calculateCirculatingSupply());
                   const percentage = circulatingSupply > 0 
                     ? ((parseFloat(holder.balanceFormatted) / circulatingSupply) * 100).toFixed(2)
@@ -201,7 +240,23 @@ export function UserBalances() {
                     >
                       <TableCell className="text-white/90">{index + 1}</TableCell>
                       <TableCell className="font-mono text-white/90">
-                        {holder.address}
+                        <div>
+                          {holder.address}
+                          {holder.isLiquidityPool && (
+                            <div className="mt-1">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                                Liquidity Pool
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-white/70 text-sm">
+                        {holder.email ? (
+                          <span className="break-all">{holder.email}</span>
+                        ) : (
+                          <span className="text-white/40 italic">No email</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-right text-white/90 font-semibold">
                         {parseFloat(holder.balanceFormatted).toLocaleString()}
