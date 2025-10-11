@@ -38,6 +38,10 @@ export function RedeemSection() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [pendingTxHash, setPendingTxHash] = useState<string | null>(null)
   const [redemptionId, setRedemptionId] = useState<string | null>(null)
+  const [showVerification, setShowVerification] = useState(false)
+  const [verificationCode, setVerificationCode] = useState('')
+  const [isVerifying, setIsVerifying] = useState(false)
+  const [isVerified, setIsVerified] = useState(false)
 
   const PKRSC_TOKEN_ADDRESS = '0x1f192CB7B36d7acfBBdCA1E0C1d697361508F9D5'
 
@@ -164,27 +168,11 @@ export function RedeemSection() {
 
       const { data } = await response.json()
       setRedemptionId(data.id)
+      setShowVerification(true)
 
       toast({
-        title: "Redemption Request Created",
-        description: "Initiating burn transaction...",
-      })
-
-      // Automatically execute the burn transaction
-      const txHash = await writeContractAsync({
-        address: PKRSC_TOKEN_ADDRESS as `0x${string}`,
-        abi: ERC20_ABI,
-        functionName: 'burn',
-        args: [parseUnits(formData.amount, 6)],
-        account: address,
-        chain: base,
-      })
-
-      setPendingTxHash(txHash)
-      
-      toast({
-        title: "Transaction Submitted",
-        description: "Waiting for confirmation on the blockchain...",
+        title: "Verification Email Sent",
+        description: "Please check your email for the verification code.",
       })
 
     } catch (error) {
@@ -197,6 +185,87 @@ export function RedeemSection() {
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  const handleVerifyAndBurn = async () => {
+    if (!verificationCode || verificationCode.length !== 6) {
+      toast({
+        title: "Invalid Code",
+        description: "Please enter a 6-digit verification code",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!address || !redemptionId) return
+
+    setIsVerifying(true)
+
+    try {
+      // Verify the code
+      const verifyResponse = await fetch(
+        'https://jdjreuxhvzmzockuduyq.supabase.co/functions/v1/verify-redemption',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            redemptionId,
+            verificationCode,
+          }),
+        }
+      )
+
+      if (!verifyResponse.ok) {
+        const errorData = await verifyResponse.json()
+        throw new Error(errorData.error || 'Verification failed')
+      }
+
+      setIsVerified(true)
+
+      toast({
+        title: "Email Verified",
+        description: "Initiating burn transaction with 0.5% fee included...",
+      })
+
+      // Calculate burn amount including 0.5% fee
+      // If redeeming 1000 PKR, burn 1005 PKRSC (1000 * 1.005)
+      const baseAmount = parseFloat(formData.amount)
+      const burnAmount = baseAmount * 1.005
+      
+      console.log(`Burning ${burnAmount} PKRSC (${baseAmount} + 0.5% fee)`)
+
+      // Execute the burn transaction with fee included
+      const txHash = await writeContractAsync({
+        address: PKRSC_TOKEN_ADDRESS as `0x${string}`,
+        abi: ERC20_ABI,
+        functionName: 'burn',
+        args: [parseUnits(burnAmount.toFixed(6), 6)],
+        account: address,
+        chain: base,
+      })
+
+      setPendingTxHash(txHash)
+      
+      toast({
+        title: "Transaction Submitted",
+        description: "Waiting for blockchain confirmation...",
+      })
+
+    } catch (error) {
+      console.error('Error verifying or burning:', error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Verification or burn failed",
+        variant: "destructive",
+      })
+    } finally {
+      setIsVerifying(false)
+    }
+  }
+
+  const handleResendCode = async () => {
+    // Resubmit to get a new code
+    await handleSubmitRedemption()
   }
 
   const pakistaniBanks = [
@@ -229,7 +298,7 @@ export function RedeemSection() {
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
-        {!redemptionId ? (
+        {!showVerification && !redemptionId ? (
           <>
             {/* Amount Input */}
             <div className="space-y-2">
@@ -309,7 +378,60 @@ export function RedeemSection() {
               {isSubmitting ? "Creating Request..." : "Create Redemption Request"}
             </Button>
           </>
-        ) : (
+        ) : showVerification && !isVerified ? (
+          <>
+            {/* Email Verification Section */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-primary" />
+                <h3 className="font-medium text-card-foreground">Verify Your Email</h3>
+              </div>
+              
+              <div className="p-4 bg-muted/50 rounded-lg">
+                <p className="text-sm text-muted-foreground mb-4">
+                  We've sent a 6-digit verification code to your email. Please enter it below to proceed with the token burn.
+                </p>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="verificationCode">Verification Code</Label>
+                  <Input
+                    id="verificationCode"
+                    type="text"
+                    placeholder="000000"
+                    maxLength={6}
+                    value={verificationCode}
+                    onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
+                    className="text-center text-2xl tracking-widest"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-yellow-500/10 rounded-lg p-4 border border-yellow-500/20">
+                <p className="text-sm text-yellow-600 dark:text-yellow-400">
+                  <strong>Important:</strong> After verification, you'll burn {parseFloat(formData.amount) * 1.005} PKRSC 
+                  (includes 0.5% transaction fee)
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <Button 
+                  onClick={handleVerifyAndBurn}
+                  disabled={isVerifying || verificationCode.length !== 6}
+                  className="flex-1"
+                >
+                  {isVerifying ? "Verifying..." : "Verify & Burn Tokens"}
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={handleResendCode}
+                  disabled={isVerifying}
+                >
+                  Resend Code
+                </Button>
+              </div>
+            </div>
+          </>
+        ) : isVerified && redemptionId ? (
           <>
             {/* Transaction Status */}
             <div className="space-y-4">
@@ -364,7 +486,7 @@ export function RedeemSection() {
               )}
             </div>
           </>
-        )}
+        ) : null}
       </CardContent>
     </Card>
   )
