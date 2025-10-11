@@ -52,12 +52,13 @@ interface TokenHolder {
   balance: string;
   balanceFormatted: string;
   email?: string;
-  lpType?: 'provider' | 'uniswap';
+  lpType?: 'provider' | 'uniswap' | 'master-minter';
 }
 
 const LP_PROVIDER_ADDRESS = '0xCFBDCBFD1312a2D85545A88Ca95C93C7523dd11b'.toLowerCase();
 const UNISWAP_POOL_ADDRESS = '0x1bC6fB786B7B5BA4D31A7F47a75eC3Fd3B26690E'.toLowerCase();
-const KNOWN_LP_ADDRESSES = [LP_PROVIDER_ADDRESS, UNISWAP_POOL_ADDRESS];
+const MASTER_MINTER_ADDRESS = '0x50c46b0286028c3ab12b947003129feb39ccf082'.toLowerCase();
+const KNOWN_LP_ADDRESSES = [LP_PROVIDER_ADDRESS, UNISWAP_POOL_ADDRESS, MASTER_MINTER_ADDRESS];
 
 // Optional BaseScan API key for reliable holder lookup
 const BASESCAN_API_KEY = Deno.env.get('BASESCAN_API_KEY');
@@ -337,6 +338,8 @@ async function enrichHoldersWithEmails(supabase: any, holders: TokenHolder[]): P
         holder.lpType = 'provider';
       } else if (addr === UNISWAP_POOL_ADDRESS) {
         holder.lpType = 'uniswap';
+      } else if (addr === MASTER_MINTER_ADDRESS) {
+        holder.lpType = 'master-minter';
       }
     }
 

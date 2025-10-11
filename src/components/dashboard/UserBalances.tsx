@@ -13,7 +13,7 @@ interface TokenHolder {
   balance: string;
   balanceFormatted: string;
   email?: string;
-  lpType?: 'provider' | 'uniswap';
+  lpType?: 'provider' | 'uniswap' | 'master-minter';
 }
 
 interface TokenMetrics {
@@ -253,6 +253,13 @@ export function UserBalances() {
                             <div className="mt-1">
                               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30">
                                 UNISWAP POOL ADDRESS
+                              </span>
+                            </div>
+                          )}
+                          {holder.lpType === 'master-minter' && (
+                            <div className="mt-1">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/30">
+                                MASTER MINTER ADDRESS
                               </span>
                             </div>
                           )}
