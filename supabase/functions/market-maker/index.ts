@@ -419,10 +419,23 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Execute trade with adjusted size based on liquidity
-    let tradeAmountUsdt = parseFloat(config.trade_amount_usdt)
+    // Calculate dynamic trade amount based on price deviation
+    // Larger deviation = larger trade to bring price back to target faster
+    const baseAmount = 10 // Base trade amount in USDT
+    const scaleFactor = 500 // Multiplier for deviation
+    const maxTradeAmount = 1000 // Maximum trade size in USDT
     
-    // Limit trade to max 2% of pool liquidity if we have that data
+    const deviationPercent = Math.abs(deviation)
+    let tradeAmountUsdt = baseAmount + (deviationPercent * scaleFactor)
+    
+    // Cap at maximum
+    if (tradeAmountUsdt > maxTradeAmount) {
+      tradeAmountUsdt = maxTradeAmount
+    }
+    
+    console.log(`Dynamic trade amount: $${tradeAmountUsdt.toFixed(2)} (based on ${(deviationPercent * 100).toFixed(2)}% deviation)`)
+    
+    // Further limit trade to max 2% of pool liquidity if we have that data
     if (liquidityUsd > 0) {
       const maxTradeSize = liquidityUsd * 0.02 // 2% of liquidity
       if (tradeAmountUsdt > maxTradeSize) {
@@ -433,13 +446,25 @@ Deno.serve(async (req) => {
           wallet_address: walletAddress,
           action_type: 'MARKET_MAKER_TRADE_SIZE_REDUCED',
           details: { 
-            originalSize: config.trade_amount_usdt,
-            adjustedSize: tradeAmountUsdt,
-            liquidityUsd 
+            calculatedSize: tradeAmountUsdt,
+            adjustedSize: maxTradeSize,
+            liquidityUsd,
+            deviationPercent: (deviationPercent * 100).toFixed(2) + '%'
           }
         })
       }
     }
+    
+    await supabase.from('admin_actions').insert({
+      wallet_address: walletAddress,
+      action_type: 'MARKET_MAKER_DYNAMIC_TRADE_SIZE',
+      details: { 
+        deviation: (deviationPercent * 100).toFixed(2) + '%',
+        calculatedTradeAmount: tradeAmountUsdt,
+        baseAmount,
+        scaleFactor
+      }
+    })
     
     let txHash = ''
     let action = ''

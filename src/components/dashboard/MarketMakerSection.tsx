@@ -52,7 +52,7 @@ export function MarketMakerSection() {
   const [targetPrice, setTargetPrice] = useState('1.0')
   const [threshold, setThreshold] = useState('0.02')
   const [tradeAmount, setTradeAmount] = useState('100')
-  const [interval, setInterval] = useState('300')
+  const [interval, setInterval] = useState('10')
 
   useEffect(() => {
     fetchConfig()
