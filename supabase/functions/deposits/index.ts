@@ -439,11 +439,12 @@ serve(async (req) => {
         )
       }
 
-      // Update deposit status to cancelled
+      // Update deposit status to rejected (cancelled by user)
       const { data, error } = await supabase
         .from('deposits')
         .update({
-          status: 'cancelled',
+          status: 'rejected',
+          rejection_reason: 'Cancelled by user',
           updated_at: new Date().toISOString()
         })
         .eq('id', depositId)
