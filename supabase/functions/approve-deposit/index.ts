@@ -269,9 +269,9 @@ serve(async (req) => {
         console.log(`Transaction fee recorded: ${feeAmount} PKR`)
       }
 
-      // Update PKR bank reserves (with full deposit amount - bank receives full PKR)
+      // Update PKR bank reserves (with net amount after fee deduction)
       const { error: reserveError } = await supabase.rpc('update_pkr_reserves', {
-        amount_change: deposit.amount_pkr,
+        amount_change: netAmount,
         updated_by_wallet: walletAddress.toLowerCase()
       })
 
@@ -279,7 +279,7 @@ serve(async (req) => {
         console.error('Error updating PKR reserves:', reserveError)
         // Log but don't fail the approval
       } else {
-        console.log(`Updated PKR reserves: +${deposit.amount_pkr} PKR`)
+        console.log(`Updated PKR reserves: +${netAmount} PKR`)
       }
 
       // Log admin action with signature
@@ -291,8 +291,11 @@ serve(async (req) => {
           depositId,
           userId: deposit.user_id,
           amount: deposit.amount_pkr,
+          feeAmount: feeAmount,
+          netAmount: netAmount,
           mintTxHash,
           reserveUpdated: !reserveError,
+          feeRecorded: !feeError,
           timestamp: new Date().toISOString()
         },
         nonce,
@@ -300,18 +303,27 @@ serve(async (req) => {
         signedMessage
       )
 
-      // Send success email notification
-      const { data: whitelistData } = await supabase
-        .from('whitelist_requests')
-        .select('email')
+      // Fetch and decrypt email if available
+      let userEmail = null
+      const { data: emailData } = await supabase
+        .from('encrypted_emails')
+        .select('encrypted_email')
         .ilike('wallet_address', deposit.user_id)
         .single()
+      
+      if (emailData?.encrypted_email) {
+        try {
+          userEmail = await decryptEmail(emailData.encrypted_email)
+        } catch (error) {
+          console.error('Failed to decrypt email:', error)
+        }
+      }
 
-      if (whitelistData?.email) {
+      if (userEmail) {
         try {
           await resend.emails.send({
             from: FROM_EMAIL,
-            to: [whitelistData.email],
+            to: [userEmail],
             subject: 'PKRSC Deposit Confirmed',
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
