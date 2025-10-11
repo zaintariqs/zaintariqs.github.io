@@ -177,11 +177,20 @@ serve(async (req) => {
         )
       }
 
-      // Update PKR reserves when redemption is completed
+      // Update PKR reserves and record transaction fee when redemption is completed
       let reserveUpdated = false
+      let feeRecorded = false
       if (status === 'completed' && redemptionData?.pkrsc_amount) {
+        // Calculate 0.5% transaction fee
+        const FEE_PERCENTAGE = 0.5
+        const feeAmount = (redemptionData.pkrsc_amount * FEE_PERCENTAGE) / 100
+        const netAmount = redemptionData.pkrsc_amount - feeAmount
+
+        console.log(`Redemption fee calculation: Original=${redemptionData.pkrsc_amount} PKRSC, Fee=${feeAmount} PKRSC (${FEE_PERCENTAGE}%), Net=${netAmount} PKR`)
+
+        // Update PKR reserves (subtract net amount - what user actually receives)
         const { error: reserveError } = await supabase.rpc('update_pkr_reserves', {
-          amount_change: -redemptionData.pkrsc_amount, // Negative to subtract
+          amount_change: -netAmount, // Negative to subtract the net amount
           updated_by_wallet: walletAddress.toLowerCase()
         })
 
@@ -190,7 +199,28 @@ serve(async (req) => {
           // Log but don't fail the redemption
         } else {
           reserveUpdated = true
-          console.log(`Updated PKR reserves: -${redemptionData.pkrsc_amount}`)
+          console.log(`Updated PKR reserves: -${netAmount} PKR`)
+        }
+
+        // Record transaction fee
+        const { error: feeError } = await supabase
+          .from('transaction_fees')
+          .insert({
+            transaction_type: 'redemption',
+            transaction_id: redemptionId,
+            user_id: data.user_id.toLowerCase(),
+            original_amount: redemptionData.pkrsc_amount,
+            fee_percentage: FEE_PERCENTAGE,
+            fee_amount: feeAmount,
+            net_amount: netAmount
+          })
+
+        if (feeError) {
+          console.error('Error recording redemption fee:', feeError)
+          // Don't fail the redemption, just log the error
+        } else {
+          feeRecorded = true
+          console.log(`Redemption fee recorded: ${feeAmount} PKRSC`)
         }
       }
 
@@ -205,6 +235,7 @@ serve(async (req) => {
           cancellationReason,
           burnTransactionHash,
           reserveUpdated,
+          feeRecorded,
           amount: redemptionData?.pkrsc_amount,
           timestamp: new Date().toISOString() 
         }
@@ -265,7 +296,8 @@ serve(async (req) => {
                   <div style="background-color: #f0fdf4; border-left: 4px solid #059669; padding: 16px; margin: 20px 0;">
                     <strong>Redemption Details:</strong><br><br>
                     <strong>PKRSC Amount Redeemed:</strong> ${data.pkrsc_amount} PKRSC<br>
-                    <strong>PKR Amount:</strong> ${data.pkrsc_amount} PKR<br>
+                    <strong>Transaction Fee (0.5%):</strong> ${(data.pkrsc_amount * 0.005).toFixed(2)} PKR<br>
+                    <strong>PKR Amount Received:</strong> ${(data.pkrsc_amount * 0.995).toFixed(2)} PKR<br>
                     <strong>Your Wallet:</strong> ${data.user_id}
                   </div>
                   
