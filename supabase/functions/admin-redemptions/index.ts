@@ -181,12 +181,12 @@ serve(async (req) => {
       let reserveUpdated = false
       let feeRecorded = false
       if (status === 'completed' && redemptionData?.pkrsc_amount) {
-        // Calculate 0.5% transaction fee
+        // User pays 0.5% fee on top (e.g., user pays 502.5 PKRSC, bank pays 500 PKR)
         const FEE_PERCENTAGE = 0.5
-        const feeAmount = (redemptionData.pkrsc_amount * FEE_PERCENTAGE) / 100
-        const netAmount = redemptionData.pkrsc_amount - feeAmount
+        const netAmount = redemptionData.pkrsc_amount / 1.005 // Amount bank actually pays
+        const feeAmount = redemptionData.pkrsc_amount - netAmount // Fee in PKRSC
 
-        console.log(`Redemption fee calculation: Original=${redemptionData.pkrsc_amount} PKRSC, Fee=${feeAmount} PKRSC (${FEE_PERCENTAGE}%), Net=${netAmount} PKR`)
+        console.log(`Redemption fee calculation: User Pays=${redemptionData.pkrsc_amount} PKRSC, Fee=${feeAmount.toFixed(2)} PKRSC (${FEE_PERCENTAGE}%), Bank Pays=${netAmount.toFixed(2)} PKR`)
 
         // Update PKR reserves (subtract net amount - what user actually receives)
         const { error: reserveError } = await supabase.rpc('update_pkr_reserves', {
