@@ -561,17 +561,19 @@ Deno.serve(async (req) => {
     console.log('BaseScan unavailable, building holders from recent DB addresses');
     let holders: TokenHolder[] = [];
 
-    // Gather candidate addresses (recent users + admins + connected wallet)
+    // Gather candidate addresses (recent users + admins + connected wallet + welcome bonus recipients)
     const candidateSet = new Set<string>();
     try {
-      const [{ data: rds }, { data: deps }, { data: admins }] = await Promise.all([
+      const [{ data: rds }, { data: deps }, { data: admins }, { data: bonuses }] = await Promise.all([
         supabase.from('redemptions').select('user_id').order('created_at', { ascending: false }).limit(200),
         supabase.from('deposits_public').select('user_id').order('created_at', { ascending: false }).limit(200),
-        supabase.from('admin_wallets').select('wallet_address').eq('is_active', true)
+        supabase.from('admin_wallets').select('wallet_address').eq('is_active', true),
+        supabase.from('welcome_bonuses').select('wallet_address').order('created_at', { ascending: false }).limit(200)
       ]);
       (rds || []).forEach((r: any) => r?.user_id && candidateSet.add(String(r.user_id).toLowerCase()));
       (deps || []).forEach((d: any) => d?.user_id && candidateSet.add(String(d.user_id).toLowerCase()));
       (admins || []).forEach((a: any) => a?.wallet_address && candidateSet.add(String(a.wallet_address).toLowerCase()));
+      (bonuses || []).forEach((b: any) => b?.wallet_address && candidateSet.add(String(b.wallet_address).toLowerCase()));
     } catch (e) {
       console.warn('DB address collection failed:', e);
     }
