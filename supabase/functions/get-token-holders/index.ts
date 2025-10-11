@@ -161,7 +161,7 @@ Deno.serve(async (req) => {
     console.log('Unique addresses found:', addressSet.size);
 
     // Fetch balance for each address
-    const holders: TokenHolder[] = [];
+    let holders: TokenHolder[] = [];
     
     for (const address of addressSet) {
       try {
@@ -198,6 +198,20 @@ Deno.serve(async (req) => {
 
     console.log('Token holders with balance:', holders.length);
 
+    // Fallback: BaseScan API if available and no holders from RPC
+    try {
+      const apiKey = Deno.env.get('BASESCAN_API_KEY');
+      if (holders.length === 0 && apiKey) {
+        const bsHolders = await fetchHoldersFromBaseScan(decimals);
+        if (bsHolders.length > 0) {
+          holders = bsHolders;
+          console.log('BaseScan fallback holders:', holders.length);
+        }
+      }
+    } catch (e) {
+      console.warn('BaseScan fallback failed:', e instanceof Error ? e.message : String(e));
+    }
+
     return new Response(
       JSON.stringify({ holders }),
       { 
@@ -209,10 +223,10 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Error in get-token-holders:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ holders: [], error: error instanceof Error ? error.message : String(error) }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400 
+        status: 200 
       }
     );
   }
