@@ -54,28 +54,63 @@ async function fetchHoldersFromBaseScan(decimals: number): Promise<TokenHolder[]
   const res = await fetch(url);
   const json = await res.json();
 
-  if (json.status !== '1' || !Array.isArray(json.result)) {
-    throw new Error(json.message || 'BaseScan tokenholderlist unavailable');
+  // Try tokenholderlist first
+  if (json.status === '1' && Array.isArray(json.result) && json.result.length > 0) {
+    const divisor = Math.pow(10, decimals);
+    const holders: TokenHolder[] = json.result
+      .map((r: any) => ({
+        address: (r.TokenHolderAddress || r.holderAddress || '').toLowerCase(),
+        raw: r.TokenHolderQuantity || r.tokenHolderQuantity || r.balance || '0',
+      }))
+      .filter((r: any) => r.address && r.raw)
+      .map((r: any) => {
+        const raw = BigInt(r.raw);
+        return {
+          address: r.address,
+          balance: raw.toString(),
+          balanceFormatted: (Number(raw) / divisor).toFixed(2),
+        } as TokenHolder;
+      })
+      .filter((h) => Number(h.balance) > 0)
+      .sort((a, b) => (BigInt(b.balance) > BigInt(a.balance) ? 1 : -1));
+    return holders;
   }
 
-  const divisor = Math.pow(10, decimals);
-  const holders: TokenHolder[] = json.result
-    .map((r: any) => ({
-      address: (r.TokenHolderAddress || r.holderAddress || '').toLowerCase(),
-      raw: r.TokenHolderQuantity || r.tokenHolderQuantity || r.balance || '0',
-    }))
-    .filter((r: any) => r.address && r.raw)
-    .map((r: any) => {
-      const raw = BigInt(r.raw);
-      return {
-        address: r.address,
-        balance: raw.toString(),
-        balanceFormatted: (Number(raw) / divisor).toFixed(2),
-      } as TokenHolder;
-    })
-    .filter((h) => Number(h.balance) > 0)
-    .sort((a, b) => (BigInt(b.balance) > BigInt(a.balance) ? 1 : -1));
+  // Fallback: build holders from BaseScan transaction list (tokentx)
+  const addrSet = new Set<string>();
+  for (let page = 1; page <= 3; page++) {
+    const txUrl = `https://api.basescan.org/api?module=account&action=tokentx&contractaddress=${PKRSC_CONTRACT_ADDRESS}&page=${page}&offset=100&sort=asc&apikey=${BASESCAN_API_KEY}`;
+    const txRes = await fetch(txUrl);
+    const txJson = await txRes.json();
+    if (txJson.status !== '1' || !Array.isArray(txJson.result)) break;
+    for (const t of txJson.result) {
+      if (t.from) addrSet.add(String(t.from).toLowerCase());
+      if (t.to) addrSet.add(String(t.to).toLowerCase());
+    }
+    if (txJson.result.length < 100) break; // no more pages
+  }
+  // Remove zero address
+  addrSet.delete('0x0000000000000000000000000000000000000000');
 
+  const divisor = Math.pow(10, decimals);
+  const holders: TokenHolder[] = [];
+  for (const a of addrSet) {
+    const balUrl = `https://api.basescan.org/api?module=account&action=tokenbalance&contractaddress=${PKRSC_CONTRACT_ADDRESS}&address=${a}&tag=latest&apikey=${BASESCAN_API_KEY}`;
+    const balRes = await fetch(balUrl);
+    const balJson = await balRes.json();
+    if (balJson.status === '1' && balJson.result) {
+      const raw = BigInt(balJson.result);
+      if (raw > 0n) {
+        holders.push({
+          address: a,
+          balance: raw.toString(),
+          balanceFormatted: (Number(raw) / divisor).toFixed(2),
+        });
+      }
+    }
+  }
+
+  holders.sort((a, b) => (BigInt(b.balance) > BigInt(a.balance) ? 1 : -1));
   return holders;
 }
 
