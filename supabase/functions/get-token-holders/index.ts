@@ -301,41 +301,23 @@ async function enrichHoldersWithEmails(supabase: any, holders: TokenHolder[]): P
   try {
     const addresses = holders.map(h => h.address.toLowerCase());
     
-    // Fetch emails from whitelist_requests
-    const { data: whitelistEmails } = await supabase
-      .from('whitelist_requests')
-      .select('wallet_address, email_encrypted')
-      .in('wallet_address', addresses)
-      .eq('status', 'approved');
-
-    // Create lookup map with encrypted emails
-    const emailMap = new Map<string, string>();
-    if (whitelistEmails) {
-      for (const record of whitelistEmails) {
-        if (record.wallet_address && record.email_encrypted) {
-          emailMap.set(record.wallet_address.toLowerCase(), record.email_encrypted);
-        }
-      }
-    }
-
-    // Also check encrypted_emails table
+    // Fetch encrypted emails from encrypted_emails table
     const { data: encryptedEmails } = await supabase
       .from('encrypted_emails')
       .select('wallet_address, encrypted_email')
       .in('wallet_address', addresses);
 
+    // Create lookup map with encrypted emails
+    const emailMap = new Map<string, string>();
     if (encryptedEmails) {
       for (const record of encryptedEmails) {
         if (record.wallet_address && record.encrypted_email) {
-          const addr = record.wallet_address.toLowerCase();
-          if (!emailMap.has(addr)) {
-            emailMap.set(addr, record.encrypted_email);
-          }
+          emailMap.set(record.wallet_address.toLowerCase(), record.encrypted_email);
         }
       }
     }
 
-    // Enrich holders with DECRYPTED emails and mark LP
+    // Enrich holders with DECRYPTED emails and mark LP type
     for (const holder of holders) {
       const addr = holder.address.toLowerCase();
       const encryptedEmail = emailMap.get(addr);
