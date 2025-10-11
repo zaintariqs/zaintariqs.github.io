@@ -38,7 +38,7 @@ export function AdminDeposits() {
   const [selectedDeposit, setSelectedDeposit] = useState<Deposit | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [actionType, setActionType] = useState<'approve' | 'reject'>('approve')
-  const [mintTxHash, setMintTxHash] = useState('')
+  
   const [rejectionReason, setRejectionReason] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [searchAddress, setSearchAddress] = useState('')
@@ -96,7 +96,6 @@ export function AdminDeposits() {
   const openDialog = (deposit: Deposit, type: 'approve' | 'reject' | 'view') => {
     setSelectedDeposit(deposit)
     setActionType(type as 'approve' | 'reject')
-    setMintTxHash('')
     setRejectionReason('')
     setDialogOpen(true)
   }
@@ -104,14 +103,6 @@ export function AdminDeposits() {
   const handleSubmit = async () => {
     if (!selectedDeposit || !address) return
 
-    if (actionType === 'approve' && !mintTxHash.trim()) {
-      toast({
-        title: "Error",
-        description: "Mint transaction hash is required",
-        variant: "destructive",
-      })
-      return
-    }
 
     if (actionType === 'reject' && !rejectionReason.trim()) {
       toast({
@@ -144,12 +135,11 @@ export function AdminDeposits() {
             'x-signature-message': btoa(message),
             'x-nonce': nonce.toString(),
           },
-          body: JSON.stringify({
-            depositId: selectedDeposit.id,
-            action: actionType,
-            mintTxHash: actionType === 'approve' ? mintTxHash : undefined,
-            rejectionReason: actionType === 'reject' ? rejectionReason : undefined,
-          }),
+            body: JSON.stringify({
+              depositId: selectedDeposit.id,
+              action: actionType,
+              rejectionReason: actionType === 'reject' ? rejectionReason : undefined,
+            }),
         }
       )
 
@@ -455,16 +445,16 @@ export function AdminDeposits() {
             )}
             {actionType === 'approve' ? (
               <div className="space-y-2">
-                <Label htmlFor="mintTxHash">Mint Transaction Hash</Label>
-                <Input
-                  id="mintTxHash"
-                  placeholder="Enter PKRSC mint transaction hash (0x...)"
-                  value={mintTxHash}
-                  onChange={(e) => setMintTxHash(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  First, use the Admin Dashboard to mint {selectedDeposit?.amount_pkr} PKRSC to {selectedDeposit?.user_id?.slice(0, 6)}...{selectedDeposit?.user_id?.slice(-4)}, then paste the transaction hash here.
+                <p className="text-sm text-muted-foreground">
+                  On approve, the system will auto-mint net PKRSC to the user and deduct a 0.5% fee. Bank reserves increase by the net amount.
                 </p>
+                {selectedDeposit && (
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p>Deposit: PKR {selectedDeposit.amount_pkr.toFixed(2)}</p>
+                    <p>Fee (0.5%): PKR {(selectedDeposit.amount_pkr * 0.005).toFixed(2)}</p>
+                    <p>Net minted: {(selectedDeposit.amount_pkr * 0.995).toFixed(2)} PKRSC</p>
+                  </div>
+                )}
               </div>
             ) : actionType === 'reject' ? (
               <div className="space-y-2">
