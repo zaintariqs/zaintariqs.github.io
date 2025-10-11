@@ -47,6 +47,25 @@ Deno.serve(async (req) => {
 
     console.log('Fetching token holders for PKRSC contract:', PKRSC_CONTRACT_ADDRESS);
 
+    // First verify the contract exists
+    const codeResponse = await fetch(BASE_MAINNET_RPC, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        method: 'eth_getCode',
+        params: [PKRSC_CONTRACT_ADDRESS, 'latest'],
+        id: 1
+      })
+    });
+    
+    const codeData = await codeResponse.json();
+    if (!codeData.result || codeData.result === '0x' || codeData.result === '0x0') {
+      console.error('Contract not found at address:', PKRSC_CONTRACT_ADDRESS);
+      throw new Error('Contract not deployed at this address on Base mainnet');
+    }
+    console.log('Contract verified at address');
+
     // Get the current block number
     const blockResponse = await fetch(BASE_MAINNET_RPC, {
       method: 'POST',
@@ -55,13 +74,18 @@ Deno.serve(async (req) => {
         jsonrpc: '2.0',
         method: 'eth_blockNumber',
         params: [],
-        id: 1
+        id: 2
       })
     });
     
     const blockData = await blockResponse.json();
     const currentBlock = parseInt(blockData.result, 16);
     console.log('Current block:', currentBlock);
+
+    // Try querying from a recent block range first (last 100k blocks)
+    // If contract is new, this will be faster
+    const startBlock = Math.max(0, currentBlock - 100000);
+    console.log('Querying from block:', startBlock, 'to latest');
 
     // Fetch Transfer events to get all addresses that have interacted with the token
     const logsResponse = await fetch(BASE_MAINNET_RPC, {
@@ -71,17 +95,24 @@ Deno.serve(async (req) => {
         jsonrpc: '2.0',
         method: 'eth_getLogs',
         params: [{
-          fromBlock: '0x0',
+          fromBlock: '0x' + startBlock.toString(16),
           toBlock: 'latest',
           address: PKRSC_CONTRACT_ADDRESS,
           topics: [TRANSFER_EVENT_SIGNATURE]
         }],
-        id: 2
+        id: 3
       })
     });
 
     const logsData = await logsResponse.json();
+    
+    if (logsData.error) {
+      console.error('RPC error fetching logs:', logsData.error);
+      throw new Error(`RPC error: ${logsData.error.message || 'Unknown error'}`);
+    }
+    
     console.log('Transfer events found:', logsData.result?.length || 0);
+    console.log('Raw logs response:', JSON.stringify(logsData).substring(0, 500));
 
     // Extract unique addresses from Transfer events
     const addressSet = new Set<string>();
