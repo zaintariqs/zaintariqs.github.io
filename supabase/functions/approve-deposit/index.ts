@@ -103,7 +103,7 @@ serve(async (req) => {
     }
 
     const body = await req.json()
-    const { depositId, action, mintTxHash, rejectionReason } = body
+    const { depositId, action, rejectionReason } = body
 
     if (!depositId || !action) {
       return new Response(
@@ -127,105 +127,64 @@ serve(async (req) => {
     }
 
     if (action === 'approve') {
-      if (!mintTxHash) {
-        return new Response(
-          JSON.stringify({ error: 'Mint transaction hash required for approval' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-
-      // Check if transaction hash was already used (prevent replay attacks)
-      const txHashUsed = await isTransactionHashUsed(supabase, mintTxHash)
-      if (txHashUsed) {
-        return new Response(
-          JSON.stringify({ error: 'Transaction hash already used (replay attack prevented)' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-
-      // Verify the mint transaction on-chain
-      try {
-        const { ethers } = await import('https://esm.sh/ethers@6.9.0')
-        const provider = new ethers.JsonRpcProvider('https://mainnet.base.org')
-        const receipt = await provider.getTransactionReceipt(mintTxHash)
-
-        if (!receipt) {
-          return new Response(
-            JSON.stringify({ error: 'Transaction not found. Please wait a moment and try again.' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          )
-        }
-
-        if (receipt.status !== 1) {
-          return new Response(
-            JSON.stringify({ error: 'Mint transaction failed on-chain' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          )
-        }
-
-        // Enhanced validation: Check transaction is recent (within last 24 hours)
-        const block = await provider.getBlock(receipt.blockNumber)
-        const txTimestamp = block?.timestamp || 0
-        const currentTime = Math.floor(Date.now() / 1000)
-        const twentyFourHours = 24 * 60 * 60
-
-        if (currentTime - txTimestamp > twentyFourHours) {
-          return new Response(
-            JSON.stringify({ error: 'Transaction is too old (must be within last 24 hours)' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          )
-        }
-
-        // Enhanced validation: Check minimum confirmations (at least 3 blocks)
-        const currentBlock = await provider.getBlockNumber()
-        const confirmations = currentBlock - receipt.blockNumber
-        if (confirmations < 3) {
-          return new Response(
-            JSON.stringify({ error: `Transaction needs more confirmations (${confirmations}/3)` }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          )
-        }
-
-        // Verify it's a transfer to the user's wallet
-        const TRANSFER_TOPIC = ethers.id('Transfer(address,address,uint256)')
-        const targetLog = receipt.logs.find((log: any) => {
-          if (log.address?.toLowerCase() !== PKRSC_TOKEN_ADDRESS.toLowerCase()) return false
-          if (!log.topics || log.topics.length < 3) return false
-          if (log.topics[0] !== TRANSFER_TOPIC) return false
-          const toTopic = log.topics[2].toLowerCase()
-          const toAddr = '0x' + toTopic.slice(-40)
-          return toAddr.toLowerCase() === deposit.user_id.toLowerCase()
-        })
-
-        if (!targetLog) {
-          return new Response(
-            JSON.stringify({ error: 'Transaction does not mint to user wallet' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          )
-        }
-
-        // Parse minted amount
-        const value = ethers.toBigInt(targetLog.data)
-        const mintedAmount = Number(value) / 10 ** PKRSC_DECIMALS
-
-        console.log(`Verified mint: ${mintedAmount} PKRSC to ${deposit.user_id}`)
-        
-        // Mark transaction hash as used
-        await markTransactionHashUsed(supabase, mintTxHash, 'mint', deposit.user_id)
-      } catch (error) {
-        console.error('Error verifying mint transaction:', error)
-        return new Response(
-          JSON.stringify({ error: 'Failed to verify mint transaction on-chain' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-
       // Calculate 0.5% transaction fee
       const FEE_PERCENTAGE = 0.5
       const feeAmount = (deposit.amount_pkr * FEE_PERCENTAGE) / 100
       const netAmount = deposit.amount_pkr - feeAmount
 
       console.log(`Deposit fee calculation: Original=${deposit.amount_pkr} PKR, Fee=${feeAmount} PKR (${FEE_PERCENTAGE}%), Net=${netAmount} PKR`)
+
+      // Automatically mint PKRSC tokens to user's wallet
+      let mintTxHash: string
+      try {
+        const { ethers } = await import('https://esm.sh/ethers@6.9.0')
+        const provider = new ethers.JsonRpcProvider('https://mainnet.base.org')
+        
+        // Get master minter wallet
+        const masterMinterPrivateKey = Deno.env.get('MASTER_MINTER_PRIVATE_KEY')
+        if (!masterMinterPrivateKey) {
+          throw new Error('Master minter private key not configured')
+        }
+        
+        const masterMinterWallet = new ethers.Wallet(masterMinterPrivateKey, provider)
+        console.log(`Master minter wallet: ${masterMinterWallet.address}`)
+
+        // PKRSC token contract ABI (mint function)
+        const tokenABI = [
+          'function mint(address to, uint256 amount) returns (bool)',
+          'function decimals() view returns (uint8)'
+        ]
+        
+        const tokenContract = new ethers.Contract(PKRSC_TOKEN_ADDRESS, tokenABI, masterMinterWallet)
+        
+        // Convert net amount to token units (with decimals)
+        const amountInTokenUnits = ethers.parseUnits(netAmount.toFixed(PKRSC_DECIMALS), PKRSC_DECIMALS)
+        
+        console.log(`Minting ${netAmount} PKRSC (${amountInTokenUnits.toString()} units) to ${deposit.user_id}`)
+        
+        // Execute mint transaction
+        const tx = await tokenContract.mint(deposit.user_id, amountInTokenUnits)
+        console.log(`Mint transaction submitted: ${tx.hash}`)
+        
+        // Wait for confirmation
+        const receipt = await tx.wait()
+        
+        if (receipt.status !== 1) {
+          throw new Error('Mint transaction failed on-chain')
+        }
+        
+        mintTxHash = tx.hash
+        console.log(`Mint transaction confirmed: ${mintTxHash}`)
+        
+        // Mark transaction hash as used
+        await markTransactionHashUsed(supabase, mintTxHash, 'mint', deposit.user_id)
+      } catch (error) {
+        console.error('Error minting tokens:', error)
+        return new Response(
+          JSON.stringify({ error: `Failed to mint tokens: ${error.message}` }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
 
       // Update deposit as completed
       const { data, error } = await supabase
