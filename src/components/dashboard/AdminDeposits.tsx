@@ -283,7 +283,10 @@ export function AdminDeposits() {
                       </TableCell>
                       <TableCell>PKR {deposit.amount_pkr.toLocaleString()}</TableCell>
                       <TableCell className="capitalize">
-                        {deposit.payment_method === 'easypaisa' ? 'EasyPaisa' : 'JazzCash'}
+                        {deposit.payment_method === 'easypaisa' ? 'EasyPaisa' : 
+                         deposit.payment_method === 'jazzcash' ? 'JazzCash' : 
+                         deposit.payment_method === 'bank' ? 'Bank Transfer' : 
+                         deposit.payment_method}
                       </TableCell>
                       <TableCell>{deposit.phone_number}</TableCell>
                       <TableCell>{getStatusBadge(deposit.status)}</TableCell>
@@ -322,14 +325,20 @@ export function AdminDeposits() {
                               </Button>
                             </div>
                           )}
-                          {deposit.status === 'completed' && deposit.transaction_id && (
-                            <span className="text-xs text-muted-foreground font-mono">
-                              {deposit.transaction_id}
-                            </span>
+                          {deposit.status === 'completed' && deposit.mint_transaction_hash && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => window.open(`https://basescan.org/tx/${deposit.mint_transaction_hash}`, '_blank')}
+                              className="w-full"
+                            >
+                              <ExternalLink className="h-4 w-4 mr-1" />
+                              View on BaseScan
+                            </Button>
                           )}
                           {deposit.status === 'rejected' && deposit.rejection_reason && (
                             <span className="text-xs text-muted-foreground">
-                              {deposit.rejection_reason}
+                              Reason: {deposit.rejection_reason}
                             </span>
                           )}
                         </div>
