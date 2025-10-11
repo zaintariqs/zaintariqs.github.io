@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { decryptEmail } from '../_shared/email-encryption.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -293,7 +294,7 @@ async function fetchHoldersFromRpcLogs(decimals: number): Promise<TokenHolder[]>
   }
 }
 
-// Enrich holders array with emails from database
+// Enrich holders array with emails from database and decrypt them
 async function enrichHoldersWithEmails(supabase: any, holders: TokenHolder[]): Promise<void> {
   try {
     const addresses = holders.map(h => h.address.toLowerCase());
@@ -305,7 +306,7 @@ async function enrichHoldersWithEmails(supabase: any, holders: TokenHolder[]): P
       .in('wallet_address', addresses)
       .eq('status', 'approved');
 
-    // Create lookup map
+    // Create lookup map with encrypted emails
     const emailMap = new Map<string, string>();
     if (whitelistEmails) {
       for (const record of whitelistEmails) {
@@ -332,14 +333,25 @@ async function enrichHoldersWithEmails(supabase: any, holders: TokenHolder[]): P
       }
     }
 
-    // Enrich holders with emails and mark LP
+    // Enrich holders with DECRYPTED emails and mark LP
     for (const holder of holders) {
       const addr = holder.address.toLowerCase();
-      holder.email = emailMap.get(addr);
+      const encryptedEmail = emailMap.get(addr);
+      
+      // Decrypt email if available
+      if (encryptedEmail) {
+        try {
+          holder.email = await decryptEmail(encryptedEmail);
+        } catch (e) {
+          console.warn(`Failed to decrypt email for ${addr}:`, e);
+          holder.email = undefined; // Don't show encrypted email if decryption fails
+        }
+      }
+      
       holder.isLiquidityPool = addr === LIQUIDITY_POOL_ADDRESS.toLowerCase();
     }
 
-    console.log(`Enriched ${holders.length} holders with email data`);
+    console.log(`Enriched ${holders.length} holders with decrypted email data`);
   } catch (e) {
     console.warn('Failed to enrich holders with emails:', e);
   }
@@ -484,6 +496,31 @@ Deno.serve(async (req) => {
           console.log('Merged holders count:', holdersArr.length);
         }
 
+        // Always ensure LP address is checked and included
+        try {
+          const lpLower = LIQUIDITY_POOL_ADDRESS.toLowerCase();
+          const lpExists = holdersArr.find(h => h.address.toLowerCase() === lpLower);
+          if (!lpExists) {
+            const lpBal = await rpcFetch('eth_call', [{
+              to: PKRSC_CONTRACT_ADDRESS,
+              data: '0x70a08231' + lpLower.slice(2).padStart(64, '0')
+            }, 'latest']);
+            if (lpBal?.result) {
+              const wei = BigInt(lpBal.result);
+              if (wei > 0n) {
+                holdersArr.push({
+                  address: lpLower,
+                  balance: wei.toString(),
+                  balanceFormatted: (Number(wei) / divisor).toFixed(2)
+                });
+                console.log('Added LP address with balance:', (Number(wei) / divisor).toFixed(2));
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('Failed to check LP address balance:', e);
+        }
+
         // Enrich holders with emails and mark LP addresses
         await enrichHoldersWithEmails(supabase, holdersArr);
 
@@ -543,6 +580,31 @@ Deno.serve(async (req) => {
     }
 
     holders.sort((a, b) => (BigInt(b.balance) > BigInt(a.balance) ? 1 : -1));
+
+    // Always ensure LP address is checked and included
+    try {
+      const lpLower = LIQUIDITY_POOL_ADDRESS.toLowerCase();
+      const lpExists = holders.find(h => h.address.toLowerCase() === lpLower);
+      if (!lpExists) {
+        const lpBal = await rpcFetch('eth_call', [{
+          to: PKRSC_CONTRACT_ADDRESS,
+          data: '0x70a08231' + lpLower.slice(2).padStart(64, '0')
+        }, 'latest']);
+        if (lpBal?.result) {
+          const wei = BigInt(lpBal.result);
+          if (wei > 0n) {
+            holders.push({
+              address: lpLower,
+              balance: wei.toString(),
+              balanceFormatted: (Number(wei) / divisor).toFixed(2)
+            });
+            console.log('Added LP address with balance (fallback path):', (Number(wei) / divisor).toFixed(2));
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to check LP address balance (fallback path):', e);
+    }
 
     // Enrich holders with emails and mark LP addresses
     await enrichHoldersWithEmails(supabase, holders);
