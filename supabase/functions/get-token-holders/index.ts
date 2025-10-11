@@ -55,31 +55,43 @@ interface TokenHolder {
 // Optional BaseScan API key for reliable holder lookup
 const BASESCAN_API_KEY = Deno.env.get('BASESCAN_API_KEY');
 
-// Calculate burned tokens by querying zero address balance
+// Calculate burned tokens using BaseScan tokentx (sum transfers to zero address)
 async function calculateBurnedTokens(decimals: number): Promise<string> {
   const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
   const divisor = Math.pow(10, decimals);
-  
+  if (!BASESCAN_API_KEY) return '0.00';
+
   try {
-    console.log('Fetching burned tokens from zero address balance...');
-    
-    // Query the zero address balance directly - much faster than scanning all events
-    const balanceData = await rpcFetch('eth_call', [{
-      to: PKRSC_CONTRACT_ADDRESS,
-      data: '0x70a08231' + ZERO_ADDRESS.slice(2).padStart(64, '0') // balanceOf(0x000...000)
-    }, 'latest']);
-    
-    if (balanceData.result) {
-      const balanceWei = BigInt(balanceData.result);
-      const burnedFormatted = (Number(balanceWei) / divisor).toFixed(2);
-      console.log('Total burned tokens:', burnedFormatted);
-      return burnedFormatted;
+    console.log('Calculating burned tokens via BaseScan tokentx...');
+    let total = 0n;
+    const MAX_PAGES = 10; // safeguard
+
+    for (let page = 1; page <= MAX_PAGES; page++) {
+      const txUrl = `https://api.basescan.org/api?module=account&action=tokentx&contractaddress=${PKRSC_CONTRACT_ADDRESS}&page=${page}&offset=100&sort=asc&apikey=${BASESCAN_API_KEY}`;
+      const txRes = await fetch(txUrl);
+      const txJson = await txRes.json();
+      if (txJson.status !== '1' || !Array.isArray(txJson.result) || txJson.result.length === 0) break;
+
+      for (const t of txJson.result) {
+        const to = String(t.to || '').toLowerCase();
+        if (to === ZERO_ADDRESS) {
+          // Etherscan-style API returns value as decimal string (raw units)
+          try {
+            const raw = BigInt(t.value || '0');
+            total += raw;
+          } catch (_) {}
+        }
+      }
+      if (txJson.result.length < 100) break; // no more pages
     }
+
+    const burnedFormatted = (Number(total) / divisor).toFixed(2);
+    console.log('Burned (from BaseScan):', burnedFormatted);
+    return burnedFormatted;
   } catch (e) {
-    console.warn('Failed to fetch burned tokens:', e);
+    console.warn('Failed to calculate burned via BaseScan:', e);
+    return '0.00';
   }
-  
-  return '0.00';
 }
 
 async function fetchHoldersFromBaseScan(decimals: number): Promise<TokenHolder[]> {
@@ -88,21 +100,27 @@ async function fetchHoldersFromBaseScan(decimals: number): Promise<TokenHolder[]
   const res = await fetch(url);
   const json = await res.json();
 
-  // Try tokenholderlist first
   if (json.status === '1' && Array.isArray(json.result) && json.result.length > 0) {
     const divisor = Math.pow(10, decimals);
     const holders: TokenHolder[] = json.result
-      .map((r: any) => ({
-        address: (r.TokenHolderAddress || r.holderAddress || '').toLowerCase(),
-        raw: r.TokenHolderQuantity || r.tokenHolderQuantity || r.balance || '0',
-      }))
-      .filter((r: any) => r.address && r.raw)
       .map((r: any) => {
-        const raw = BigInt(r.raw);
+        const addr = (r.TokenHolderAddress || r.HolderAddress || r.holderAddress || r.TokenHolder || r.address || '').toLowerCase();
+        const qtyStr = String(r.TokenHolderQuantity || r.TokenBalance || r.tokenHolderQuantity || r.tokenBalance || r.balance || '0');
+        return { addr, qtyStr };
+      })
+      .filter((r: any) => r.addr)
+      .map((r: any) => {
+        let rawWei: bigint;
+        if (/^\d+$/.test(r.qtyStr)) {
+          rawWei = BigInt(r.qtyStr);
+        } else {
+          const tokens = parseFloat(r.qtyStr.replace(/,/g, '')) || 0;
+          rawWei = BigInt(Math.round(tokens * divisor));
+        }
         return {
-          address: r.address,
-          balance: raw.toString(),
-          balanceFormatted: (Number(raw) / divisor).toFixed(2),
+          address: r.addr,
+          balance: rawWei.toString(),
+          balanceFormatted: (Number(rawWei) / divisor).toFixed(2),
         } as TokenHolder;
       })
       .filter((h) => Number(h.balance) > 0)
