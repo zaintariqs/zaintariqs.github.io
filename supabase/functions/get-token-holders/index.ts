@@ -8,7 +8,14 @@ const PKRSC_CONTRACT_ADDRESS = '0x220aC54E22056B834522cD1A6A3DfeCA63bC3C6e';
 const BASE_RPCS = [
   'https://mainnet.base.org',
   'https://base.llamarpc.com',
-  'https://base-rpc.publicnode.com'
+  'https://base-rpc.publicnode.com',
+  'https://1rpc.io/base',
+  'https://base.blockpi.network/v1/rpc/public',
+  'https://base.meowrpc.com',
+  'https://rpc.ankr.com/base',
+  'https://endpoints.omniatech.io/v1/base/mainnet/public',
+  'https://base.api.onfinality.io/public',
+  'https://base.drpc.org'
 ];
 
 const rpcHeaders = { 'Content-Type': 'application/json' } as const;
