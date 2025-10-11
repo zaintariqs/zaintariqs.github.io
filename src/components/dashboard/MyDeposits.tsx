@@ -223,6 +223,44 @@ export function MyDeposits() {
     }
   }
 
+  const handleViewProof = async (deposit: Deposit) => {
+    try {
+      if (deposit.receipt_url) {
+        window.open(deposit.receipt_url, '_blank')
+        return
+      }
+      if (!address) {
+        toast({ title: 'Wallet not connected', description: 'Connect your wallet to view proof', variant: 'destructive' })
+        return
+      }
+      // Fallback: look up file in public bucket by convention address/depositId-*
+      const folder = address
+      const { data: files, error } = await supabase.storage
+        .from('deposit-receipts')
+        .list(folder, { limit: 100 })
+      if (error) throw error
+      const matches = (files || []).filter((f: any) => f.name.startsWith(`${deposit.id}-`))
+      if (!matches.length) {
+        toast({ title: 'Proof not found', description: 'We could not locate your uploaded receipt for this deposit.' })
+        return
+      }
+      // Pick the most recent by updated_at if available
+      const sorted = matches.sort((a: any, b: any) => new Date(b.updated_at || 0).getTime() - new Date(a.updated_at || 0).getTime())
+      const file = sorted[0]
+      const { data: pub } = supabase.storage
+        .from('deposit-receipts')
+        .getPublicUrl(`${folder}/${file.name}`)
+      if (pub?.publicUrl) {
+        window.open(pub.publicUrl, '_blank')
+      } else {
+        toast({ title: 'Proof unavailable', description: 'Could not generate a public link for the receipt.' })
+      }
+    } catch (err) {
+      console.error('Error opening proof:', err)
+      toast({ title: 'Error', description: 'Failed to open proof', variant: 'destructive' })
+    }
+  }
+
   const handleCancelDeposit = (deposit: Deposit) => {
     setSelectedDeposit(deposit)
     setCancelDialogOpen(true)
@@ -408,11 +446,11 @@ export function MyDeposits() {
                             Submit Proof
                           </Button>
                         )}
-                        {deposit.receipt_url && (
+                        {(deposit.receipt_url || deposit.submitted_at) && (
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => window.open(deposit.receipt_url, '_blank')}
+                            onClick={() => handleViewProof(deposit)}
                             className="w-full"
                           >
                             <ExternalLink className="h-3 w-3 mr-2" />
