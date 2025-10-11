@@ -125,6 +125,14 @@ export function AdminDeposits() {
     setIsSubmitting(true)
 
     try {
+      // Sign message for authentication
+      const nonce = Date.now()
+      const message = `Admin action: ${actionType} deposit\nNonce: ${nonce}\nTimestamp: ${new Date().toISOString()}`
+      const signature = await signMessageAsync({ 
+        message,
+        account: address 
+      })
+
       const response = await fetch(
         'https://jdjreuxhvzmzockuduyq.supabase.co/functions/v1/approve-deposit',
         {
@@ -132,6 +140,9 @@ export function AdminDeposits() {
           headers: {
             'Content-Type': 'application/json',
             'x-wallet-address': address,
+            'x-wallet-signature': signature,
+            'x-signature-message': btoa(message),
+            'x-nonce': nonce.toString(),
           },
           body: JSON.stringify({
             depositId: selectedDeposit.id,
