@@ -48,52 +48,31 @@ interface TokenHolder {
 // Optional BaseScan API key for reliable holder lookup
 const BASESCAN_API_KEY = Deno.env.get('BASESCAN_API_KEY');
 
-// Calculate burned tokens from Transfer events to zero address
+// Calculate burned tokens by querying zero address balance
 async function calculateBurnedTokens(decimals: number): Promise<string> {
   const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
   const divisor = Math.pow(10, decimals);
   
-  // Get current block
-  const blockData = await rpcFetch('eth_blockNumber', []);
-  const currentBlock = parseInt(blockData.result, 16);
-  
-  // Scan for Transfer events to zero address (burns)
-  const CHUNK_SIZE = 200000;
-  let totalBurned = 0n;
-  
-  console.log('Calculating burned tokens from Transfer events to zero address...');
-  
-  for (let start = 0; start <= currentBlock; start += CHUNK_SIZE) {
-    const end = Math.min(currentBlock, start + CHUNK_SIZE - 1);
+  try {
+    console.log('Fetching burned tokens from zero address balance...');
     
-    try {
-      const logsData = await rpcFetch('eth_getLogs', [{
-        fromBlock: '0x' + start.toString(16),
-        toBlock: '0x' + end.toString(16),
-        address: PKRSC_CONTRACT_ADDRESS,
-        topics: [
-          TRANSFER_EVENT_SIGNATURE,
-          null, // from (any address)
-          '0x' + ZERO_ADDRESS.slice(2).padStart(64, '0') // to zero address
-        ]
-      }]);
-      
-      if (logsData?.result) {
-        for (const log of logsData.result) {
-          // Amount is in the data field
-          const amount = BigInt(log.data);
-          totalBurned += amount;
-        }
-      }
-    } catch (e) {
-      console.warn(`Failed to fetch burn logs for block range ${start}-${end}:`, e);
+    // Query the zero address balance directly - much faster than scanning all events
+    const balanceData = await rpcFetch('eth_call', [{
+      to: PKRSC_CONTRACT_ADDRESS,
+      data: '0x70a08231' + ZERO_ADDRESS.slice(2).padStart(64, '0') // balanceOf(0x000...000)
+    }, 'latest']);
+    
+    if (balanceData.result) {
+      const balanceWei = BigInt(balanceData.result);
+      const burnedFormatted = (Number(balanceWei) / divisor).toFixed(2);
+      console.log('Total burned tokens:', burnedFormatted);
+      return burnedFormatted;
     }
+  } catch (e) {
+    console.warn('Failed to fetch burned tokens:', e);
   }
   
-  const burnedFormatted = (Number(totalBurned) / divisor).toFixed(2);
-  console.log('Total burned tokens:', burnedFormatted);
-  
-  return burnedFormatted;
+  return '0.00';
 }
 
 async function fetchHoldersFromBaseScan(decimals: number): Promise<TokenHolder[]> {
@@ -262,120 +241,9 @@ Deno.serve(async (req) => {
       console.warn('BaseScan primary fetch failed:', e instanceof Error ? e.message : String(e));
     }
 
-    // Get the current block number
-    const blockData = await rpcFetch('eth_blockNumber', []);
-    const currentBlock = parseInt(blockData.result, 16);
-    console.log('Current block:', currentBlock);
-
-    // Scan Transfer logs across the entire chain in safe chunks to avoid RPC limits
-    const CHUNK_SIZE = 200000;
-    const combinedLogs: any[] = [];
-    console.log(`Scanning logs in chunks of ${CHUNK_SIZE} blocks...`);
-
-    for (let start = 0; start <= currentBlock; start += CHUNK_SIZE) {
-      const end = Math.min(currentBlock, start + CHUNK_SIZE - 1);
-      const fetchRange = async (from: number, to: number) => {
-        return rpcFetch('eth_getLogs', [{
-          fromBlock: '0x' + from.toString(16),
-          toBlock: '0x' + to.toString(16),
-          address: PKRSC_CONTRACT_ADDRESS,
-          topics: [TRANSFER_EVENT_SIGNATURE]
-        }]);
-      };
-
-      let data = await fetchRange(start, end);
-
-      // If too many results / rate limited, split into smaller sub-chunks
-      if (data?.error && (data.error.code === -32005 || String(data.error.message || '').toLowerCase().includes('limit'))) {
-        const SUB = Math.max(20000, Math.floor(CHUNK_SIZE / 10));
-        for (let subStart = start; subStart <= end; subStart += SUB) {
-          const subEnd = Math.min(end, subStart + SUB - 1);
-          const subData = await fetchRange(subStart, subEnd);
-          if (subData?.result) combinedLogs.push(...subData.result);
-        }
-      } else if (Array.isArray(data?.result)) {
-        combinedLogs.push(...data.result);
-      } else if (data?.error) {
-        console.warn('RPC error fetching logs chunk:', data.error);
-      }
-    }
-
-    console.log('Total Transfer events found:', combinedLogs.length);
-    const logsData = { result: combinedLogs };
-
-    // Extract unique addresses from Transfer events
-    const addressSet = new Set<string>();
-    
-    if (logsData.result) {
-      for (const log of logsData.result) {
-        // Topics: [0] = event signature, [1] = from, [2] = to
-        if (log.topics[1]) {
-          const from = '0x' + log.topics[1].slice(26); // Remove padding
-          addressSet.add(from.toLowerCase());
-        }
-        if (log.topics[2]) {
-          const to = '0x' + log.topics[2].slice(26);
-          addressSet.add(to.toLowerCase());
-        }
-      }
-    }
-
-    // Remove zero address
-    addressSet.delete('0x0000000000000000000000000000000000000000');
-    
-    console.log('Unique addresses found:', addressSet.size);
-
-    // Fetch balance for each address
+    // If BaseScan failed, return empty data with metrics instead of scanning entire chain
+    console.log('BaseScan unavailable, returning metrics only from contract state');
     let holders: TokenHolder[] = [];
-    
-    for (const address of addressSet) {
-      try {
-        const balanceData = await rpcFetch('eth_call', [{
-          to: PKRSC_CONTRACT_ADDRESS,
-          data: '0x70a08231' + address.slice(2).padStart(64, '0') // balanceOf(address)
-        }, 'latest']);
-        
-        if (balanceData.result) {
-          const balanceWei = BigInt(balanceData.result);
-          
-          // Only include addresses with non-zero balance
-          if (balanceWei > 0n) {
-            const balanceFormatted = (Number(balanceWei) / divisor).toFixed(2);
-            
-            holders.push({
-              address: address,
-              balance: balanceWei.toString(),
-              balanceFormatted: balanceFormatted
-            });
-          }
-        }
-      } catch (error) {
-        console.error(`Error fetching balance for ${address}:`, error);
-      }
-    }
-
-    // Sort by balance descending
-    holders.sort((a, b) => {
-      const balanceA = BigInt(a.balance);
-      const balanceB = BigInt(b.balance);
-      return balanceA > balanceB ? -1 : balanceA < balanceB ? 1 : 0;
-    });
-
-    console.log('Token holders with balance:', holders.length);
-
-    // Fallback: BaseScan API if available and no holders from RPC
-    try {
-      const apiKey = Deno.env.get('BASESCAN_API_KEY');
-      if (holders.length === 0 && apiKey) {
-        const bsHolders = await fetchHoldersFromBaseScan(decimals);
-        if (bsHolders.length > 0) {
-          holders = bsHolders;
-          console.log('BaseScan fallback holders:', holders.length);
-        }
-      }
-    } catch (e) {
-      console.warn('BaseScan fallback failed:', e instanceof Error ? e.message : String(e));
-    }
 
     // Calculate metrics: totalMinted, burned, treasury
     const metrics = { totalMinted: '0', burned: '0', treasury: '0' };
