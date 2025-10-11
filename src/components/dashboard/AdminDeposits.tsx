@@ -325,11 +325,11 @@ export function AdminDeposits() {
                               </Button>
                             </div>
                           )}
-                          {deposit.status === 'completed' && deposit.mint_transaction_hash && (
+                          {deposit.status === 'completed' && (deposit.mint_transaction_hash || deposit.transaction_id) && (
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => window.open(`https://basescan.org/tx/${deposit.mint_transaction_hash}`, '_blank')}
+                              onClick={() => window.open(`https://basescan.org/tx/${deposit.mint_transaction_hash || deposit.transaction_id}`, '_blank')}
                               className="w-full"
                             >
                               <ExternalLink className="h-4 w-4 mr-1" />
