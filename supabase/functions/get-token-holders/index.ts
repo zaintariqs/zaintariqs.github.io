@@ -45,6 +45,40 @@ interface TokenHolder {
   balanceFormatted: string;
 }
 
+// Optional BaseScan API key for reliable holder lookup
+const BASESCAN_API_KEY = Deno.env.get('BASESCAN_API_KEY');
+
+async function fetchHoldersFromBaseScan(decimals: number): Promise<TokenHolder[]> {
+  if (!BASESCAN_API_KEY) return [];
+  const url = `https://api.basescan.org/api?module=token&action=tokenholderlist&contractaddress=${PKRSC_CONTRACT_ADDRESS}&page=1&offset=200&apikey=${BASESCAN_API_KEY}`;
+  const res = await fetch(url);
+  const json = await res.json();
+
+  if (json.status !== '1' || !Array.isArray(json.result)) {
+    throw new Error(json.message || 'BaseScan tokenholderlist unavailable');
+  }
+
+  const divisor = Math.pow(10, decimals);
+  const holders: TokenHolder[] = json.result
+    .map((r: any) => ({
+      address: (r.TokenHolderAddress || r.holderAddress || '').toLowerCase(),
+      raw: r.TokenHolderQuantity || r.tokenHolderQuantity || r.balance || '0',
+    }))
+    .filter((r: any) => r.address && r.raw)
+    .map((r: any) => {
+      const raw = BigInt(r.raw);
+      return {
+        address: r.address,
+        balance: raw.toString(),
+        balanceFormatted: (Number(raw) / divisor).toFixed(2),
+      } as TokenHolder;
+    })
+    .filter((h) => Number(h.balance) > 0)
+    .sort((a, b) => (BigInt(b.balance) > BigInt(a.balance) ? 1 : -1));
+
+  return holders;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
