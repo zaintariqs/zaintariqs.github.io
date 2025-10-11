@@ -290,56 +290,91 @@ export function AdminDeposits() {
                       </TableCell>
                       <TableCell>{deposit.phone_number}</TableCell>
                       <TableCell>{getStatusBadge(deposit.status)}</TableCell>
-                      <TableCell>
+                       <TableCell>
                         <div className="flex flex-col gap-2">
-                          {deposit.receipt_url && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => openDialog(deposit, 'view')}
-                              className="w-full"
-                            >
-                              <Eye className="h-4 w-4 mr-1" />
-                              View Proof
-                            </Button>
-                          )}
                           {(deposit.status === 'pending' || deposit.status === 'processing') && (
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="default"
-                                onClick={() => openDialog(deposit, 'approve')}
-                                className="flex-1"
-                              >
-                                <Check className="h-4 w-4 mr-1" />
-                                Approve
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => openDialog(deposit, 'reject')}
-                                className="flex-1"
-                              >
-                                <X className="h-4 w-4 mr-1" />
-                                Reject
-                              </Button>
-                            </div>
+                            <>
+                              {deposit.receipt_url && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => openDialog(deposit, 'view')}
+                                  className="w-full"
+                                >
+                                  <Eye className="h-4 w-4 mr-1" />
+                                  View Proof
+                                </Button>
+                              )}
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="default"
+                                  onClick={() => openDialog(deposit, 'approve')}
+                                  className="flex-1"
+                                >
+                                  <Check className="h-4 w-4 mr-1" />
+                                  Approve
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => openDialog(deposit, 'reject')}
+                                  className="flex-1"
+                                >
+                                  <X className="h-4 w-4 mr-1" />
+                                  Reject
+                                </Button>
+                              </div>
+                            </>
                           )}
-                          {deposit.status === 'completed' && (deposit.mint_transaction_hash || deposit.transaction_id) && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => window.open(`https://basescan.org/tx/${deposit.mint_transaction_hash || deposit.transaction_id}`, '_blank')}
-                              className="w-full"
-                            >
-                              <ExternalLink className="h-4 w-4 mr-1" />
-                              View on BaseScan
-                            </Button>
+                          {deposit.status === 'completed' && (
+                            <>
+                              {deposit.receipt_url && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => openDialog(deposit, 'view')}
+                                  className="w-full"
+                                >
+                                  <Eye className="h-4 w-4 mr-1" />
+                                  View Proof
+                                </Button>
+                              )}
+                              {(deposit.mint_transaction_hash || deposit.transaction_id) && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => window.open(`https://basescan.org/tx/${deposit.mint_transaction_hash || deposit.transaction_id}`, '_blank')}
+                                  className="w-full"
+                                >
+                                  <ExternalLink className="h-4 w-4 mr-1" />
+                                  View on BaseScan
+                                </Button>
+                              )}
+                            </>
                           )}
-                          {deposit.status === 'rejected' && deposit.rejection_reason && (
-                            <span className="text-xs text-muted-foreground">
-                              Reason: {deposit.rejection_reason}
-                            </span>
+                          {deposit.status === 'rejected' && (
+                            <>
+                              {deposit.receipt_url && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => openDialog(deposit, 'view')}
+                                  className="w-full"
+                                >
+                                  <Eye className="h-4 w-4 mr-1" />
+                                  View Proof
+                                </Button>
+                              )}
+                              {deposit.rejection_reason && (
+                                <span className="text-xs text-muted-foreground">
+                                  Reason: {deposit.rejection_reason}
+                                </span>
+                              )}
+                            </>
+                          )}
+                          {deposit.status === 'draft' && (
+                            <span className="text-xs text-muted-foreground">Awaiting email verification</span>
                           )}
                         </div>
                       </TableCell>
