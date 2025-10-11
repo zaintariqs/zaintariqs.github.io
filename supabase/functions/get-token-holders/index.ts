@@ -52,13 +52,12 @@ interface TokenHolder {
   balance: string;
   balanceFormatted: string;
   email?: string;
-  isLiquidityPool?: boolean;
+  lpType?: 'provider' | 'uniswap';
 }
 
-const KNOWN_LP_ADDRESSES = [
-  '0xCFBDCBFD1312a2D85545A88Ca95C93C7523dd11b'.toLowerCase(), // LP wallet address
-  '0x1bC6fB786B7B5BA4D31A7F47a75eC3Fd3B26690E'.toLowerCase()  // Uniswap pool contract address
-];
+const LP_PROVIDER_ADDRESS = '0xCFBDCBFD1312a2D85545A88Ca95C93C7523dd11b'.toLowerCase();
+const UNISWAP_POOL_ADDRESS = '0x1bC6fB786B7B5BA4D31A7F47a75eC3Fd3B26690E'.toLowerCase();
+const KNOWN_LP_ADDRESSES = [LP_PROVIDER_ADDRESS, UNISWAP_POOL_ADDRESS];
 
 // Optional BaseScan API key for reliable holder lookup
 const BASESCAN_API_KEY = Deno.env.get('BASESCAN_API_KEY');
@@ -351,7 +350,12 @@ async function enrichHoldersWithEmails(supabase: any, holders: TokenHolder[]): P
         }
       }
       
-      holder.isLiquidityPool = KNOWN_LP_ADDRESSES.includes(addr);
+      // Mark LP type
+      if (addr === LP_PROVIDER_ADDRESS) {
+        holder.lpType = 'provider';
+      } else if (addr === UNISWAP_POOL_ADDRESS) {
+        holder.lpType = 'uniswap';
+      }
     }
 
     console.log(`Enriched ${holders.length} holders with decrypted email data`);

@@ -13,7 +13,7 @@ interface TokenHolder {
   balance: string;
   balanceFormatted: string;
   email?: string;
-  isLiquidityPool?: boolean;
+  lpType?: 'provider' | 'uniswap';
 }
 
 interface TokenMetrics {
@@ -242,10 +242,17 @@ export function UserBalances() {
                       <TableCell className="font-mono text-white/90">
                         <div>
                           {holder.address}
-                          {holder.isLiquidityPool && (
+                          {holder.lpType === 'provider' && (
+                            <div className="mt-1">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                                LIQUIDITY PROVIDER ADDRESS
+                              </span>
+                            </div>
+                          )}
+                          {holder.lpType === 'uniswap' && (
                             <div className="mt-1">
                               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30">
-                                Liquidity Pool
+                                UNISWAP POOL ADDRESS
                               </span>
                             </div>
                           )}
