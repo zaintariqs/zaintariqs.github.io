@@ -5,7 +5,36 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 const PKRSC_CONTRACT_ADDRESS = '0x220aC54E22056B834522cD1A6A3DfeCA63bC3C6e';
-const BASE_MAINNET_RPC = 'https://mainnet.base.org';
+const BASE_RPCS = [
+  'https://mainnet.base.org',
+  'https://base.llamarpc.com',
+  'https://base-rpc.publicnode.com'
+];
+
+const rpcHeaders = { 'Content-Type': 'application/json' } as const;
+
+async function rpcFetch(method: string, params: any[], attempt = 0): Promise<any> {
+  for (const rpc of BASE_RPCS) {
+    try {
+      const res = await fetch(rpc, {
+        method: 'POST',
+        headers: rpcHeaders,
+        body: JSON.stringify({ jsonrpc: '2.0', method, params, id: Date.now() })
+      });
+      const json = await res.json();
+      if (json.error) throw Object.assign(new Error(json.error.message || 'RPC error'), { code: json.error.code, info: json.error });
+      return json;
+    } catch (e: any) {
+      console.warn(`RPC ${rpc} failed for ${method}:`, e?.code || e?.message || e);
+      continue; // try next endpoint
+    }
+  }
+  if (attempt < 2) {
+    await new Promise((r) => setTimeout(r, 300 * (attempt + 1)));
+    return rpcFetch(method, params, attempt + 1);
+  }
+  throw new Error(`All RPC endpoints failed for ${method}`);
+}
 
 // ERC20 Transfer event signature
 const TRANSFER_EVENT_SIGNATURE = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
@@ -48,37 +77,28 @@ Deno.serve(async (req) => {
     console.log('Fetching token holders for PKRSC contract:', PKRSC_CONTRACT_ADDRESS);
 
     // First verify the contract exists
-    const codeResponse = await fetch(BASE_MAINNET_RPC, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        method: 'eth_getCode',
-        params: [PKRSC_CONTRACT_ADDRESS, 'latest'],
-        id: 1
-      })
-    });
-    
-    const codeData = await codeResponse.json();
+    const codeData = await rpcFetch('eth_getCode', [PKRSC_CONTRACT_ADDRESS, 'latest']);
     if (!codeData.result || codeData.result === '0x' || codeData.result === '0x0') {
       console.error('Contract not found at address:', PKRSC_CONTRACT_ADDRESS);
       throw new Error('Contract not deployed at this address on Base mainnet');
     }
     console.log('Contract verified at address');
 
+    // Discover token decimals
+    let decimals = 6;
+    try {
+      const decRes = await rpcFetch('eth_call', [{ to: PKRSC_CONTRACT_ADDRESS, data: '0x313ce567' }, 'latest']);
+      if (decRes.result) {
+        decimals = parseInt(decRes.result, 16) || 6;
+      }
+      console.log('Token decimals:', decimals);
+    } catch (e) {
+      console.warn('Failed to fetch decimals, defaulting to 6');
+    }
+    const divisor = Math.pow(10, decimals);
+
     // Get the current block number
-    const blockResponse = await fetch(BASE_MAINNET_RPC, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        method: 'eth_blockNumber',
-        params: [],
-        id: 2
-      })
-    });
-    
-    const blockData = await blockResponse.json();
+    const blockData = await rpcFetch('eth_blockNumber', []);
     const currentBlock = parseInt(blockData.result, 16);
     console.log('Current block:', currentBlock);
 
@@ -90,22 +110,12 @@ Deno.serve(async (req) => {
     for (let start = 0; start <= currentBlock; start += CHUNK_SIZE) {
       const end = Math.min(currentBlock, start + CHUNK_SIZE - 1);
       const fetchRange = async (from: number, to: number) => {
-        const res = await fetch(BASE_MAINNET_RPC, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            jsonrpc: '2.0',
-            method: 'eth_getLogs',
-            params: [{
-              fromBlock: '0x' + from.toString(16),
-              toBlock: '0x' + to.toString(16),
-              address: PKRSC_CONTRACT_ADDRESS,
-              topics: [TRANSFER_EVENT_SIGNATURE]
-            }],
-            id: 3
-          })
-        });
-        return res.json();
+        return rpcFetch('eth_getLogs', [{
+          fromBlock: '0x' + from.toString(16),
+          toBlock: '0x' + to.toString(16),
+          address: PKRSC_CONTRACT_ADDRESS,
+          topics: [TRANSFER_EVENT_SIGNATURE]
+        }]);
       };
 
       let data = await fetchRange(start, end);
@@ -155,28 +165,17 @@ Deno.serve(async (req) => {
     
     for (const address of addressSet) {
       try {
-        const balanceResponse = await fetch(BASE_MAINNET_RPC, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            jsonrpc: '2.0',
-            method: 'eth_call',
-            params: [{
-              to: PKRSC_CONTRACT_ADDRESS,
-              data: '0x70a08231' + address.slice(2).padStart(64, '0') // balanceOf(address)
-            }, 'latest'],
-            id: 3
-          })
-        });
-
-        const balanceData = await balanceResponse.json();
+        const balanceData = await rpcFetch('eth_call', [{
+          to: PKRSC_CONTRACT_ADDRESS,
+          data: '0x70a08231' + address.slice(2).padStart(64, '0') // balanceOf(address)
+        }, 'latest']);
         
         if (balanceData.result) {
           const balanceWei = BigInt(balanceData.result);
           
           // Only include addresses with non-zero balance
           if (balanceWei > 0n) {
-            const balanceFormatted = (Number(balanceWei) / 1e6).toFixed(2);
+            const balanceFormatted = (Number(balanceWei) / divisor).toFixed(2);
             
             holders.push({
               address: address,
