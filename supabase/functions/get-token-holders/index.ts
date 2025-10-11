@@ -4,8 +4,8 @@ import { corsHeaders } from '../_shared/cors.ts';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-const PKRSC_CONTRACT_ADDRESS = '0x52c49c498150e5e9C7dECC70e24A6bD791cf7F76';
-const BASE_SEPOLIA_RPC = 'https://sepolia.base.org';
+const PKRSC_CONTRACT_ADDRESS = '0x220ac54e22056b834522cd1a6a3dfeca63bc3c6e';
+const BASE_MAINNET_RPC = 'https://mainnet.base.org';
 
 // ERC20 Transfer event signature
 const TRANSFER_EVENT_SIGNATURE = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
     console.log('Fetching token holders for PKRSC contract:', PKRSC_CONTRACT_ADDRESS);
 
     // Get the current block number
-    const blockResponse = await fetch(BASE_SEPOLIA_RPC, {
+    const blockResponse = await fetch(BASE_MAINNET_RPC, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -64,7 +64,7 @@ Deno.serve(async (req) => {
     console.log('Current block:', currentBlock);
 
     // Fetch Transfer events to get all addresses that have interacted with the token
-    const logsResponse = await fetch(BASE_SEPOLIA_RPC, {
+    const logsResponse = await fetch(BASE_MAINNET_RPC, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -110,7 +110,7 @@ Deno.serve(async (req) => {
     
     for (const address of addressSet) {
       try {
-        const balanceResponse = await fetch(BASE_SEPOLIA_RPC, {
+        const balanceResponse = await fetch(BASE_MAINNET_RPC, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -131,7 +131,7 @@ Deno.serve(async (req) => {
           
           // Only include addresses with non-zero balance
           if (balanceWei > 0n) {
-            const balanceFormatted = (Number(balanceWei) / 1e18).toFixed(2);
+            const balanceFormatted = (Number(balanceWei) / 1e6).toFixed(2);
             
             holders.push({
               address: address,
