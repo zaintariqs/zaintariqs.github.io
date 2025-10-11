@@ -278,20 +278,58 @@ Deno.serve(async (req) => {
       console.warn('BaseScan primary fetch failed:', e instanceof Error ? e.message : String(e));
     }
 
-    // If BaseScan failed, return empty data with metrics instead of scanning entire chain
-    console.log('BaseScan unavailable, returning metrics only from contract state');
+    // BaseScan unavailable — build holders from recent DB addresses and compute metrics
+    console.log('BaseScan unavailable, building holders from recent DB addresses');
     let holders: TokenHolder[] = [];
 
-    // Calculate metrics: totalMinted, burned, treasury
-    const metrics = { totalMinted: '0', burned: '0', treasury: '0' };
-    
-    // Get totalSupply from contract
+    // Gather candidate addresses (recent users + admins + connected wallet)
+    const candidateSet = new Set<string>();
     try {
-      const totalSupplyData = await rpcFetch('eth_call', [{
-        to: PKRSC_CONTRACT_ADDRESS,
-        data: '0x18160ddd' // totalSupply()
-      }, 'latest']);
-      
+      const [{ data: rds }, { data: deps }, { data: admins }] = await Promise.all([
+        supabase.from('redemptions').select('user_id').order('created_at', { ascending: false }).limit(200),
+        supabase.from('deposits_public').select('user_id').order('created_at', { ascending: false }).limit(200),
+        supabase.from('admin_wallets').select('wallet_address').eq('is_active', true)
+      ]);
+      (rds || []).forEach((r: any) => r?.user_id && candidateSet.add(String(r.user_id).toLowerCase()));
+      (deps || []).forEach((d: any) => d?.user_id && candidateSet.add(String(d.user_id).toLowerCase()));
+      (admins || []).forEach((a: any) => a?.wallet_address && candidateSet.add(String(a.wallet_address).toLowerCase()));
+    } catch (e) {
+      console.warn('DB address collection failed:', e);
+    }
+    if (walletAddress && /^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+      candidateSet.add(walletAddress.toLowerCase());
+    }
+    candidateSet.delete('0x0000000000000000000000000000000000000000');
+    candidateSet.delete('0x000000000000000000000000000000000000dead');
+
+    // Query balances via RPC
+    for (const addr of candidateSet) {
+      try {
+        const bal = await rpcFetch('eth_call', [{
+          to: PKRSC_CONTRACT_ADDRESS,
+          data: '0x70a08231' + addr.slice(2).padStart(64, '0')
+        }, 'latest']);
+        if (bal?.result) {
+          const wei = BigInt(bal.result);
+          if (wei > 0n) {
+            holders.push({
+              address: addr,
+              balance: wei.toString(),
+              balanceFormatted: (Number(wei) / divisor).toFixed(2)
+            });
+          }
+        }
+      } catch (e) {
+        console.warn('balanceOf RPC failed for', addr, e);
+      }
+    }
+
+    holders.sort((a, b) => (BigInt(b.balance) > BigInt(a.balance) ? 1 : -1));
+
+    // Compute metrics from contract state + BaseScan burns
+    const metrics = { totalMinted: '0', burned: '0', treasury: '0' };
+    try {
+      const totalSupplyData = await rpcFetch('eth_call', [{ to: PKRSC_CONTRACT_ADDRESS, data: '0x18160ddd' }, 'latest']);
       if (totalSupplyData.result) {
         const totalSupplyWei = BigInt(totalSupplyData.result);
         metrics.totalMinted = (Number(totalSupplyWei) / divisor).toFixed(2);
@@ -299,52 +337,21 @@ Deno.serve(async (req) => {
     } catch (e) {
       console.warn('Failed to fetch totalSupply:', e);
     }
-
-    // Calculate burned tokens from Transfer events to zero address
     try {
       metrics.burned = await calculateBurnedTokens(decimals);
     } catch (e) {
       console.warn('Failed to calculate burned tokens:', e);
     }
 
-    // Include connected admin wallet holder if it has balance
-    try {
-      if (walletAddress && /^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
-        const balRes = await rpcFetch('eth_call', [{
-          to: PKRSC_CONTRACT_ADDRESS,
-          data: '0x70a08231' + walletAddress.slice(2).padStart(64, '0')
-        }, 'latest']);
-        if (balRes.result) {
-          const balWei = BigInt(balRes.result);
-          if (balWei > 0n) {
-            holders.unshift({
-              address: walletAddress.toLowerCase(),
-              balance: balWei.toString(),
-              balanceFormatted: (Number(balWei) / divisor).toFixed(2)
-            });
-          }
-        }
-      }
-    } catch (e) {
-      console.warn('Failed to fetch connected wallet balance:', e);
-    }
-
-    // Find treasury wallet (largest holder excluding zero/burn addresses)
     const treasuryHolder = holders.find(h => 
       h.address.toLowerCase() !== '0x0000000000000000000000000000000000000000' &&
       h.address.toLowerCase() !== '0x000000000000000000000000000000000000dead'
     );
-    
-    if (treasuryHolder) {
-      metrics.treasury = treasuryHolder.balanceFormatted;
-    }
+    if (treasuryHolder) metrics.treasury = treasuryHolder.balanceFormatted;
 
     return new Response(
       JSON.stringify({ holders, metrics }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
 
   } catch (error) {
