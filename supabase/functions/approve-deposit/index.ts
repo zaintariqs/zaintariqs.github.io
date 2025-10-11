@@ -37,7 +37,8 @@ serve(async (req) => {
 
     const walletAddress = req.headers.get('x-wallet-address')
     const signature = req.headers.get('x-wallet-signature')
-    const signedMessage = req.headers.get('x-signature-message')
+    const messageHeaderEncoded = req.headers.get('x-signature-message')
+    const signedMessage = messageHeaderEncoded ? atob(messageHeaderEncoded) : null
     const nonce = req.headers.get('x-nonce')
     
     if (!walletAddress || !signature || !signedMessage || !nonce) {

@@ -153,7 +153,14 @@ export function AdminDeposits() {
         }
       )
 
-      if (!response.ok) throw new Error(`Failed to ${actionType} deposit`)
+      if (!response.ok) {
+        let errMsg = `Failed to ${actionType} deposit`
+        try {
+          const data = await response.json()
+          if (data?.error) errMsg = data.error
+        } catch {}
+        throw new Error(errMsg)
+      }
 
       toast({
         title: "Success",
@@ -162,11 +169,11 @@ export function AdminDeposits() {
 
       setDialogOpen(false)
       fetchDeposits()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating deposit:', error)
       toast({
         title: "Error",
-        description: "Failed to update deposit",
+        description: error?.message || "Failed to update deposit",
         variant: "destructive",
       })
     } finally {
