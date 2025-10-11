@@ -217,6 +217,78 @@ async function fetchHoldersFromBaseScan(decimals: number): Promise<TokenHolder[]
   return holders;
 }
 
+// Fallback using on-chain logs if BaseScan fails or is incomplete
+async function fetchHoldersFromRpcLogs(decimals: number): Promise<TokenHolder[]> {
+  try {
+    console.log('🔎 Scanning RPC logs for Transfer events...');
+    const latest = await rpcFetch('eth_blockNumber', []);
+    const latestNum = parseInt(latest.result, 16);
+    const step = 50_000;
+    const span = 1_000_000; // last ~1M blocks
+    const start = Math.max(0, latestNum - span);
+
+    const addrSet = new Set<string>();
+
+    for (let from = start; from <= latestNum; from += step) {
+      const to = Math.min(latestNum, from + step - 1);
+      try {
+        const logs = await rpcFetch('eth_getLogs', [{
+          address: PKRSC_CONTRACT_ADDRESS,
+          fromBlock: '0x' + from.toString(16),
+          toBlock: '0x' + to.toString(16),
+          topics: [TRANSFER_EVENT_SIGNATURE]
+        }]);
+
+        if (Array.isArray(logs.result)) {
+          for (const l of logs.result) {
+            const topics: string[] = l.topics || [];
+            if (topics.length >= 3) {
+              const fromAddr = ('0x' + topics[1].slice(26)).toLowerCase();
+              const toAddr = ('0x' + topics[2].slice(26)).toLowerCase();
+              if (fromAddr !== '0x0000000000000000000000000000000000000000') addrSet.add(fromAddr);
+              if (toAddr !== '0x0000000000000000000000000000000000000000' && toAddr !== '0x000000000000000000000000000000000000dead') addrSet.add(toAddr);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn(`eth_getLogs failed for range ${from}-${to}:`, e);
+      }
+    }
+
+    console.log(`RPC logs discovered ${addrSet.size} candidate addresses`);
+
+    const holders: TokenHolder[] = [];
+    const divisor = Math.pow(10, decimals);
+    for (const addr of addrSet) {
+      try {
+        const balRes = await rpcFetch('eth_call', [{
+          to: PKRSC_CONTRACT_ADDRESS,
+          data: '0x70a08231' + addr.slice(2).padStart(64, '0')
+        }, 'latest']);
+        if (balRes?.result) {
+          const wei = BigInt(balRes.result);
+          if (wei > 0n) {
+            holders.push({
+              address: addr,
+              balance: wei.toString(),
+              balanceFormatted: (Number(wei) / divisor).toFixed(2)
+            });
+          }
+        }
+      } catch (e) {
+        console.warn('balanceOf failed for', addr, e);
+      }
+    }
+
+    holders.sort((a, b) => (BigInt(b.balance) > BigInt(a.balance) ? 1 : -1));
+    console.log(`RPC logs built ${holders.length} holders`);
+    return holders;
+  } catch (e) {
+    console.warn('RPC logs fallback failed:', e);
+    return [];
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -271,7 +343,7 @@ Deno.serve(async (req) => {
         console.log('Returning holders from BaseScan:', bsHolders.length);
         
         // Calculate metrics even when using BaseScan data
-        const metrics = { totalMinted: '0', burned: '0', treasury: '0' };
+        const metrics = { totalMinted: '0', burned: '0', treasury: '0' } as { totalMinted: string; burned: string; treasury: string };
         
         // Get totalSupply from contract
         try {
@@ -279,7 +351,6 @@ Deno.serve(async (req) => {
             to: PKRSC_CONTRACT_ADDRESS,
             data: '0x18160ddd' // totalSupply()
           }, 'latest']);
-          
           if (totalSupplyData.result) {
             const totalSupplyWei = BigInt(totalSupplyData.result);
             metrics.totalMinted = (Number(totalSupplyWei) / divisor).toFixed(2);
@@ -317,12 +388,49 @@ Deno.serve(async (req) => {
           console.warn('Failed to include connected wallet balance:', e);
         }
 
-        return new Response(
-          JSON.stringify({ holders: bsHolders, metrics }),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 200 
+        // Treasury = Master Minter's on-chain balance
+        try {
+          const { data: masterMinter } = await supabase.rpc('get_master_minter_address');
+          if (masterMinter && /^0x[a-fA-F0-9]{40}$/.test(masterMinter)) {
+            const mmLower = masterMinter.toLowerCase();
+            const found = bsHolders.find(h => h.address.toLowerCase() === mmLower);
+            if (found) {
+              metrics.treasury = found.balanceFormatted;
+            } else {
+              const mmBal = await rpcFetch('eth_call', [{
+                to: PKRSC_CONTRACT_ADDRESS,
+                data: '0x70a08231' + mmLower.slice(2).padStart(64, '0')
+              }, 'latest']);
+              if (mmBal?.result) {
+                const wei = BigInt(mmBal.result);
+                metrics.treasury = (Number(wei) / divisor).toFixed(2);
+                if (wei > 0n) {
+                  bsHolders.unshift({ address: mmLower, balance: wei.toString(), balanceFormatted: metrics.treasury });
+                }
+              }
+            }
           }
+        } catch (e) {
+          console.warn('Failed to compute treasury (master minter balance):', e);
+        }
+
+        // If BaseScan returned too few holders, enrich with RPC logs
+        let holdersArr = bsHolders;
+        if (holdersArr.length < 5) {
+          console.log('Enriching holders via RPC logs fallback...');
+          const rpcHolders = await fetchHoldersFromRpcLogs(decimals);
+          const map = new Map<string, TokenHolder>();
+          for (const h of [...holdersArr, ...rpcHolders]) {
+            const key = h.address.toLowerCase();
+            if (!map.has(key)) map.set(key, h);
+          }
+          holdersArr = Array.from(map.values()).sort((a, b) => (BigInt(b.balance) > BigInt(a.balance) ? 1 : -1));
+          console.log('Merged holders count:', holdersArr.length);
+        }
+
+        return new Response(
+          JSON.stringify({ holders: holdersArr, metrics }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         );
       }
     } catch (e) {
@@ -394,11 +502,31 @@ Deno.serve(async (req) => {
       console.warn('Failed to calculate burned tokens:', e);
     }
 
-    const treasuryHolder = holders.find(h => 
-      h.address.toLowerCase() !== '0x0000000000000000000000000000000000000000' &&
-      h.address.toLowerCase() !== '0x000000000000000000000000000000000000dead'
-    );
-    if (treasuryHolder) metrics.treasury = treasuryHolder.balanceFormatted;
+    // Treasury = Master Minter's on-chain balance (more accurate than guessing top holder)
+    try {
+      const { data: masterMinter } = await supabase.rpc('get_master_minter_address');
+      if (masterMinter && /^0x[a-fA-F0-9]{40}$/.test(masterMinter)) {
+        const mmLower = masterMinter.toLowerCase();
+        const found = holders.find(h => h.address.toLowerCase() === mmLower);
+        if (found) {
+          metrics.treasury = found.balanceFormatted;
+        } else {
+          const mmBal = await rpcFetch('eth_call', [{
+            to: PKRSC_CONTRACT_ADDRESS,
+            data: '0x70a08231' + mmLower.slice(2).padStart(64, '0')
+          }, 'latest']);
+          if (mmBal?.result) {
+            const wei = BigInt(mmBal.result);
+            metrics.treasury = (Number(wei) / divisor).toFixed(2);
+            if (wei > 0n) {
+              holders.unshift({ address: mmLower, balance: wei.toString(), balanceFormatted: metrics.treasury });
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to compute treasury in fallback path:', e);
+    }
 
     return new Response(
       JSON.stringify({ holders, metrics }),
