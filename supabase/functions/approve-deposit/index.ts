@@ -22,7 +22,7 @@ const corsHeaders = {
 }
 
 // PKRSC token details on Base
-const PKRSC_TOKEN_ADDRESS = '0x1f192CB7B36d7acfBBdCA1E0C1d697361508F9D5'
+const PKRSC_TOKEN_ADDRESS = '0x220aC54E22056B834522cD1A6A3DfeCA63bC3C6e'
 const PKRSC_DECIMALS = 6
 
 serve(async (req) => {

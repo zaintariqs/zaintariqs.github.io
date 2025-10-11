@@ -22,7 +22,7 @@ export function BalanceCard() {
   const currentChain = supportedChains.find(chain => chain.id === chainId)
 
   // PKRSC Contract Address
-  const PKRSC_CONTRACT_ADDRESS = '0x1f192CB7B36d7acfBBdCA1E0C1d697361508F9D5'
+  const PKRSC_CONTRACT_ADDRESS = '0x220aC54E22056B834522cD1A6A3DfeCA63bC3C6e'
 
   // ERC20 ABI for balanceOf function
   const erc20Abi = [

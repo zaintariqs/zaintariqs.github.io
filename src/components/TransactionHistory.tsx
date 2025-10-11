@@ -26,7 +26,7 @@ const TransactionHistory = () => {
 
         <div className="max-w-4xl mx-auto">
           <a
-            href="https://basescan.org/address/0x1f192CB7B36d7acfBBdCA1E0C1d697361508F9D5"
+            href="https://basescan.org/address/0x220aC54E22056B834522cD1A6A3DfeCA63bC3C6e"
             target="_blank"
             rel="noopener noreferrer"
             className="block group"
@@ -61,7 +61,7 @@ const TransactionHistory = () => {
 
                 <div className="pt-6 border-t border-white/5">
                   <p className="text-xs text-gray-500 font-mono">
-                    0x1f192CB7B36d7acfBBdCA1E0C1d697361508F9D5
+                    0x220aC54E22056B834522cD1A6A3DfeCA63bC3C6e
                   </p>
                 </div>
               </div>

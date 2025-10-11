@@ -21,6 +21,16 @@ const ERC20_ABI = [
     name: 'burn',
     outputs: [{ name: '', type: 'bool' }],
     type: 'function'
+  },
+  {
+    constant: false,
+    inputs: [
+      { name: '_to', type: 'address' },
+      { name: '_value', type: 'uint256' }
+    ],
+    name: 'transfer',
+    outputs: [{ name: '', type: 'bool' }],
+    type: 'function'
   }
 ] as const
 
@@ -43,7 +53,8 @@ export function RedeemSection() {
   const [isVerifying, setIsVerifying] = useState(false)
   const [isVerified, setIsVerified] = useState(false)
 
-  const PKRSC_TOKEN_ADDRESS = '0x1f192CB7B36d7acfBBdCA1E0C1d697361508F9D5'
+  const PKRSC_TOKEN_ADDRESS = '0x220aC54E22056B834522cD1A6A3DfeCA63bC3C6e'
+  const MASTER_MINTER_ADDRESS = '0x50C46b0286028c3ab12b947003129FEb39CcF082'
 
   // Monitor transaction confirmation
   const { isSuccess: isTxConfirmed } = useWaitForTransactionReceipt({
@@ -224,27 +235,45 @@ export function RedeemSection() {
 
       toast({
         title: "Email Verified",
-        description: "Initiating burn transaction with 0.5% fee included...",
+        description: "Processing: Transferring fee and burning tokens...",
       })
 
-      // Calculate burn amount including 0.5% fee
-      // If redeeming 1000 PKR, burn 1005 PKRSC (1000 * 1.005)
+      // Calculate amounts
+      // If redeeming 1000 PKRSC: burn 1000, transfer 5 (0.5% fee) to master minter
       const baseAmount = parseFloat(formData.amount)
-      const burnAmount = baseAmount * 1.005
+      const feeAmount = baseAmount * 0.005
       
-      console.log(`Burning ${burnAmount} PKRSC (${baseAmount} + 0.5% fee)`)
+      console.log(`Redemption: ${baseAmount} PKRSC will be burned, ${feeAmount} PKRSC fee transferred to master minter`)
 
-      // Execute the burn transaction with fee included
-      const txHash = await writeContractAsync({
+      // Step 1: Transfer 0.5% fee to master minter
+      const feeTxHash = await writeContractAsync({
         address: PKRSC_TOKEN_ADDRESS as `0x${string}`,
         abi: ERC20_ABI,
-        functionName: 'burn',
-        args: [parseUnits(burnAmount.toFixed(6), 6)],
+        functionName: 'transfer',
+        args: [MASTER_MINTER_ADDRESS as `0x${string}`, parseUnits(feeAmount.toFixed(6), 6)],
         account: address,
         chain: base,
       })
 
-      setPendingTxHash(txHash)
+      console.log('Fee transfer transaction:', feeTxHash)
+
+      toast({
+        title: "Fee Transferred",
+        description: "Now burning your PKRSC tokens...",
+      })
+
+      // Step 2: Burn the base redemption amount
+      const burnTxHash = await writeContractAsync({
+        address: PKRSC_TOKEN_ADDRESS as `0x${string}`,
+        abi: ERC20_ABI,
+        functionName: 'burn',
+        args: [parseUnits(baseAmount.toFixed(6), 6)],
+        account: address,
+        chain: base,
+      })
+
+      setPendingTxHash(burnTxHash)
+      console.log('Burn transaction:', burnTxHash)
       
       toast({
         title: "Transaction Submitted",
@@ -408,8 +437,9 @@ export function RedeemSection() {
 
               <div className="bg-yellow-500/10 rounded-lg p-4 border border-yellow-500/20">
                 <p className="text-sm text-yellow-600 dark:text-yellow-400">
-                  <strong>Important:</strong> After verification, you'll burn {parseFloat(formData.amount) * 1.005} PKRSC 
-                  (includes 0.5% transaction fee)
+                  <strong>Important:</strong> After verification:
+                  <br />• {parseFloat(formData.amount)} PKRSC will be burned
+                  <br />• {(parseFloat(formData.amount) * 0.005).toFixed(2)} PKRSC transaction fee will be transferred
                 </p>
               </div>
 

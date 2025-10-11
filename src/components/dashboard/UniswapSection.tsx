@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { ExternalLink, TrendingUp } from 'lucide-react'
 
 // PKRSC Contract Address
-const PKRSC_CONTRACT_ADDRESS = '0x1f192CB7B36d7acfBBdCA1E0C1d697361508F9D5'
+const PKRSC_CONTRACT_ADDRESS = '0x220aC54E22056B834522cD1A6A3DfeCA63bC3C6e'
 
 export function UniswapSection() {
   const [poolData, setPoolData] = useState({
@@ -146,7 +146,7 @@ export function UniswapSection() {
         {/* Embedded Uniswap Swap Interface */}
         <div className="bg-card border border-border rounded-lg overflow-hidden">
           <iframe
-            src="https://app.uniswap.org/swap?chain=base&inputCurrency=0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2&outputCurrency=0x1f192CB7B36d7acfBBdCA1E0C1d697361508F9D5&theme=dark"
+            src="https://app.uniswap.org/swap?chain=base&inputCurrency=0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2&outputCurrency=0x220aC54E22056B834522cD1A6A3DfeCA63bC3C6e&theme=dark"
             width="100%"
             height="660px"
             style={{ border: 'none', minHeight: '660px' }}
@@ -161,7 +161,7 @@ export function UniswapSection() {
             size="sm"
             onClick={() =>
               window.open(
-                'https://app.uniswap.org/swap?chain=base&inputCurrency=0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2&outputCurrency=0x1f192CB7B36d7acfBBdCA1E0C1d697361508F9D5',
+                'https://app.uniswap.org/swap?chain=base&inputCurrency=0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2&outputCurrency=0x220aC54E22056B834522cD1A6A3DfeCA63bC3C6e',
                 '_blank'
               )
             }
