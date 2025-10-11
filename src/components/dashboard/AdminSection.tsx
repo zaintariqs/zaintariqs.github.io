@@ -146,18 +146,8 @@ export function AdminSection() {
     }
   })
 
-  // Read dead address balance (burned tokens) - standard Ethereum burn address
-  const DEAD_ADDRESS = '0x000000000000000000000000000000000000dead'
-  const { data: deadBalance, error: deadBalanceError, refetch: refetchDeadBalance, isLoading: deadBalanceLoading } = useReadContract({
-    address: PKRSC_CONTRACT_ADDRESS as `0x${string}`,
-    abi: pkrscAbi,
-    functionName: 'balanceOf',
-    args: [DEAD_ADDRESS as `0x${string}`],
-    chainId: base.id,
-    query: {
-      refetchInterval: 10000, // Refetch every 10 seconds
-    }
-  })
+  // Burned tokens are calculated on backend by checking Transfer events to zero address
+  // No need to read burn address balance here
 
   // Log contract read errors
   useEffect(() => {
@@ -191,18 +181,8 @@ export function AdminSection() {
   
   const tokenDecimals = typeof decimals === 'number' ? decimals : Number((decimals as any) ?? 6)
   
-  // Log dead balance for debugging
-  useEffect(() => {
-    if (deadBalanceError) {
-      console.error('❌ Error reading burned tokens:', deadBalanceError)
-    }
-    console.log('🔥 Burned tokens at', DEAD_ADDRESS, ':', {
-      raw: deadBalance?.toString(),
-      formatted: deadBalance ? formatUnits(deadBalance, tokenDecimals) : '0',
-      loading: deadBalanceLoading,
-      decimals: tokenDecimals
-    })
-  }, [deadBalance, deadBalanceError, deadBalanceLoading, tokenDecimals])
+  // State for burned tokens from backend
+  const [burnedTokens, setBurnedTokens] = useState<string>('0')
   
   // State for admin functions
   const [mintTo, setMintTo] = useState('')
@@ -329,6 +309,31 @@ export function AdminSection() {
 
     if (isAdmin) {
       fetchUserTransactions()
+    }
+  }, [address, isAdmin])
+
+  // Fetch burned tokens from contract events
+  const fetchBurnedTokens = async () => {
+    if (!address) return
+
+    try {
+      const { data, error } = await supabase.functions.invoke('get-token-holders', {
+        body: { walletAddress: address }
+      })
+
+      if (!error && data?.metrics?.burned) {
+        setBurnedTokens(data.metrics.burned)
+        console.log('🔥 Burned tokens from contract:', data.metrics.burned)
+      }
+    } catch (error) {
+      console.error('Error fetching burned tokens:', error)
+    }
+  }
+
+  // Fetch burned tokens on mount and when admin status changes
+  useEffect(() => {
+    if (isAdmin) {
+      fetchBurnedTokens()
     }
   }, [address, isAdmin])
 
@@ -707,13 +712,13 @@ ${Object.entries(blacklistedAddresses.reduce((acc, entry) => {
                 <DollarSign className="h-4 w-4 text-primary" />
                 <CardTitle className="text-base">Reserve Overview</CardTitle>
               </div>
-              <Button
+                <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => {
                   refetchTotalSupply()
                   refetchTreasury()
-                  refetchDeadBalance()
+                  fetchBurnedTokens()
                   toast({
                     title: "Refreshing...",
                     description: "Fetching latest on-chain data"
@@ -736,8 +741,8 @@ ${Object.entries(blacklistedAddresses.reduce((acc, entry) => {
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground uppercase tracking-wide">Circulating Supply</Label>
               <div className="text-2xl font-bold text-crypto-green">
-                {totalSupply && treasuryBalance && deadBalance 
-                  ? formatUnits((totalSupply as bigint) - (treasuryBalance as bigint) - (deadBalance as bigint), tokenDecimals)
+                {totalSupply && treasuryBalance && burnedTokens
+                  ? formatUnits((totalSupply as bigint) - (treasuryBalance as bigint) - parseUnits(burnedTokens, tokenDecimals), tokenDecimals)
                   : 'Loading...'}
               </div>
               <div className="text-xs text-muted-foreground">PKRSC (excludes treasury & burned)</div>
@@ -752,13 +757,7 @@ ${Object.entries(blacklistedAddresses.reduce((acc, entry) => {
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">Burned</Label>
                 <div className="text-lg font-semibold text-orange-500">
-                  {deadBalanceLoading ? (
-                    <span className="animate-pulse">Loading...</span>
-                  ) : deadBalance ? (
-                    formatUnits(deadBalance, tokenDecimals)
-                  ) : (
-                    '0.00'
-                  )}
+                  {burnedTokens ? parseFloat(burnedTokens).toLocaleString() : '0.00'}
                 </div>
               </div>
             </div>

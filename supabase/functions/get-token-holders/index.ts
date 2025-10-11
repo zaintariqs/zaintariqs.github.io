@@ -48,6 +48,54 @@ interface TokenHolder {
 // Optional BaseScan API key for reliable holder lookup
 const BASESCAN_API_KEY = Deno.env.get('BASESCAN_API_KEY');
 
+// Calculate burned tokens from Transfer events to zero address
+async function calculateBurnedTokens(decimals: number): Promise<string> {
+  const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+  const divisor = Math.pow(10, decimals);
+  
+  // Get current block
+  const blockData = await rpcFetch('eth_blockNumber', []);
+  const currentBlock = parseInt(blockData.result, 16);
+  
+  // Scan for Transfer events to zero address (burns)
+  const CHUNK_SIZE = 200000;
+  let totalBurned = 0n;
+  
+  console.log('Calculating burned tokens from Transfer events to zero address...');
+  
+  for (let start = 0; start <= currentBlock; start += CHUNK_SIZE) {
+    const end = Math.min(currentBlock, start + CHUNK_SIZE - 1);
+    
+    try {
+      const logsData = await rpcFetch('eth_getLogs', [{
+        fromBlock: '0x' + start.toString(16),
+        toBlock: '0x' + end.toString(16),
+        address: PKRSC_CONTRACT_ADDRESS,
+        topics: [
+          TRANSFER_EVENT_SIGNATURE,
+          null, // from (any address)
+          '0x' + ZERO_ADDRESS.slice(2).padStart(64, '0') // to zero address
+        ]
+      }]);
+      
+      if (logsData?.result) {
+        for (const log of logsData.result) {
+          // Amount is in the data field
+          const amount = BigInt(log.data);
+          totalBurned += amount;
+        }
+      }
+    } catch (e) {
+      console.warn(`Failed to fetch burn logs for block range ${start}-${end}:`, e);
+    }
+  }
+  
+  const burnedFormatted = (Number(totalBurned) / divisor).toFixed(2);
+  console.log('Total burned tokens:', burnedFormatted);
+  
+  return burnedFormatted;
+}
+
 async function fetchHoldersFromBaseScan(decimals: number): Promise<TokenHolder[]> {
   if (!BASESCAN_API_KEY) return [];
   const url = `https://api.basescan.org/api?module=token&action=tokenholderlist&contractaddress=${PKRSC_CONTRACT_ADDRESS}&page=1&offset=200&apikey=${BASESCAN_API_KEY}`;
@@ -190,26 +238,17 @@ Deno.serve(async (req) => {
           console.warn('Failed to fetch totalSupply:', e);
         }
 
-        // Check burned tokens at burn address
-        const BURN_ADDRESS = '0x000000000000000000000000000000000000dead';
+        // Calculate burned tokens from Transfer events to zero address
         try {
-          const burnBalanceData = await rpcFetch('eth_call', [{
-            to: PKRSC_CONTRACT_ADDRESS,
-            data: '0x70a08231' + BURN_ADDRESS.slice(2).padStart(64, '0')
-          }, 'latest']);
-          
-          if (burnBalanceData.result) {
-            const burnBalanceWei = BigInt(burnBalanceData.result);
-            metrics.burned = (Number(burnBalanceWei) / divisor).toFixed(2);
-          }
+          metrics.burned = await calculateBurnedTokens(decimals);
         } catch (e) {
-          console.warn('Failed to fetch burn balance:', e);
+          console.warn('Failed to calculate burned tokens:', e);
         }
 
-        // Find treasury wallet (largest holder excluding burn address)
+        // Find treasury wallet (largest holder excluding burn/zero addresses)
         const treasuryHolder = bsHolders.find(h => 
-          h.address.toLowerCase() !== BURN_ADDRESS.toLowerCase() &&
-          h.address.toLowerCase() !== '0x0000000000000000000000000000000000000000'
+          h.address.toLowerCase() !== '0x0000000000000000000000000000000000000000' &&
+          h.address.toLowerCase() !== '0x000000000000000000000000000000000000dead'
         );
         
         if (treasuryHolder) {
@@ -361,26 +400,17 @@ Deno.serve(async (req) => {
       console.warn('Failed to fetch totalSupply:', e);
     }
 
-    // Check burned tokens at burn address
-    const BURN_ADDRESS = '0x000000000000000000000000000000000000dead';
+    // Calculate burned tokens from Transfer events to zero address
     try {
-      const burnBalanceData = await rpcFetch('eth_call', [{
-        to: PKRSC_CONTRACT_ADDRESS,
-        data: '0x70a08231' + BURN_ADDRESS.slice(2).padStart(64, '0')
-      }, 'latest']);
-      
-      if (burnBalanceData.result) {
-        const burnBalanceWei = BigInt(burnBalanceData.result);
-        metrics.burned = (Number(burnBalanceWei) / divisor).toFixed(2);
-      }
+      metrics.burned = await calculateBurnedTokens(decimals);
     } catch (e) {
-      console.warn('Failed to fetch burn balance:', e);
+      console.warn('Failed to calculate burned tokens:', e);
     }
 
-    // Find treasury wallet (largest holder excluding burn address)
+    // Find treasury wallet (largest holder excluding zero/burn addresses)
     const treasuryHolder = holders.find(h => 
-      h.address.toLowerCase() !== BURN_ADDRESS.toLowerCase() &&
-      h.address.toLowerCase() !== '0x0000000000000000000000000000000000000000'
+      h.address.toLowerCase() !== '0x0000000000000000000000000000000000000000' &&
+      h.address.toLowerCase() !== '0x000000000000000000000000000000000000dead'
     );
     
     if (treasuryHolder) {
