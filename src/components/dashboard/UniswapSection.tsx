@@ -118,10 +118,10 @@ export function UniswapSection() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-card-foreground">
           <TrendingUp className="h-5 w-5 text-primary" />
-          Uniswap Trading
+          Uniswap Liquidity Pool
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          Trade PKRSC with other cryptocurrencies on Uniswap
+          Add liquidity to the PKRSC/USDT pool on Uniswap V3
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -143,30 +143,43 @@ export function UniswapSection() {
           </div>
         </div>
 
-        {/* Embedded Uniswap Swap Interface */}
+        {/* Embedded Uniswap Add Liquidity Interface */}
         <div className="bg-card border border-border rounded-lg overflow-hidden">
           <iframe
-            src="https://app.uniswap.org/swap?chain=base&inputCurrency=0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2&outputCurrency=0x220aC54E22056B834522cD1A6A3DfeCA63bC3C6e&theme=dark"
+            src="https://app.uniswap.org/add/0x220aC54E22056B834522cD1A6A3DfeCA63bC3C6e/0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2/10000?chain=base&theme=dark"
             width="100%"
             height="660px"
             style={{ border: 'none', minHeight: '660px' }}
-            title="Uniswap Swap Interface"
+            title="Uniswap Add Liquidity Interface"
           />
         </div>
 
-        {/* Open in New Tab Option */}
-        <div className="text-center">
+        {/* Action Buttons */}
+        <div className="flex gap-3 justify-center">
           <Button
             variant="outline"
             size="sm"
             onClick={() =>
               window.open(
-                'https://app.uniswap.org/swap?chain=base&inputCurrency=0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2&outputCurrency=0x220aC54E22056B834522cD1A6A3DfeCA63bC3C6e',
+                'https://app.uniswap.org/add/0x220aC54E22056B834522cD1A6A3DfeCA63bC3C6e/0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2/10000?chain=base',
                 '_blank'
               )
             }
           >
-            Open in New Tab
+            Add Liquidity
+            <ExternalLink className="ml-2 h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              window.open(
+                'https://app.uniswap.org/explore/pools/base/0x6C7bF3ea47DC8Ba0e9E5C04C869b3960F8bC7d81',
+                '_blank'
+              )
+            }
+          >
+            View Pool
             <ExternalLink className="ml-2 h-4 w-4" />
           </Button>
         </div>
