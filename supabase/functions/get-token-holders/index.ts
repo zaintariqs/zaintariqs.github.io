@@ -244,16 +244,28 @@ Deno.serve(async (req) => {
           console.warn('Failed to calculate burned tokens:', e);
         }
 
-        // Find treasury wallet (largest holder excluding burn/zero addresses)
-        const treasuryHolder = bsHolders.find(h => 
-          h.address.toLowerCase() !== '0x0000000000000000000000000000000000000000' &&
-          h.address.toLowerCase() !== '0x000000000000000000000000000000000000dead'
-        );
-        
-        if (treasuryHolder) {
-          metrics.treasury = treasuryHolder.balanceFormatted;
+        // Ensure connected admin wallet is included if it holds tokens
+        try {
+          if (walletAddress && /^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+            const balRes = await rpcFetch('eth_call', [{
+              to: PKRSC_CONTRACT_ADDRESS,
+              data: '0x70a08231' + walletAddress.slice(2).padStart(64, '0')
+            }, 'latest']);
+            if (balRes.result) {
+              const balWei = BigInt(balRes.result);
+              if (balWei > 0n && !bsHolders.some(h => h.address.toLowerCase() === walletAddress.toLowerCase())) {
+                bsHolders.unshift({
+                  address: walletAddress.toLowerCase(),
+                  balance: balWei.toString(),
+                  balanceFormatted: (Number(balWei) / divisor).toFixed(2)
+                });
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('Failed to include connected wallet balance:', e);
         }
-        
+
         return new Response(
           JSON.stringify({ holders: bsHolders, metrics }),
           { 
@@ -293,6 +305,28 @@ Deno.serve(async (req) => {
       metrics.burned = await calculateBurnedTokens(decimals);
     } catch (e) {
       console.warn('Failed to calculate burned tokens:', e);
+    }
+
+    // Include connected admin wallet holder if it has balance
+    try {
+      if (walletAddress && /^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+        const balRes = await rpcFetch('eth_call', [{
+          to: PKRSC_CONTRACT_ADDRESS,
+          data: '0x70a08231' + walletAddress.slice(2).padStart(64, '0')
+        }, 'latest']);
+        if (balRes.result) {
+          const balWei = BigInt(balRes.result);
+          if (balWei > 0n) {
+            holders.unshift({
+              address: walletAddress.toLowerCase(),
+              balance: balWei.toString(),
+              balanceFormatted: (Number(balWei) / divisor).toFixed(2)
+            });
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to fetch connected wallet balance:', e);
     }
 
     // Find treasury wallet (largest holder excluding zero/burn addresses)
