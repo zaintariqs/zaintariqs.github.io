@@ -118,10 +118,10 @@ export function UniswapSection() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-card-foreground">
           <TrendingUp className="h-5 w-5 text-primary" />
-          Uniswap Liquidity Pool
+          Uniswap Trading
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          Add liquidity to the PKRSC/USDT pool on Uniswap V3
+          Trade PKRSC with USDT on Uniswap V3
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -143,14 +143,14 @@ export function UniswapSection() {
           </div>
         </div>
 
-        {/* Embedded Uniswap Add Liquidity Interface */}
+        {/* Embedded Uniswap Swap Interface */}
         <div className="bg-card border border-border rounded-lg overflow-hidden">
           <iframe
-            src="https://app.uniswap.org/add/0x220aC54E22056B834522cD1A6A3DfeCA63bC3C6e/0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2/10000?chain=base&theme=dark"
+            src="https://app.uniswap.org/swap?chain=base&inputCurrency=0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2&outputCurrency=0x220aC54E22056B834522cD1A6A3DfeCA63bC3C6e&theme=dark"
             width="100%"
             height="660px"
             style={{ border: 'none', minHeight: '660px' }}
-            title="Uniswap Add Liquidity Interface"
+            title="Uniswap Swap Interface"
           />
         </div>
 
@@ -161,12 +161,12 @@ export function UniswapSection() {
             size="sm"
             onClick={() =>
               window.open(
-                'https://app.uniswap.org/add/0x220aC54E22056B834522cD1A6A3DfeCA63bC3C6e/0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2/10000?chain=base',
+                'https://app.uniswap.org/swap?chain=base&inputCurrency=0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2&outputCurrency=0x220aC54E22056B834522cD1A6A3DfeCA63bC3C6e',
                 '_blank'
               )
             }
           >
-            Add Liquidity
+            Open Swap
             <ExternalLink className="ml-2 h-4 w-4" />
           </Button>
           <Button
@@ -174,7 +174,7 @@ export function UniswapSection() {
             size="sm"
             onClick={() =>
               window.open(
-                'https://app.uniswap.org/explore/pools/base/0x6C7bF3ea47DC8Ba0e9E5C04C869b3960F8bC7d81',
+                'https://app.uniswap.org/explore/pools/base/0x1bC6fB786B7B5BA4D31A7F47a75eC3Fd3B26690E',
                 '_blank'
               )
             }
