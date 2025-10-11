@@ -83,7 +83,7 @@ export function UserBalances() {
           <div className="text-right">
             <p className="text-sm text-white/70">Circulating Supply</p>
             <p className="text-2xl font-bold text-white">
-              {holders.length > 0 ? calculateTotalSupply() : '0.00'} PKRSC
+              {loading ? '...' : holders.length > 0 ? `${calculateTotalSupply()} PKRSC` : '0.00 PKRSC'}
             </p>
           </div>
         </div>
