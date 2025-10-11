@@ -433,7 +433,10 @@ Deno.serve(async (req) => {
       tradeAmountUsdt = maxTradeAmount
     }
     
-    console.log(`Dynamic trade amount: $${tradeAmountUsdt.toFixed(2)} (based on ${(deviationPercent * 100).toFixed(2)}% deviation)`)
+    // Round to 6 decimal places (USDT decimals) to prevent parsing errors
+    tradeAmountUsdt = Math.round(tradeAmountUsdt * 1e6) / 1e6
+    
+    console.log(`Dynamic trade amount: $${tradeAmountUsdt.toFixed(6)} (based on ${(deviationPercent * 100).toFixed(2)}% deviation)`)
     
     // Further limit trade to max 2% of pool liquidity if we have that data
     if (liquidityUsd > 0) {
