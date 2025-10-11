@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
@@ -43,6 +43,7 @@ export function UserBalances() {
       });
 
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
       setHolders(data.holders || []);
       setMetrics({
@@ -66,6 +67,13 @@ export function UserBalances() {
       setLoading(false);
     }
   };
+
+  // Auto-fetch when wallet changes or page opens
+  useEffect(() => {
+    if (address) {
+      fetchBalances();
+    }
+  }, [address]);
 
   const calculateTotalSupply = () => {
     return holders.reduce((sum, holder) => {

@@ -168,11 +168,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      throw new Error('No authorization header');
-    }
-
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     
     // Get wallet address from request
@@ -182,7 +177,7 @@ Deno.serve(async (req) => {
       throw new Error('Wallet address is required');
     }
 
-    // Verify admin status
+    // Verify admin status strictly via wallet, no JWT required
     const { data: isAdmin } = await supabase.rpc('is_admin_wallet', {
       wallet_addr: walletAddress
     });
