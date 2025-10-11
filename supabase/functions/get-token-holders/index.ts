@@ -55,7 +55,10 @@ interface TokenHolder {
   isLiquidityPool?: boolean;
 }
 
-const LIQUIDITY_POOL_ADDRESS = '0xCFBDCBFD1312a2D85545A88Ca95C93C7523dd11b';
+const KNOWN_LP_ADDRESSES = [
+  '0xCFBDCBFD1312a2D85545A88Ca95C93C7523dd11b'.toLowerCase(), // LP wallet address
+  '0x1bC6fB786B7B5BA4D31A7F47a75eC3Fd3B26690E'.toLowerCase()  // Uniswap pool contract address
+];
 
 // Optional BaseScan API key for reliable holder lookup
 const BASESCAN_API_KEY = Deno.env.get('BASESCAN_API_KEY');
@@ -348,7 +351,7 @@ async function enrichHoldersWithEmails(supabase: any, holders: TokenHolder[]): P
         }
       }
       
-      holder.isLiquidityPool = addr === LIQUIDITY_POOL_ADDRESS.toLowerCase();
+      holder.isLiquidityPool = KNOWN_LP_ADDRESSES.includes(addr);
     }
 
     console.log(`Enriched ${holders.length} holders with decrypted email data`);
@@ -496,27 +499,31 @@ Deno.serve(async (req) => {
           console.log('Merged holders count:', holdersArr.length);
         }
 
-        // Always ensure LP address is checked and included
+        // Always ensure LP addresses are checked and included
         try {
-          const lpLower = LIQUIDITY_POOL_ADDRESS.toLowerCase();
-          const lpExists = holdersArr.find(h => h.address.toLowerCase() === lpLower);
-          if (!lpExists) {
-            const lpBal = await rpcFetch('eth_call', [{
-              to: PKRSC_CONTRACT_ADDRESS,
-              data: '0x70a08231' + lpLower.slice(2).padStart(64, '0')
-            }, 'latest']);
-            if (lpBal?.result) {
-              const wei = BigInt(lpBal.result);
-              if (wei > 0n) {
-                holdersArr.push({
-                  address: lpLower,
-                  balance: wei.toString(),
-                  balanceFormatted: (Number(wei) / divisor).toFixed(2)
-                });
-                console.log('Added LP address with balance:', (Number(wei) / divisor).toFixed(2));
+          for (const lpLower of KNOWN_LP_ADDRESSES) {
+            const lpExists = holdersArr.find(h => h.address.toLowerCase() === lpLower);
+            if (!lpExists) {
+              const lpBal = await rpcFetch('eth_call', [{
+                to: PKRSC_CONTRACT_ADDRESS,
+                data: '0x70a08231' + lpLower.slice(2).padStart(64, '0')
+              }, 'latest']);
+              if (lpBal?.result) {
+                const wei = BigInt(lpBal.result);
+                if (wei > 0n) {
+                  holdersArr.push({
+                    address: lpLower,
+                    balance: wei.toString(),
+                    balanceFormatted: (Number(wei) / divisor).toFixed(2)
+                  });
+                  console.log('Added LP address with balance:', lpLower, (Number(wei) / divisor).toFixed(2));
+                }
               }
             }
           }
+        } catch (e) {
+          console.warn('Failed to check LP addresses balance:', e);
+        }
         } catch (e) {
           console.warn('Failed to check LP address balance:', e);
         }
@@ -581,29 +588,30 @@ Deno.serve(async (req) => {
 
     holders.sort((a, b) => (BigInt(b.balance) > BigInt(a.balance) ? 1 : -1));
 
-    // Always ensure LP address is checked and included
+    // Always ensure LP addresses are checked and included
     try {
-      const lpLower = LIQUIDITY_POOL_ADDRESS.toLowerCase();
-      const lpExists = holders.find(h => h.address.toLowerCase() === lpLower);
-      if (!lpExists) {
-        const lpBal = await rpcFetch('eth_call', [{
-          to: PKRSC_CONTRACT_ADDRESS,
-          data: '0x70a08231' + lpLower.slice(2).padStart(64, '0')
-        }, 'latest']);
-        if (lpBal?.result) {
-          const wei = BigInt(lpBal.result);
-          if (wei > 0n) {
-            holders.push({
-              address: lpLower,
-              balance: wei.toString(),
-              balanceFormatted: (Number(wei) / divisor).toFixed(2)
-            });
-            console.log('Added LP address with balance (fallback path):', (Number(wei) / divisor).toFixed(2));
+      for (const lpLower of KNOWN_LP_ADDRESSES) {
+        const lpExists = holders.find(h => h.address.toLowerCase() === lpLower);
+        if (!lpExists) {
+          const lpBal = await rpcFetch('eth_call', [{
+            to: PKRSC_CONTRACT_ADDRESS,
+            data: '0x70a08231' + lpLower.slice(2).padStart(64, '0')
+          }, 'latest']);
+          if (lpBal?.result) {
+            const wei = BigInt(lpBal.result);
+            if (wei > 0n) {
+              holders.push({
+                address: lpLower,
+                balance: wei.toString(),
+                balanceFormatted: (Number(wei) / divisor).toFixed(2)
+              });
+              console.log('Added LP address with balance (fallback path):', lpLower, (Number(wei) / divisor).toFixed(2));
+            }
           }
         }
       }
     } catch (e) {
-      console.warn('Failed to check LP address balance (fallback path):', e);
+      console.warn('Failed to check LP addresses balance (fallback path):', e);
     }
 
     // Enrich holders with emails and mark LP addresses
