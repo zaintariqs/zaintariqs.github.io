@@ -42,7 +42,7 @@ const PAKISTANI_BANKS = [
 
 // PKRSC token details on Base
 const PKRSC_TOKEN_ADDRESS = '0x220aC54E22056B834522cD1A6A3DfeCA63bC3C6e'
-const BURN_ADDRESS = '0x000000000000000000000000000000000000dEaD'
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' // Proper burn address (contract burn function)
 const PKRSC_DECIMALS = 6
 
 // Comprehensive input validation
@@ -276,7 +276,7 @@ serve(async (req) => {
           // Transfer(address,address,uint256) topic
           const TRANSFER_TOPIC = ethers.id('Transfer(address,address,uint256)')
 
-          // Find Transfer log for PKRSC token to burn address from this wallet
+          // Find Transfer log for PKRSC token to zero address (proper burn) from this wallet
           const targetLog = receipt.logs.find((log: any) => {
             if (log.address?.toLowerCase() !== PKRSC_TOKEN_ADDRESS.toLowerCase()) return false
             if (!log.topics || log.topics.length < 3) return false
@@ -286,12 +286,12 @@ serve(async (req) => {
             // topics for indexed address are 32-byte left-padded, compare last 40 hex chars
             const fromAddr = '0x' + fromTopic.slice(-40)
             const toAddr = '0x' + toTopic.slice(-40)
-            return fromAddr.toLowerCase() === body.walletAddress.toLowerCase() && toAddr.toLowerCase() === BURN_ADDRESS.toLowerCase()
+            return fromAddr.toLowerCase() === body.walletAddress.toLowerCase() && toAddr.toLowerCase() === ZERO_ADDRESS.toLowerCase()
           })
 
           if (!targetLog) {
             return new Response(
-              JSON.stringify({ error: 'Provided transaction is not a PKRSC burn from this wallet' }),
+              JSON.stringify({ error: 'Provided transaction is not a valid PKRSC burn from this wallet. Please use the contract burn() function, not transfer to burn address.' }),
               { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
             )
           }
@@ -351,7 +351,7 @@ serve(async (req) => {
               bank_name: encryptedBankDetails.bankName,
               account_number: encryptedBankDetails.accountNumber,
               account_title: encryptedBankDetails.accountTitle,
-              burn_address: BURN_ADDRESS,
+              burn_address: ZERO_ADDRESS,
               transaction_hash: burnTx,
               status: 'draft',
               email_verified: false,
@@ -484,7 +484,7 @@ serve(async (req) => {
           bank_name: encryptedBankDetails.bankName,
           account_number: encryptedBankDetails.accountNumber,
           account_title: encryptedBankDetails.accountTitle,
-          burn_address: BURN_ADDRESS,
+          burn_address: ZERO_ADDRESS,
           status: 'draft',
           email_verified: false,
           verification_code: verificationCode,
