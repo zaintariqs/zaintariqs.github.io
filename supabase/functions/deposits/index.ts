@@ -105,7 +105,7 @@ serve(async (req) => {
         )
       }
     } else {
-      // POST and PATCH require full signature verification
+      // POST, PATCH, and DELETE require full signature verification
       const signatureHeader = req.headers.get('x-wallet-signature')
       const messageHeaderEncoded = req.headers.get('x-signature-message')
       const messageHeader = messageHeaderEncoded ? atob(messageHeaderEncoded) : null
