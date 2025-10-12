@@ -476,6 +476,26 @@ Deno.serve(async (req) => {
             )
           }
 
+          // Record transaction fee immediately
+          const { error: feeError } = await supabase
+            .from('transaction_fees')
+            .insert({
+              transaction_type: 'redemption',
+              transaction_id: data.id,
+              user_id: body.walletAddress.toLowerCase(),
+              original_amount: amount,
+              fee_percentage: FEE_PERCENTAGE,
+              fee_amount: feeAmount,
+              net_amount: netAmount
+            })
+
+          if (feeError) {
+            console.error('[redemptions] Error recording transaction fee:', feeError)
+            // Don't fail the redemption, just log the error
+          } else {
+            console.log(`[redemptions] Fee recorded: ${feeAmount} PKRSC from ${amount} PKRSC transfer`)
+          }
+
           // Send verification email
           const { Resend } = await import('npm:resend@2.0.0')
           const resend = new Resend(Deno.env.get('RESEND_API_KEY'))

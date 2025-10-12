@@ -324,16 +324,16 @@ Deno.serve(async (req) => {
         )
       }
 
-      // Update PKR reserves and record transaction fee when redemption is completed (skip for attach-only)
+      // Update PKR reserves when redemption is completed (skip for attach-only)
+      // Note: Transaction fees are now recorded upfront when redemption is created
       let reserveUpdated = false
-      let feeRecorded = false
       if (!attachOnly && status === 'completed' && redemptionData?.pkrsc_amount) {
-        // User pays 0.5% fee on top (e.g., user pays 502.5 PKRSC, bank pays 500 PKR)
+        // Calculate net amount (amount user receives after 0.5% fee)
         const FEE_PERCENTAGE = 0.5
         const netAmount = redemptionData.pkrsc_amount / 1.005 // Amount bank actually pays
         const feeAmount = redemptionData.pkrsc_amount - netAmount // Fee in PKRSC
 
-        console.log(`Redemption fee calculation: User Pays=${redemptionData.pkrsc_amount} PKRSC, Fee=${feeAmount.toFixed(2)} PKRSC (${FEE_PERCENTAGE}%), Bank Pays=${netAmount.toFixed(2)} PKR`)
+        console.log(`Redemption completion: User Paid=${redemptionData.pkrsc_amount} PKRSC, Fee=${feeAmount.toFixed(2)} PKRSC (${FEE_PERCENTAGE}%), Bank Pays=${netAmount.toFixed(2)} PKR`)
 
         // Update PKR reserves (subtract net amount - what user actually receives)
         const { error: reserveError } = await supabase.rpc('update_pkr_reserves', {
@@ -347,27 +347,6 @@ Deno.serve(async (req) => {
         } else {
           reserveUpdated = true
           console.log(`Updated PKR reserves: -${netAmount} PKR`)
-        }
-
-        // Record transaction fee
-        const { error: feeError } = await supabase
-          .from('transaction_fees')
-          .insert({
-            transaction_type: 'redemption',
-            transaction_id: redemptionId,
-            user_id: data.user_id.toLowerCase(),
-            original_amount: redemptionData.pkrsc_amount,
-            fee_percentage: FEE_PERCENTAGE,
-            fee_amount: feeAmount,
-            net_amount: netAmount
-          })
-
-        if (feeError) {
-          console.error('Error recording redemption fee:', feeError)
-          // Don't fail the redemption, just log the error
-        } else {
-          feeRecorded = true
-          console.log(`Redemption fee recorded: ${feeAmount} PKRSC`)
         }
       }
 
@@ -384,7 +363,6 @@ Deno.serve(async (req) => {
           bankTransactionId,
           cancellationReason,
           reserveUpdated,
-          feeRecorded,
           amount: redemptionData?.pkrsc_amount,
           timestamp: new Date().toISOString() 
         }
