@@ -104,7 +104,13 @@ Deno.serve(async (req) => {
       
       const { data, error } = await supabase
         .from('deposits')
-        .select('*')
+        .select(`
+          *,
+          transaction_fees (
+            fee_amount,
+            net_amount
+          )
+        `)
         .order('created_at', { ascending: false })
 
       if (error) {

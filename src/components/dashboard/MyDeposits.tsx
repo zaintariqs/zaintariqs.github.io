@@ -26,6 +26,10 @@ interface Deposit {
   mint_transaction_hash?: string
   created_at: string
   updated_at: string
+  transaction_fees?: Array<{
+    fee_amount: number
+    net_amount: number
+  }>
 }
 
 export function MyDeposits() {
@@ -371,8 +375,10 @@ export function MyDeposits() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Date</TableHead>
-                  <TableHead>Amount</TableHead>
+                  <TableHead>Amount PKR</TableHead>
                   <TableHead>Method</TableHead>
+                  <TableHead>Credited PKRSC</TableHead>
+                  <TableHead>Fee</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Details</TableHead>
                   <TableHead>Action</TableHead>
@@ -387,6 +393,16 @@ export function MyDeposits() {
                     <TableCell>PKR {deposit.amount_pkr.toLocaleString()}</TableCell>
                     <TableCell className="capitalize">
                       {deposit.payment_method === 'easypaisa' ? 'EasyPaisa' : 'JazzCash'}
+                    </TableCell>
+                    <TableCell>
+                      {deposit.transaction_fees?.[0]?.net_amount 
+                        ? `${deposit.transaction_fees[0].net_amount.toLocaleString()} PKRSC`
+                        : '-'}
+                    </TableCell>
+                    <TableCell>
+                      {deposit.transaction_fees?.[0]?.fee_amount 
+                        ? `PKR ${deposit.transaction_fees[0].fee_amount.toLocaleString()}`
+                        : '-'}
                     </TableCell>
                     <TableCell>{getStatusBadge(deposit.status)}</TableCell>
                     <TableCell>

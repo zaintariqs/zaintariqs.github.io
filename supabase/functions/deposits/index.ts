@@ -196,7 +196,13 @@ Deno.serve(async (req) => {
       
       const { data, error } = await supabase
         .from('deposits')
-        .select('*')
+        .select(`
+          *,
+          transaction_fees (
+            fee_amount,
+            net_amount
+          )
+        `)
         .eq('user_id', walletAddressHeader.toLowerCase())
         .order('created_at', { ascending: false })
 

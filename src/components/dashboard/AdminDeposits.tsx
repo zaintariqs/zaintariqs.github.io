@@ -27,6 +27,10 @@ interface Deposit {
   rejection_reason?: string
   created_at: string
   updated_at: string
+  transaction_fees?: Array<{
+    fee_amount: number
+    net_amount: number
+  }>
 }
 
 export function AdminDeposits() {
@@ -252,9 +256,11 @@ export function AdminDeposits() {
                     <TableHead className="w-12">#</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>User</TableHead>
-                    <TableHead>Amount</TableHead>
+                    <TableHead>Amount PKR</TableHead>
                     <TableHead>Method</TableHead>
                     <TableHead>Phone</TableHead>
+                    <TableHead>Credited PKRSC</TableHead>
+                    <TableHead>Fee</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -279,6 +285,16 @@ export function AdminDeposits() {
                          deposit.payment_method}
                       </TableCell>
                       <TableCell>{deposit.phone_number}</TableCell>
+                      <TableCell>
+                        {deposit.transaction_fees?.[0]?.net_amount 
+                          ? `${deposit.transaction_fees[0].net_amount.toLocaleString()} PKRSC`
+                          : '-'}
+                      </TableCell>
+                      <TableCell>
+                        {deposit.transaction_fees?.[0]?.fee_amount 
+                          ? `PKR ${deposit.transaction_fees[0].fee_amount.toLocaleString()}`
+                          : '-'}
+                      </TableCell>
                       <TableCell>{getStatusBadge(deposit.status)}</TableCell>
                        <TableCell>
                         <div className="flex flex-col gap-2">
