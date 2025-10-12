@@ -312,19 +312,27 @@ export function AdminSection() {
     }
   }, [address, isAdmin])
 
-  // Fetch burned tokens from contract events
+  // Fetch burned tokens from burn_operations table
   const fetchBurnedTokens = async () => {
     if (!address) return
 
     try {
-      const { data, error } = await supabase.functions.invoke('get-token-holders', {
-        body: { walletAddress: address }
-      })
+      const { data, error } = await supabase
+        .from('burn_operations')
+        .select('burn_amount')
+        .eq('status', 'completed')
 
-      if (!error && data?.metrics?.burned) {
-        setBurnedTokens(data.metrics.burned)
-        console.log('🔥 Burned tokens from contract:', data.metrics.burned)
+      if (error) {
+        console.error('Error fetching burn operations:', error)
+        return
       }
+
+      // Sum up all burn amounts
+      const totalBurned = data?.reduce((sum, op) => sum + parseFloat(String(op.burn_amount || 0)), 0) || 0
+      
+      // Format as decimal string for parseUnits
+      setBurnedTokens(totalBurned.toFixed(6))
+      console.log('🔥 Total burned from burn_operations:', totalBurned, 'PKRSC')
     } catch (error) {
       console.error('Error fetching burned tokens:', error)
     }
