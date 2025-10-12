@@ -346,6 +346,24 @@ Deno.serve(async (req) => {
         }
       }
 
+      // Delete fee record when redemption is cancelled
+      let feeDeleted = false
+      if (!attachOnly && status === 'cancelled') {
+        console.log(`Redemption cancelled: Deleting associated transaction fee for redemption ${redemptionId}`)
+        
+        const { error: feeDeleteError } = await supabase
+          .from('transaction_fees')
+          .delete()
+          .eq('transaction_id', redemptionId)
+        
+        if (feeDeleteError) {
+          console.error('Error deleting transaction fee:', feeDeleteError)
+        } else {
+          feeDeleted = true
+          console.log('Transaction fee deleted successfully')
+        }
+      }
+
       // Log admin action
       await supabase.from('admin_actions').insert({
         action_type: attachOnly ? 'admin_attached_tx_hashes' : 'admin_updated_redemption',
@@ -359,6 +377,7 @@ Deno.serve(async (req) => {
           bankTransactionId,
           cancellationReason,
           reserveUpdated,
+          feeDeleted,
           amount: redemptionData?.pkrsc_amount,
           timestamp: new Date().toISOString() 
         }
