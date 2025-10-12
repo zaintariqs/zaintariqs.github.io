@@ -104,3 +104,6 @@ verify_jwt = false
 
 [functions.get-welcome-bonuses]
 verify_jwt = false
+
+[functions.auto-detect-redemption-transfers]
+verify_jwt = false
