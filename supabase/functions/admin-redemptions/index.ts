@@ -129,12 +129,74 @@ Deno.serve(async (req) => {
     // PATCH: Update redemption status (admin only)
     if (req.method === 'PATCH') {
       const body = await req.json()
-      const { redemptionId, status, bankTransactionId, userTransferHash, cancellationReason, burnTransactionHash, attachOnly } = body
+      const { redemptionId, status, bankTransactionId, userTransferHash, cancellationReason, burnTransactionHash, attachOnly, retriggerBurn } = body
 
       if (!redemptionId) {
         return new Response(
           JSON.stringify({ error: 'Missing redemption ID' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Handle re-trigger burn operation (reset completed to pending_burn)
+      if (retriggerBurn) {
+        console.log('Re-triggering burn for redemption:', redemptionId)
+        
+        // Verify redemption is completed
+        const { data: redemption, error: checkError } = await supabase
+          .from('redemptions')
+          .select('status, pkrsc_amount')
+          .eq('id', redemptionId)
+          .single()
+        
+        if (checkError || !redemption) {
+          return new Response(
+            JSON.stringify({ error: 'Redemption not found' }),
+            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+        
+        if (redemption.status !== 'completed') {
+          return new Response(
+            JSON.stringify({ error: 'Can only re-trigger burn for completed redemptions' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+        
+        // Reset to pending_burn to allow cron to pick it up
+        const { error: updateError } = await supabase
+          .from('redemptions')
+          .update({ status: 'pending_burn' })
+          .eq('id', redemptionId)
+        
+        if (updateError) {
+          console.error('Error resetting redemption to pending_burn:', updateError)
+          return new Response(
+            JSON.stringify({ error: 'Failed to re-trigger burn' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+        
+        // Log the action
+        await supabase.from('admin_actions').insert({
+          action_type: 'redemption_burn_retriggered',
+          wallet_address: walletAddress,
+          details: {
+            redemptionId,
+            amount: redemption.pkrsc_amount,
+            timestamp: new Date().toISOString()
+          }
+        })
+        
+        console.log(`✓ Burn re-triggered for redemption ${redemptionId}. Cron job will process it within 5 minutes.`)
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            message: 'Burn re-triggered successfully. The contract burn() function will be called within 5 minutes to permanently destroy tokens.',
+            data: { status: 'pending_burn' }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
 

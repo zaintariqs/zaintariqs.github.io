@@ -38,7 +38,7 @@ export function AdminRedemptions() {
   const [isLoading, setIsLoading] = useState(true)
   const [selectedRedemption, setSelectedRedemption] = useState<Redemption | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [actionType, setActionType] = useState<'complete' | 'cancel' | 'attach'>('complete')
+  const [actionType, setActionType] = useState<'complete' | 'cancel' | 'attach' | 'retrigger-burn'>('complete')
   const [bankTransactionId, setBankTransactionId] = useState('')
   const [userTransferHash, setUserTransferHash] = useState('')
   const [burnTransactionHash, setBurnTransactionHash] = useState('')
@@ -80,7 +80,7 @@ export function AdminRedemptions() {
     fetchRedemptions()
   }, [address])
 
-  const openDialog = (redemption: Redemption, type: 'complete' | 'cancel' | 'attach') => {
+  const openDialog = (redemption: Redemption, type: 'complete' | 'cancel' | 'attach' | 'retrigger-burn') => {
     setSelectedRedemption(redemption)
     setActionType(type)
     setBankTransactionId(redemption.bank_transaction_id || '')
@@ -92,6 +92,55 @@ export function AdminRedemptions() {
 
   const handleSubmit = async () => {
     if (!selectedRedemption || !address) return
+
+    if (actionType === 'retrigger-burn') {
+      setIsSubmitting(true)
+      try {
+        const response = await fetch(
+          'https://jdjreuxhvzmzockuduyq.supabase.co/functions/v1/admin-redemptions',
+          {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-wallet-address': address,
+            },
+            body: JSON.stringify({
+              redemptionId: selectedRedemption.id,
+              retriggerBurn: true,
+            }),
+          }
+        )
+
+        if (!response.ok) {
+          let msg = 'Failed to re-trigger burn'
+          try {
+            const err = await response.json()
+            msg = err?.error || msg
+          } catch {}
+          throw new Error(msg)
+        }
+
+        const responseData = await response.json()
+
+        toast({
+          title: "Success",
+          description: responseData.message || "Burn re-triggered. The contract's burn() function will be called within 5 minutes.",
+        })
+
+        setDialogOpen(false)
+        fetchRedemptions()
+      } catch (error: any) {
+        console.error('Error re-triggering burn:', error)
+        toast({
+          title: "Error",
+          description: error?.message || 'Failed to re-trigger burn',
+          variant: "destructive",
+        })
+      } finally {
+        setIsSubmitting(false)
+      }
+      return
+    }
 
     if (actionType === 'complete') {
       if (!bankTransactionId.trim()) {
@@ -385,6 +434,14 @@ export function AdminRedemptions() {
                                 Attach TX
                               </Button>
                             ) : null}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openDialog(redemption, 'retrigger-burn')}
+                              className="text-xs border-yellow-500/50 text-yellow-600 hover:bg-yellow-500/10"
+                            >
+                              🔥 Re-trigger Burn
+                            </Button>
                             {redemption.bank_transaction_id && (
                               <span className="text-xs text-muted-foreground font-mono">
                                 {redemption.bank_transaction_id}
@@ -411,11 +468,33 @@ export function AdminRedemptions() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {actionType === 'complete' ? 'Complete Redemption' : actionType === 'attach' ? 'Attach Transaction Hashes' : 'Cancel Redemption'}
+              {actionType === 'complete' && 'Complete Redemption'}
+              {actionType === 'attach' && 'Attach Transaction Hashes'}
+              {actionType === 'cancel' && 'Cancel Redemption'}
+              {actionType === 'retrigger-burn' && 'Re-trigger Token Burn'}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            {actionType === 'attach' ? (
+            {actionType === 'retrigger-burn' ? (
+              <>
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    <strong>Redemption ID:</strong> {selectedRedemption?.id.slice(0, 8)}...
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    <strong>Amount:</strong> {selectedRedemption?.pkrsc_amount.toLocaleString()} PKRSC
+                  </p>
+                  <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 mt-3">
+                    <p className="text-sm text-yellow-700 dark:text-yellow-300 font-medium mb-2">
+                      ⚠️ Token Burn Process
+                    </p>
+                    <p className="text-xs text-yellow-600 dark:text-yellow-400">
+                      This will call the PKRSC contract's <code className="bg-yellow-500/20 px-1 rounded">burn()</code> function to permanently destroy tokens and reduce the total supply. The cron job will process this within 5 minutes.
+                    </p>
+                  </div>
+                </div>
+              </>
+            ) : actionType === 'attach' ? (
               <>
                 <div className="space-y-2">
                   <Label htmlFor="userTransferHash">User Transfer TX Hash</Label>
@@ -496,7 +575,11 @@ export function AdminRedemptions() {
               Cancel
             </Button>
             <Button onClick={handleSubmit} disabled={isSubmitting}>
-              {isSubmitting ? 'Submitting...' : 'Submit'}
+              {isSubmitting ? 'Processing...' : 
+                actionType === 'retrigger-burn' ? '🔥 Re-trigger Burn' :
+                actionType === 'complete' ? 'Complete Redemption' :
+                actionType === 'cancel' ? 'Cancel Redemption' :
+                'Attach Transaction'}
             </Button>
           </DialogFooter>
         </DialogContent>
