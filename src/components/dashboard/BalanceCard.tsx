@@ -7,12 +7,14 @@ import { Button } from '@/components/ui/button'
 import { supportedChains } from '@/lib/web3-config'
 import { formatUnits } from 'viem'
 import { useToast } from '@/hooks/use-toast'
+import { supabase } from '@/integrations/supabase/client'
 import MetaMaskIcon from '@/assets/metamask-icon.svg'
 
 export function BalanceCard() {
   const { address } = useAccount()
   const chainId = useChainId()
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [userEmail, setUserEmail] = useState<string | null>(null)
   const { toast } = useToast()
   
   const { data: ethBalance, refetch } = useBalance({
@@ -64,6 +66,27 @@ export function BalanceCard() {
         maximumFractionDigits: 2
       })
     : '0.00'
+
+  // Fetch user email
+  useEffect(() => {
+    const fetchEmail = async () => {
+      if (!address) return
+      
+      try {
+        const { data, error } = await supabase.functions.invoke('get-user-email', {
+          body: { walletAddress: address }
+        })
+        
+        if (!error && data?.email) {
+          setUserEmail(data.email)
+        }
+      } catch (err) {
+        console.error('Error fetching email:', err)
+      }
+    }
+    
+    fetchEmail()
+  }, [address])
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
@@ -171,11 +194,19 @@ export function BalanceCard() {
         </div>
 
         {/* Wallet Address */}
-        <div className="pt-2 border-t border-border">
+        <div className="pt-2 border-t border-border space-y-2">
           <div className="text-xs text-muted-foreground">Wallet Address</div>
           <div className="text-xs font-mono text-card-foreground break-all">
             {address}
           </div>
+          {userEmail && (
+            <>
+              <div className="text-xs text-muted-foreground pt-1">Email</div>
+              <div className="text-xs text-card-foreground break-all">
+                {userEmail}
+              </div>
+            </>
+          )}
         </div>
       </CardContent>
     </Card>
