@@ -158,16 +158,18 @@ Deno.serve(async (req) => {
       }
     }
     
-    // Check rate limiting for all operations (database-backed)
-    const rateLimitResult = await checkRateLimit(supabase, walletAddressHeader, `deposit_${req.method.toLowerCase()}`)
-    if (!rateLimitResult.allowed) {
-      console.warn('Rate limit exceeded for wallet:', walletAddressHeader)
-      return new Response(
-        JSON.stringify({ 
-          error: `Too many requests. Please wait ${rateLimitResult.retryAfter || 60} seconds before trying again.` 
-        }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    // Check rate limiting for write operations only (avoid GET concurrency issues)
+    if (req.method !== 'GET') {
+      const rateLimitResult = await checkRateLimit(supabase, walletAddressHeader, `deposit_${req.method.toLowerCase()}`)
+      if (!rateLimitResult.allowed) {
+        console.warn('Rate limit exceeded for wallet:', walletAddressHeader)
+        return new Response(
+          JSON.stringify({ 
+            error: `Too many requests. Please wait ${rateLimitResult.retryAfter || 60} seconds before trying again.` 
+          }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
     }
     
     // Log access for audit trail (non-blocking)
