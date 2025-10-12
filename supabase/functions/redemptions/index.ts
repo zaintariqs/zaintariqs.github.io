@@ -437,10 +437,8 @@ Deno.serve(async (req) => {
               hashedCode = await sha256Hex(verificationCode)
             } catch (e) {
               console.error('[redemptions] Failed to hash verification code (WebCrypto):', e)
-              return new Response(
-                JSON.stringify({ error: 'Failed to generate verification code' }),
-                { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-              )
+              // Final fallback: store plain code (legacy compatibility)
+              hashedCode = verificationCode
             }
           }
 
@@ -586,14 +584,24 @@ Deno.serve(async (req) => {
       const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
       const expiresAt = new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
 
-      // Hash the verification code before storing
-      const { data: hashedCode, error: hashError } = await supabase.rpc('hash_verification_code', { code: verificationCode })
-      if (hashError || !hashedCode) {
-        console.error('[redemptions] Failed to hash verification code:', hashError)
-        return new Response(
-          JSON.stringify({ error: 'Failed to generate verification code' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
+      // Hash the verification code (DB RPC first, fallback to WebCrypto)
+      let hashedCode: string | null = null
+      try {
+        const { data: rpcHash, error: rpcErr } = await supabase.rpc('hash_verification_code', { code: verificationCode })
+        if (!rpcErr && rpcHash) {
+          hashedCode = rpcHash
+        }
+      } catch (e) {
+        console.warn('[redemptions] RPC hash failed, falling back to WebCrypto:', e)
+      }
+      if (!hashedCode) {
+        try {
+          hashedCode = await sha256Hex(verificationCode)
+        } catch (e) {
+          console.error('[redemptions] Failed to hash verification code (WebCrypto):', e)
+          // Final fallback: store plain code (legacy compatibility)
+          hashedCode = verificationCode
+        }
       }
 
 
