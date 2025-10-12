@@ -29,6 +29,11 @@ interface Redemption {
   cancellation_reason?: string
   created_at: string
   updated_at: string
+  transaction_fees?: {
+    fee_amount: number
+    net_amount: number
+    original_amount: number
+  }
 }
 
 export function MyRedemptions() {
@@ -274,7 +279,9 @@ export function MyRedemptions() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[100px]">Date</TableHead>
-                  <TableHead className="w-[120px]">Amount</TableHead>
+                  <TableHead className="w-[120px]">PKRSC Burned</TableHead>
+                  <TableHead className="w-[100px]">PKR Transfer</TableHead>
+                  <TableHead className="w-[80px]">Fee</TableHead>
                   <TableHead className="w-[150px]">Bank</TableHead>
                   <TableHead className="w-[120px]">Status</TableHead>
                   <TableHead className="w-[100px]">Transfer TX</TableHead>
@@ -289,13 +296,18 @@ export function MyRedemptions() {
                       {new Date(redemption.created_at).toLocaleDateString()}
                     </TableCell>
                     <TableCell>
-                      <div>
-                        <div className="font-medium text-primary">
-                          {redemption.desired_pkr_amount?.toLocaleString() || Math.floor(redemption.pkrsc_amount / 1.005)} PKR
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {redemption.pkrsc_amount.toFixed(6)} PKRSC
-                        </div>
+                      <div className="font-medium text-muted-foreground">
+                        {redemption.pkrsc_amount.toFixed(2)} PKRSC
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="font-medium text-primary">
+                        {redemption.transaction_fees?.net_amount?.toLocaleString() || redemption.desired_pkr_amount?.toLocaleString() || Math.floor(redemption.pkrsc_amount / 1.005)} PKR
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm text-muted-foreground">
+                        {redemption.transaction_fees?.fee_amount?.toFixed(2) || (redemption.pkrsc_amount * 0.005).toFixed(2)} PKRSC
                       </div>
                     </TableCell>
                     <TableCell>

@@ -216,16 +216,18 @@ Deno.serve(async (req) => {
       }
     }
     
-    // Check rate limiting (database-backed)
-    const rateLimitResult = await checkRateLimit(supabase, walletAddressHeader, `redemption_${req.method.toLowerCase()}`)
-    if (!rateLimitResult.allowed) {
-      console.warn('Rate limit exceeded for wallet:', walletAddressHeader)
-      return new Response(
-        JSON.stringify({ 
-          error: `Too many requests. Please wait ${rateLimitResult.retryAfter || 60} seconds before trying again.` 
-        }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    // Check rate limiting for write operations only (avoid GET concurrency issues)
+    if (req.method !== 'GET') {
+      const rateLimitResult = await checkRateLimit(supabase, walletAddressHeader, `redemption_${req.method.toLowerCase()}`)
+      if (!rateLimitResult.allowed) {
+        console.warn('Rate limit exceeded for wallet:', walletAddressHeader)
+        return new Response(
+          JSON.stringify({ 
+            error: `Too many requests. Please wait ${rateLimitResult.retryAfter || 60} seconds before trying again.` 
+          }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
     }
     
     // Log access for audit trail (non-blocking)
@@ -805,12 +807,29 @@ Deno.serve(async (req) => {
         burnData = burns || []
       }
 
-      // Merge burn proof with redemptions
+      // Fetch transaction fees
+      let feesData: any[] = []
+      if (redemptionIds.length > 0) {
+        const { data: fees } = await supabase
+          .from('transaction_fees')
+          .select('transaction_id, fee_amount, net_amount, original_amount')
+          .in('transaction_id', redemptionIds)
+        
+        feesData = fees || []
+      }
+
+      // Merge burn proof and fees with redemptions
       const enrichedData = decryptedData.map(redemption => {
         const burn = burnData.find(b => b.redemption_id === redemption.id)
+        const fee = feesData.find(f => f.transaction_id === redemption.id)
         return {
           ...redemption,
-          burn_tx_hash: burn?.burn_tx_hash || null
+          burn_tx_hash: burn?.burn_tx_hash || null,
+          transaction_fees: fee ? {
+            fee_amount: fee.fee_amount,
+            net_amount: fee.net_amount,
+            original_amount: fee.original_amount
+          } : null
         }
       })
 
