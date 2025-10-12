@@ -38,7 +38,7 @@ export function AdminRedemptions() {
   const [isLoading, setIsLoading] = useState(true)
   const [selectedRedemption, setSelectedRedemption] = useState<Redemption | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [actionType, setActionType] = useState<'complete' | 'cancel'>('complete')
+  const [actionType, setActionType] = useState<'complete' | 'cancel' | 'attach'>('complete')
   const [bankTransactionId, setBankTransactionId] = useState('')
   const [userTransferHash, setUserTransferHash] = useState('')
   const [burnTransactionHash, setBurnTransactionHash] = useState('')
@@ -80,12 +80,12 @@ export function AdminRedemptions() {
     fetchRedemptions()
   }, [address])
 
-  const openDialog = (redemption: Redemption, type: 'complete' | 'cancel') => {
+  const openDialog = (redemption: Redemption, type: 'complete' | 'cancel' | 'attach') => {
     setSelectedRedemption(redemption)
     setActionType(type)
-    setBankTransactionId('')
+    setBankTransactionId(redemption.bank_transaction_id || '')
     setUserTransferHash(redemption.transaction_hash || '')
-    setBurnTransactionHash(redemption.transaction_hash || '')
+    setBurnTransactionHash(redemption.burn_tx_hash || '')
     setCancellationReason('')
     setDialogOpen(true)
   }
@@ -123,6 +123,17 @@ export function AdminRedemptions() {
       }
     }
 
+    if (actionType === 'attach') {
+      if (!userTransferHash.trim() && !burnTransactionHash.trim()) {
+        toast({
+          title: "Error",
+          description: "At least one transaction hash is required",
+          variant: "destructive",
+        })
+        return
+      }
+    }
+
     setIsSubmitting(true)
 
     try {
@@ -136,11 +147,12 @@ export function AdminRedemptions() {
           },
             body: JSON.stringify({
               redemptionId: selectedRedemption.id,
-              status: actionType === 'complete' ? 'completed' : 'cancelled',
+              status: actionType === 'attach' ? undefined : (actionType === 'complete' ? 'completed' : 'cancelled'),
               bankTransactionId: actionType === 'complete' ? bankTransactionId : undefined,
-              userTransferHash: actionType === 'complete' && userTransferHash ? userTransferHash : undefined,
+              userTransferHash: (actionType === 'complete' || actionType === 'attach') && userTransferHash ? userTransferHash : undefined,
               cancellationReason: actionType === 'cancel' ? cancellationReason : undefined,
-              burnTransactionHash: actionType === 'cancel' ? burnTransactionHash : undefined,
+              burnTransactionHash: (actionType === 'cancel' || actionType === 'attach') && burnTransactionHash ? burnTransactionHash : undefined,
+              attachOnly: actionType === 'attach',
             }),
         }
       )
@@ -152,7 +164,9 @@ export function AdminRedemptions() {
 
       toast({
         title: "Success",
-        description: actualStatus === 'pending_burn' 
+        description: actionType === 'attach'
+          ? "Transaction hashes attached successfully"
+          : actualStatus === 'pending_burn' 
           ? "Transfer hash linked. Tokens will be burned automatically (5 min), then you can complete the bank transfer."
           : `Redemption ${actionType === 'complete' ? 'completed' : 'cancelled'} successfully`,
       })
@@ -352,10 +366,24 @@ export function AdminRedemptions() {
                             </Button>
                           </div>
                         )}
-                        {redemption.status === 'completed' && redemption.bank_transaction_id && (
-                          <span className="text-xs text-muted-foreground font-mono">
-                            {redemption.bank_transaction_id}
-                          </span>
+                        {redemption.status === 'completed' && (
+                          <div className="flex flex-col gap-1">
+                            {!redemption.transaction_hash || !redemption.burn_tx_hash ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openDialog(redemption, 'attach')}
+                                className="text-xs"
+                              >
+                                Attach TX
+                              </Button>
+                            ) : null}
+                            {redemption.bank_transaction_id && (
+                              <span className="text-xs text-muted-foreground font-mono">
+                                {redemption.bank_transaction_id}
+                              </span>
+                            )}
+                          </div>
                         )}
                         {redemption.status === 'cancelled' && redemption.cancellation_reason && (
                           <span className="text-xs text-muted-foreground">
@@ -376,11 +404,35 @@ export function AdminRedemptions() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {actionType === 'complete' ? 'Complete Redemption' : 'Cancel Redemption'}
+              {actionType === 'complete' ? 'Complete Redemption' : actionType === 'attach' ? 'Attach Transaction Hashes' : 'Cancel Redemption'}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            {actionType === 'complete' ? (
+            {actionType === 'attach' ? (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="userTransferHash">User Transfer TX Hash</Label>
+                  <Input
+                    id="userTransferHash"
+                    placeholder="0x... (transfer to master minter)"
+                    value={userTransferHash}
+                    onChange={(e) => setUserTransferHash(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="burnTransactionHash">Burn Transaction Hash</Label>
+                  <Input
+                    id="burnTransactionHash"
+                    placeholder="0x... (burn proof)"
+                    value={burnTransactionHash}
+                    onChange={(e) => setBurnTransactionHash(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Add transaction hashes for record-keeping. This won't change the redemption status.
+                  </p>
+                </div>
+              </>
+            ) : actionType === 'complete' ? (
               <>
                 <div className="space-y-2">
                   <Label htmlFor="userTransferHash">User Transfer TX Hash (Optional)</Label>

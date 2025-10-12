@@ -129,65 +129,91 @@ Deno.serve(async (req) => {
     // PATCH: Update redemption status (admin only)
     if (req.method === 'PATCH') {
       const body = await req.json()
-      const { redemptionId, status, bankTransactionId, userTransferHash, cancellationReason, burnTransactionHash } = body
+      const { redemptionId, status, bankTransactionId, userTransferHash, cancellationReason, burnTransactionHash, attachOnly } = body
 
-      if (!redemptionId || !status) {
+      if (!redemptionId) {
         return new Response(
-          JSON.stringify({ error: 'Missing required fields' }),
+          JSON.stringify({ error: 'Missing redemption ID' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
 
-      const validStatuses = ['pending', 'waiting_for_burn', 'burn_confirmed', 'processing_transfer', 'completed', 'cancelled']
-      if (!validStatuses.includes(status)) {
-        return new Response(
-          JSON.stringify({ error: 'Invalid status' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
+      // Skip status validation for attach-only operations
+      if (!attachOnly) {
+        if (!status) {
+          return new Response(
+            JSON.stringify({ error: 'Missing status' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+
+        const validStatuses = ['pending', 'waiting_for_burn', 'burn_confirmed', 'processing_transfer', 'completed', 'cancelled']
+        if (!validStatuses.includes(status)) {
+          return new Response(
+            JSON.stringify({ error: 'Invalid status' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
       }
 
-      // Validate required fields based on status
-      if (status === 'completed' && !bankTransactionId) {
-        return new Response(
-          JSON.stringify({ error: 'Bank transaction ID required for completed redemptions' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
+      // Validate required fields based on status (skip for attach-only)
+      if (!attachOnly) {
+        if (status === 'completed' && !bankTransactionId) {
+          return new Response(
+            JSON.stringify({ error: 'Bank transaction ID required for completed redemptions' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+
+        if (status === 'cancelled' && !cancellationReason) {
+          return new Response(
+            JSON.stringify({ error: 'Cancellation reason required when cancelling redemptions' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
       }
 
-      if (status === 'cancelled' && !cancellationReason) {
-        return new Response(
-          JSON.stringify({ error: 'Cancellation reason required when cancelling redemptions' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-
-      const updateData: any = { status }
+      const updateData: any = {}
       
-      // If admin is adding a transfer hash for the first time during completion
-      // Set status to pending_burn so the burn process can run first
-      if (userTransferHash && status === 'completed') {
-        const { data: existing } = await supabase
-          .from('redemptions')
-          .select('transaction_hash')
-          .eq('id', redemptionId)
-          .single()
-        
-        if (!existing?.transaction_hash) {
-          // Transfer hash is being added for first time - need to burn first
-          updateData.status = 'pending_burn'
+      // Handle attach-only operations (no status change)
+      if (attachOnly) {
+        console.log('Attach-only operation - updating transaction hashes without status change')
+        if (userTransferHash) {
           updateData.transaction_hash = userTransferHash
-          console.log('Transfer hash added - setting status to pending_burn for burn process')
-        } else {
-          // Transfer already existed, proceed with completion
-          if (bankTransactionId) updateData.bank_transaction_id = bankTransactionId
+        }
+        if (burnTransactionHash) {
+          updateData.burn_tx_hash = burnTransactionHash
         }
       } else {
-        if (bankTransactionId) updateData.bank_transaction_id = bankTransactionId
-        if (userTransferHash) updateData.transaction_hash = userTransferHash
+        // Handle normal status change operations
+        updateData.status = status
+        
+        // If admin is adding a transfer hash for the first time during completion
+        // Set status to pending_burn so the burn process can run first
+        if (userTransferHash && status === 'completed') {
+          const { data: existing } = await supabase
+            .from('redemptions')
+            .select('transaction_hash')
+            .eq('id', redemptionId)
+            .single()
+          
+          if (!existing?.transaction_hash) {
+            // Transfer hash is being added for first time - need to burn first
+            updateData.status = 'pending_burn'
+            updateData.transaction_hash = userTransferHash
+            console.log('Transfer hash added - setting status to pending_burn for burn process')
+          } else {
+            // Transfer already existed, proceed with completion
+            if (bankTransactionId) updateData.bank_transaction_id = bankTransactionId
+          }
+        } else {
+          if (bankTransactionId) updateData.bank_transaction_id = bankTransactionId
+          if (userTransferHash) updateData.transaction_hash = userTransferHash
+        }
+        
+        if (cancellationReason) updateData.cancellation_reason = cancellationReason
+        if (burnTransactionHash && !userTransferHash) updateData.transaction_hash = burnTransactionHash
       }
-      
-      if (cancellationReason) updateData.cancellation_reason = cancellationReason
-      if (burnTransactionHash && !userTransferHash) updateData.transaction_hash = burnTransactionHash
 
       // Get redemption details before updating (for reserve tracking)
       const { data: redemptionData, error: fetchError } = await supabase
@@ -221,10 +247,10 @@ Deno.serve(async (req) => {
         )
       }
 
-      // Update PKR reserves and record transaction fee when redemption is completed
+      // Update PKR reserves and record transaction fee when redemption is completed (skip for attach-only)
       let reserveUpdated = false
       let feeRecorded = false
-      if (status === 'completed' && redemptionData?.pkrsc_amount) {
+      if (!attachOnly && status === 'completed' && redemptionData?.pkrsc_amount) {
         // User pays 0.5% fee on top (e.g., user pays 502.5 PKRSC, bank pays 500 PKR)
         const FEE_PERCENTAGE = 0.5
         const netAmount = redemptionData.pkrsc_amount / 1.005 // Amount bank actually pays
@@ -270,14 +296,16 @@ Deno.serve(async (req) => {
 
       // Log admin action
       await supabase.from('admin_actions').insert({
-        action_type: 'admin_updated_redemption',
+        action_type: attachOnly ? 'admin_attached_tx_hashes' : 'admin_updated_redemption',
         wallet_address: walletAddress.toLowerCase(),
         details: { 
           redemptionId, 
-          status, 
+          status: attachOnly ? undefined : status,
+          attachOnly,
+          userTransferHash: attachOnly ? userTransferHash : undefined,
+          burnTransactionHash: attachOnly ? burnTransactionHash : undefined,
           bankTransactionId,
           cancellationReason,
-          burnTransactionHash,
           reserveUpdated,
           feeRecorded,
           amount: redemptionData?.pkrsc_amount,
@@ -285,16 +313,17 @@ Deno.serve(async (req) => {
         }
       })
 
-      // Send email notification
-      const { data: whitelistData } = await supabase
-        .from('whitelist_requests')
-        .select('wallet_address')
-        .ilike('wallet_address', data.user_id)
-        .single()
+      // Send email notification (skip for attach-only operations)
+      if (!attachOnly) {
+        const { data: whitelistData } = await supabase
+          .from('whitelist_requests')
+          .select('wallet_address')
+          .ilike('wallet_address', data.user_id)
+          .single()
 
-      // Fetch and decrypt email if available
-      let userEmail = null
-      if (whitelistData) {
+        // Fetch and decrypt email if available
+        let userEmail = null
+        if (whitelistData) {
         const { data: emailData } = await supabase
           .from('encrypted_emails')
           .select('encrypted_email')
@@ -433,6 +462,7 @@ Deno.serve(async (req) => {
           console.error('Error sending redemption email:', emailError)
         }
       }
+      } // End of !attachOnly email notification block
 
       return new Response(
         JSON.stringify({ data }),
