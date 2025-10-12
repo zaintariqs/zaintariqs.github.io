@@ -181,8 +181,15 @@ Deno.serve(async (req) => {
         if (userTransferHash) {
           updateData.transaction_hash = userTransferHash
         }
+        // Note: burn proofs are stored in burn_operations, not redemptions
         if (burnTransactionHash) {
-          updateData.burn_tx_hash = burnTransactionHash
+          const { error: burnUpdateErr } = await supabase
+            .from('burn_operations')
+            .update({ burn_tx_hash: burnTransactionHash })
+            .eq('redemption_id', redemptionId)
+          if (burnUpdateErr) {
+            console.warn('Burn operations update skipped or failed:', burnUpdateErr)
+          }
         }
       } else {
         // Handle normal status change operations
@@ -241,9 +248,13 @@ Deno.serve(async (req) => {
 
       if (error) {
         console.error('Error updating redemption:', error)
+        const statusCode = (error as any)?.code === '23505' ? 409 : 500
+        const message = (error as any)?.code === '23505'
+          ? 'This transaction hash is already linked to another redemption'
+          : 'Failed to update redemption'
         return new Response(
-          JSON.stringify({ error: 'Failed to update redemption' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ error: message, details: error }),
+          { status: statusCode, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
 

@@ -157,7 +157,14 @@ export function AdminRedemptions() {
         }
       )
 
-      if (!response.ok) throw new Error('Failed to update redemption')
+      if (!response.ok) {
+        let msg = 'Failed to update redemption'
+        try {
+          const err = await response.json()
+          msg = err?.error || msg
+        } catch {}
+        throw new Error(msg)
+      }
 
       const responseData = await response.json()
       const actualStatus = responseData.data?.status
@@ -173,11 +180,11 @@ export function AdminRedemptions() {
 
       setDialogOpen(false)
       fetchRedemptions()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating redemption:', error)
       toast({
         title: "Error",
-        description: "Failed to update redemption",
+        description: error?.message || 'Failed to update redemption',
         variant: "destructive",
       })
     } finally {
