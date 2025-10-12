@@ -17,6 +17,7 @@ interface Redemption {
   pkrsc_amount: number
   status: string
   transaction_hash?: string
+  burn_tx_hash?: string
   bank_transaction_id?: string
   bank_name: string
   account_number: string
@@ -275,7 +276,8 @@ export function MyRedemptions() {
                   <TableHead className="w-[120px]">Amount</TableHead>
                   <TableHead className="w-[150px]">Bank</TableHead>
                   <TableHead className="w-[120px]">Status</TableHead>
-                  <TableHead className="w-[100px]">Burn TX</TableHead>
+                  <TableHead className="w-[100px]">Transfer TX</TableHead>
+                  <TableHead className="w-[100px]">Burn Proof</TableHead>
                   <TableHead className="min-w-[200px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -309,6 +311,23 @@ export function MyRedemptions() {
                           <ExternalLink className="h-3 w-3" />
                         </a>
                       )}
+                    </TableCell>
+                    <TableCell>
+                      {redemption.burn_tx_hash ? (
+                        <a
+                          href={`https://basescan.org/tx/${redemption.burn_tx_hash}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 text-crypto-green hover:underline"
+                        >
+                          <span className="text-xs font-mono">
+                            {redemption.burn_tx_hash.slice(0, 8)}...
+                          </span>
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      ) : redemption.status === 'pending_burn' ? (
+                        <span className="text-xs text-muted-foreground">Pending...</span>
+                      ) : null}
                     </TableCell>
                     <TableCell className="min-w-[200px]">
                       {redemption.status === 'completed' && redemption.bank_transaction_id && (

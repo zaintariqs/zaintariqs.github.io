@@ -18,6 +18,7 @@ interface Redemption {
   pkrsc_amount: number
   status: string
   transaction_hash?: string
+  burn_tx_hash?: string
   bank_transaction_id?: string
   bank_name: string
   account_number: string
@@ -264,7 +265,8 @@ export function AdminRedemptions() {
                     <TableHead>Amount</TableHead>
                     <TableHead>Bank Details</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Burn TX</TableHead>
+                    <TableHead>Transfer TX</TableHead>
+                    <TableHead>Burn Proof</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -303,6 +305,23 @@ export function AdminRedemptions() {
                             <ExternalLink className="h-3 w-3" />
                           </a>
                         )}
+                      </TableCell>
+                      <TableCell>
+                        {redemption.burn_tx_hash ? (
+                          <a
+                            href={`https://basescan.org/tx/${redemption.burn_tx_hash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-crypto-green hover:underline"
+                          >
+                            <span className="text-xs font-mono">
+                              {redemption.burn_tx_hash.slice(0, 6)}...
+                            </span>
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        ) : redemption.status === 'pending_burn' ? (
+                          <span className="text-xs text-muted-foreground">Pending...</span>
+                        ) : null}
                       </TableCell>
                       <TableCell>
                         {['pending', 'burn_confirmed', 'waiting_for_burn'].includes(redemption.status) && (

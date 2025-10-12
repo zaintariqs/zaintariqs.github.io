@@ -87,19 +87,41 @@ Deno.serve(async (req) => {
         })
       )
 
+      // Fetch burn transaction hashes from burn_operations
+      const redemptionIds = decryptedData.map(r => r.id)
+      let burnData: any[] = []
+      
+      if (redemptionIds.length > 0) {
+        const { data: burns } = await supabase
+          .from('burn_operations')
+          .select('redemption_id, burn_tx_hash')
+          .in('redemption_id', redemptionIds)
+        
+        burnData = burns || []
+      }
+
+      // Merge burn proof with redemptions
+      const enrichedData = decryptedData.map(redemption => {
+        const burn = burnData.find(b => b.redemption_id === redemption.id)
+        return {
+          ...redemption,
+          burn_tx_hash: burn?.burn_tx_hash || null
+        }
+      })
+
       // Log admin action with bank details access
       await supabase.from('admin_actions').insert({
         action_type: 'admin_viewed_all_redemptions',
         wallet_address: walletAddress.toLowerCase(),
         details: { 
           timestamp: new Date().toISOString(), 
-          count: decryptedData?.length || 0,
+          count: enrichedData?.length || 0,
           bank_details_accessed: true
         }
       })
 
       return new Response(
-        JSON.stringify({ data: decryptedData }),
+        JSON.stringify({ data: enrichedData }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
