@@ -193,27 +193,31 @@ Deno.serve(async (req) => {
         }
       } else {
         // Handle normal status change operations
-        updateData.status = status
         
-        // If admin is adding a transfer hash for the first time during completion
-        // Set status to pending_burn so the burn process can run first
-        if (userTransferHash && status === 'completed') {
-          const { data: existing } = await supabase
-            .from('redemptions')
-            .select('transaction_hash')
-            .eq('id', redemptionId)
+        // Special handling for completion - check if burn happened first
+        if (status === 'completed') {
+          // Check if tokens have been burned via burn_operations table
+          const { data: burnCheck } = await supabase
+            .from('burn_operations')
+            .select('id, burn_tx_hash')
+            .eq('redemption_id', redemptionId)
             .single()
           
-          if (!existing?.transaction_hash) {
-            // Transfer hash is being added for first time - need to burn first
+          if (!burnCheck) {
+            // No burn record exists - need to burn tokens first
+            console.log('Completion requested but no burn found - setting status to pending_burn')
             updateData.status = 'pending_burn'
-            updateData.transaction_hash = userTransferHash
-            console.log('Transfer hash added - setting status to pending_burn for burn process')
+            if (userTransferHash) updateData.transaction_hash = userTransferHash
           } else {
-            // Transfer already existed, proceed with completion
+            // Burn already happened, proceed with completion
+            console.log('Burn confirmed, proceeding with completion')
+            updateData.status = 'completed'
             if (bankTransactionId) updateData.bank_transaction_id = bankTransactionId
+            if (userTransferHash) updateData.transaction_hash = userTransferHash
           }
         } else {
+          // Non-completion status changes
+          updateData.status = status
           if (bankTransactionId) updateData.bank_transaction_id = bankTransactionId
           if (userTransferHash) updateData.transaction_hash = userTransferHash
         }
