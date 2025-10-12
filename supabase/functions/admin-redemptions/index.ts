@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
     if (!walletAddress) {
       return new Response(
         JSON.stringify({ error: 'Wallet address required' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: responseHeaders }
       )
     }
 
@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
       console.warn('Non-admin attempted to access admin redemptions:', walletAddress, adminError)
       return new Response(
         JSON.stringify({ error: 'Unauthorized: Admin access required' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 403, headers: responseHeaders }
       )
     }
 
@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
         console.error('Error fetching redemptions:', error)
         return new Response(
           JSON.stringify({ error: 'Failed to fetch redemptions' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 500, headers: responseHeaders }
         )
       }
 
@@ -117,7 +117,7 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify({ data: enrichedData }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: responseHeaders }
       )
     }
 
@@ -129,7 +129,7 @@ Deno.serve(async (req) => {
       if (!redemptionId) {
         return new Response(
           JSON.stringify({ error: 'Missing redemption ID' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 400, headers: responseHeaders }
         )
       }
 
@@ -147,14 +147,14 @@ Deno.serve(async (req) => {
         if (checkError || !redemption) {
           return new Response(
             JSON.stringify({ error: 'Redemption not found' }),
-            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 404, headers: responseHeaders }
           )
         }
         
         if (redemption.status !== 'completed') {
           return new Response(
             JSON.stringify({ error: 'Can only re-trigger burn for completed redemptions' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 400, headers: responseHeaders }
           )
         }
         
@@ -168,7 +168,7 @@ Deno.serve(async (req) => {
           console.error('Error resetting redemption to pending_burn:', updateError)
           return new Response(
             JSON.stringify({ error: 'Failed to re-trigger burn' }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 500, headers: responseHeaders }
           )
         }
         
@@ -200,7 +200,7 @@ Deno.serve(async (req) => {
         if (!status) {
           return new Response(
             JSON.stringify({ error: 'Missing status' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 400, headers: responseHeaders }
           )
         }
 
@@ -208,7 +208,7 @@ Deno.serve(async (req) => {
         if (!validStatuses.includes(status)) {
           return new Response(
             JSON.stringify({ error: 'Invalid status' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 400, headers: responseHeaders }
           )
         }
       }
@@ -218,14 +218,14 @@ Deno.serve(async (req) => {
         if (status === 'completed' && !bankTransactionId) {
           return new Response(
             JSON.stringify({ error: 'Bank transaction ID required for completed redemptions' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 400, headers: responseHeaders }
           )
         }
 
         if (status === 'cancelled' && !cancellationReason) {
           return new Response(
             JSON.stringify({ error: 'Cancellation reason required when cancelling redemptions' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            { status: 400, headers: responseHeaders }
           )
         }
       }
@@ -294,7 +294,7 @@ Deno.serve(async (req) => {
         console.error('Error fetching redemption:', fetchError)
         return new Response(
           JSON.stringify({ error: 'Redemption not found' }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 404, headers: responseHeaders }
         )
       }
 
@@ -315,7 +315,7 @@ Deno.serve(async (req) => {
           : 'Failed to update redemption'
         return new Response(
           JSON.stringify({ error: message, details: error }),
-          { status: statusCode, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: statusCode, headers: responseHeaders }
         )
       }
 
@@ -560,20 +560,20 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify({ data }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: responseHeaders }
       )
     }
 
     return new Response(
       JSON.stringify({ error: 'Method not allowed' }),
-      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 405, headers: responseHeaders }
     )
 
   } catch (error) {
     console.error('Unexpected error:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: responseHeaders }
     )
   }
 })

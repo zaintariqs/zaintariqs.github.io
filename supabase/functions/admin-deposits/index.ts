@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
       console.warn('Missing authentication headers for admin-deposits')
       return new Response(
         JSON.stringify({ error: 'Authentication required: wallet signature missing' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 401, headers: responseHeaders }
       )
     }
 
@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
       console.error('Invalid wallet signature for admin-deposits:', walletAddress)
       return new Response(
         JSON.stringify({ error: 'Invalid wallet signature' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 403, headers: responseHeaders }
       )
     }
 
@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
       console.error('Nonce already used - possible replay attack:', nonceHeader)
       return new Response(
         JSON.stringify({ error: 'Invalid nonce - possible replay attack detected' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 403, headers: responseHeaders }
       )
     }
 
@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
       console.error('Admin verification failed for wallet:', walletAddress, adminError)
       return new Response(
         JSON.stringify({ error: 'Unauthorized: Admin access required' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 403, headers: responseHeaders }
       )
     }
 
@@ -111,7 +111,7 @@ Deno.serve(async (req) => {
         console.error('Error fetching deposits:', error)
         return new Response(
           JSON.stringify({ error: 'Failed to fetch deposits' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 500, headers: responseHeaders }
         )
       }
 
@@ -156,7 +156,7 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify({ data: depositsWithDecryptedPhones }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: responseHeaders }
       )
     }
 
@@ -168,7 +168,7 @@ Deno.serve(async (req) => {
       if (!depositId || !status) {
         return new Response(
           JSON.stringify({ error: 'Missing required fields' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 400, headers: responseHeaders }
         )
       }
 
@@ -176,7 +176,7 @@ Deno.serve(async (req) => {
       if (!validStatuses.includes(status)) {
         return new Response(
           JSON.stringify({ error: 'Invalid status' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 400, headers: responseHeaders }
         )
       }
 
@@ -197,7 +197,7 @@ Deno.serve(async (req) => {
         console.error('Error updating deposit:', error)
         return new Response(
           JSON.stringify({ error: 'Failed to update deposit' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 500, headers: responseHeaders }
         )
       }
 
@@ -216,20 +216,20 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify({ data }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: responseHeaders }
       )
     }
 
     return new Response(
       JSON.stringify({ error: 'Method not allowed' }),
-      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 405, headers: responseHeaders }
     )
 
   } catch (error) {
     console.error('Unexpected error:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: responseHeaders }
     )
   }
 })
