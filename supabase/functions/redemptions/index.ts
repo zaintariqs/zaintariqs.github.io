@@ -44,6 +44,22 @@ const PKRSC_TOKEN_ADDRESS = '0x220aC54E22056B834522cD1A6A3DfeCA63bC3C6e'
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' // Proper burn address (contract burn function)
 const PKRSC_DECIMALS = 6
 
+// Get master minter address helper
+async function getMasterMinterAddress(supabase: any): Promise<string> {
+  const { data, error } = await supabase
+    .from('master_minter_config')
+    .select('master_minter_address')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
+  
+  if (error || !data) {
+    throw new Error('Master minter address not configured')
+  }
+  
+  return data.master_minter_address.toLowerCase()
+}
+
 // Comprehensive input validation
 function validateBankDetails(bankName: string, accountNumber: string, accountTitle: string): { valid: boolean; error?: string } {
   // Validate bank name
@@ -250,10 +266,10 @@ Deno.serve(async (req) => {
         )
       }
 
-      // Branch: user already burned and provides a transaction hash
-      if (body.existingBurnTx) {
-        const burnTx: string = String(body.existingBurnTx)
-        if (!/^0x[a-fA-F0-9]{64}$/.test(burnTx)) {
+      // Branch: user transferred tokens to master minter for redemption
+      if (body.existingTransferTx) {
+        const transferTx: string = String(body.existingTransferTx)
+        if (!/^0x[a-fA-F0-9]{64}$/.test(transferTx)) {
           return new Response(
             JSON.stringify({ error: 'Invalid transaction hash format' }),
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -263,7 +279,7 @@ Deno.serve(async (req) => {
         try {
           const { ethers } = await import('https://esm.sh/ethers@6.9.0')
           const provider = new ethers.JsonRpcProvider('https://mainnet.base.org')
-          const receipt = await provider.getTransactionReceipt(burnTx)
+          const receipt = await provider.getTransactionReceipt(transferTx)
 
           if (!receipt || receipt.status !== 1) {
             return new Response(
@@ -272,10 +288,13 @@ Deno.serve(async (req) => {
             )
           }
 
+          // Get master minter address
+          const masterMinterAddress = await getMasterMinterAddress(supabase)
+
           // Transfer(address,address,uint256) topic
           const TRANSFER_TOPIC = ethers.id('Transfer(address,address,uint256)')
 
-          // Find Transfer log for PKRSC token to zero address (proper burn) from this wallet
+          // Find Transfer log for PKRSC token TO master minter FROM this wallet
           const targetLog = receipt.logs.find((log: any) => {
             if (log.address?.toLowerCase() !== PKRSC_TOKEN_ADDRESS.toLowerCase()) return false
             if (!log.topics || log.topics.length < 3) return false
@@ -285,12 +304,12 @@ Deno.serve(async (req) => {
             // topics for indexed address are 32-byte left-padded, compare last 40 hex chars
             const fromAddr = '0x' + fromTopic.slice(-40)
             const toAddr = '0x' + toTopic.slice(-40)
-            return fromAddr.toLowerCase() === body.walletAddress.toLowerCase() && toAddr.toLowerCase() === ZERO_ADDRESS.toLowerCase()
+            return fromAddr.toLowerCase() === body.walletAddress.toLowerCase() && toAddr.toLowerCase() === masterMinterAddress.toLowerCase()
           })
 
           if (!targetLog) {
             return new Response(
-              JSON.stringify({ error: 'Provided transaction is not a valid PKRSC burn from this wallet. Please use the contract burn() function, not transfer to burn address.' }),
+              JSON.stringify({ error: `Provided transaction is not a valid PKRSC transfer to master minter wallet from your address. Please transfer tokens to ${masterMinterAddress}` }),
               { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
             )
           }
@@ -311,7 +330,7 @@ Deno.serve(async (req) => {
           const feeAmount = (amount * FEE_PERCENTAGE) / 100
           const netAmount = amount - feeAmount
 
-          console.log(`[redemptions] Fee calculation (existing burn, v2): Original=${amount} PKRSC, Fee=${feeAmount} PKRSC (${FEE_PERCENTAGE}%), Net=${netAmount} PKRSC`)
+          console.log(`[redemptions] Fee calculation (transfer to master minter): Original=${amount} PKRSC, Fee=${feeAmount} PKRSC (${FEE_PERCENTAGE}%), Net=${netAmount} PKRSC to burn`)
 
           // Get user's email for verification
           const { data: emailData, error: emailFetchError } = await supabase
@@ -346,13 +365,13 @@ Deno.serve(async (req) => {
             .from('redemptions')
             .insert({
               user_id: body.walletAddress.toLowerCase(),
-              pkrsc_amount: amount,
+              pkrsc_amount: netAmount, // Store net amount (what user will receive in PKR)
               bank_name: encryptedBankDetails.bankName,
               account_number: encryptedBankDetails.accountNumber,
               account_title: encryptedBankDetails.accountTitle,
-              burn_address: ZERO_ADDRESS,
-              transaction_hash: burnTx,
-              status: 'draft',
+              burn_address: masterMinterAddress, // Transferred to master minter
+              transaction_hash: transferTx,
+              status: 'pending_burn', // Needs backend to burn the tokens
               email_verified: false,
               verification_code: verificationCode,
               verification_expires_at: expiresAt.toISOString(),
@@ -362,9 +381,9 @@ Deno.serve(async (req) => {
             .single()
 
           if (error) {
-            console.error('[redemptions] Error creating redemption (existing burn):', error)
+            console.error('[redemptions] Error creating redemption (transfer to master minter):', error)
             return new Response(
-              JSON.stringify({ error: 'Failed to create redemption with existing burn' }),
+              JSON.stringify({ error: 'Failed to create redemption with transfer' }),
               { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
             )
           }
@@ -383,8 +402,9 @@ Deno.serve(async (req) => {
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                   <h2 style="color: #00A86B;">Verify Your Redemption Request</h2>
                   <p>Hi,</p>
-                  <p>You've initiated a redemption request of <strong>${amount} PKRSC</strong>.</p>
-                  <p>Transaction Hash: <code>${burnTx}</code></p>
+                  <p>You've initiated a redemption request of <strong>${netAmount} PKRSC</strong> (after 0.5% fee).</p>
+                  <p>Transfer Amount: <strong>${amount} PKRSC</strong></p>
+                  <p>Transaction Hash: <code>${transferTx}</code></p>
                   <p>Please use the following verification code to confirm your request:</p>
                   <div style="background-color: #f4f4f4; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; margin: 20px 0;">
                     ${verificationCode}
@@ -413,9 +433,17 @@ Deno.serve(async (req) => {
           })
 
           await supabase.from('admin_actions').insert({
-            action_type: 'redemption_created_from_existing_burn',
+            action_type: 'redemption_created_from_transfer',
             wallet_address: body.walletAddress.toLowerCase(),
-            details: { redemptionId: data.id, burnTx, amount, feeAmount, netAmount, timestamp: new Date().toISOString() }
+            details: { 
+              redemptionId: data.id, 
+              transferTx, 
+              totalAmount: amount, 
+              feeAmount, 
+              netAmountToBurn: netAmount,
+              masterMinter: masterMinterAddress,
+              timestamp: new Date().toISOString() 
+            }
           })
 
           return new Response(

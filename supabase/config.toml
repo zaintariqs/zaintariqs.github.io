@@ -92,3 +92,6 @@ verify_jwt = false
 
 [functions.get-token-holders]
 verify_jwt = false
+
+[functions.process-redemption-burns]
+verify_jwt = false
