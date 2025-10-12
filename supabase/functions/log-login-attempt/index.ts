@@ -17,36 +17,35 @@ async function verifyWalletSignature(
   }
 }
 
-// Simple rate limiting (in-memory)
-const rateLimitMap = new Map<string, number[]>()
-const RATE_LIMIT_WINDOW_MS = 60000 // 1 minute
-const MAX_ATTEMPTS_PER_WINDOW = 5
+// Database-backed rate limiting using admin_rate_limits table
+async function checkRateLimit(
+  supabase: any,
+  identifier: string,
+  operationType: string = 'login_attempt',
+  maxOperations: number = 5,
+  windowMinutes: number = 1
+): Promise<{ allowed: boolean; retryAfter?: number }> {
+  try {
+    const { data, error } = await supabase.rpc('check_and_update_rate_limit', {
+      p_wallet_address: identifier.toLowerCase(),
+      p_operation_type: operationType,
+      p_max_operations: maxOperations,
+      p_window_minutes: windowMinutes
+    }).single()
 
-function checkRateLimit(identifier: string): boolean {
-  const now = Date.now()
-  const attempts = rateLimitMap.get(identifier) || []
-  
-  // Remove old attempts outside the window
-  const recentAttempts = attempts.filter(time => now - time < RATE_LIMIT_WINDOW_MS)
-  
-  if (recentAttempts.length >= MAX_ATTEMPTS_PER_WINDOW) {
-    return false
-  }
-  
-  recentAttempts.push(now)
-  rateLimitMap.set(identifier, recentAttempts)
-  
-  // Cleanup old entries
-  if (rateLimitMap.size > 10000) {
-    const cutoff = now - RATE_LIMIT_WINDOW_MS * 2
-    for (const [key, times] of rateLimitMap.entries()) {
-      if (times.every(t => t < cutoff)) {
-        rateLimitMap.delete(key)
-      }
+    if (error) {
+      console.error('Rate limit check error:', error)
+      return { allowed: true } // Fail open on error
     }
+
+    return {
+      allowed: data.allowed,
+      retryAfter: data.retry_after_seconds || undefined
+    }
+  } catch (error) {
+    console.error('Rate limit check failed:', error)
+    return { allowed: true } // Fail open on error
   }
-  
-  return true
 }
 
 Deno.serve(async (req) => {
@@ -78,16 +77,19 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Rate limiting by IP and wallet
+    // Rate limiting by IP and wallet (database-backed)
     const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 
                      req.headers.get('x-real-ip') || 
                      'unknown'
     
     const rateLimitKey = `${walletAddress.toLowerCase()}-${ipAddress}`
-    if (!checkRateLimit(rateLimitKey)) {
+    const rateLimitResult = await checkRateLimit(supabase, rateLimitKey, 'login_attempt', 5, 1)
+    if (!rateLimitResult.allowed) {
       console.warn('[log-login-attempt] Rate limit exceeded for:', rateLimitKey)
       return new Response(
-        JSON.stringify({ error: 'Too many requests. Please try again in 1 minute.' }),
+        JSON.stringify({ 
+          error: `Too many requests. Please try again in ${rateLimitResult.retryAfter || 60} seconds.` 
+        }),
         { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }

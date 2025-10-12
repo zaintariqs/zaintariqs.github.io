@@ -26,31 +26,35 @@ async function verifyWalletSignature(
 import { encryptEmail, decryptEmail } from '../_shared/email-encryption.ts'
 import { isDisposableEmail, getDisposableEmailError } from '../_shared/disposable-email-checker.ts'
 
-// Rate limiting configuration
-const RATE_LIMIT_MS = 60000; // 1 minute
-const rateLimitMap = new Map<string, number>();
+// Database-backed rate limiting using admin_rate_limits table
+async function checkRateLimit(
+  supabase: any,
+  identifier: string,
+  operationType: string = 'whitelist_request',
+  maxOperations: number = 3,
+  windowMinutes: number = 1
+): Promise<{ allowed: boolean; retryAfter?: number }> {
+  try {
+    const { data, error } = await supabase.rpc('check_and_update_rate_limit', {
+      p_wallet_address: identifier.toLowerCase(),
+      p_operation_type: operationType,
+      p_max_operations: maxOperations,
+      p_window_minutes: windowMinutes
+    }).single()
 
-function checkRateLimit(identifier: string): boolean {
-  const now = Date.now();
-  const lastRequest = rateLimitMap.get(identifier);
-  
-  if (lastRequest && now - lastRequest < RATE_LIMIT_MS) {
-    return false;
-  }
-  
-  rateLimitMap.set(identifier, now);
-  
-  // Clean up old entries
-  if (rateLimitMap.size > 10000) {
-    const cutoff = now - RATE_LIMIT_MS * 2;
-    for (const [key, timestamp] of rateLimitMap.entries()) {
-      if (timestamp < cutoff) {
-        rateLimitMap.delete(key);
-      }
+    if (error) {
+      console.error('Rate limit check error:', error)
+      return { allowed: true } // Fail open on error
     }
+
+    return {
+      allowed: data.allowed,
+      retryAfter: data.retry_after_seconds || undefined
+    }
+  } catch (error) {
+    console.error('Rate limit check failed:', error)
+    return { allowed: true } // Fail open on error
   }
-  
-  return true;
 }
 
 serve(async (req) => {
@@ -202,14 +206,17 @@ serve(async (req) => {
         );
       }
 
-      // Rate limiting by wallet address and IP
+      // Rate limiting by wallet address and IP (database-backed)
       const clientIp = req.headers.get("x-forwarded-for") || "unknown";
       const rateLimitKey = `${walletAddress.toLowerCase()}-${clientIp}`;
       
-      if (!checkRateLimit(rateLimitKey)) {
+      const rateLimitResult = await checkRateLimit(supabase, rateLimitKey, 'whitelist_request', 3, 1);
+      if (!rateLimitResult.allowed) {
         console.log(`Rate limit exceeded for ${rateLimitKey}`);
         return new Response(
-          JSON.stringify({ error: "Too many requests. Please try again in 1 minute." }),
+          JSON.stringify({ 
+            error: `Too many requests. Please try again in ${rateLimitResult.retryAfter || 60} seconds.` 
+          }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }

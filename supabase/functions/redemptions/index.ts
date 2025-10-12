@@ -122,20 +122,35 @@ async function verifyWalletSignature(
   }
 }
 
-// Rate limiting map (wallet address -> last request timestamp)
-const rateLimitMap = new Map<string, number>()
-const RATE_LIMIT_MS = 5000 // 5 seconds between requests
+// Database-backed rate limiting using admin_rate_limits table
+async function checkRateLimit(
+  supabase: any,
+  walletAddress: string,
+  operationType: string = 'redemption_operation',
+  maxOperations: number = 12,
+  windowMinutes: number = 1
+): Promise<{ allowed: boolean; retryAfter?: number }> {
+  try {
+    const { data, error } = await supabase.rpc('check_and_update_rate_limit', {
+      p_wallet_address: walletAddress.toLowerCase(),
+      p_operation_type: operationType,
+      p_max_operations: maxOperations,
+      p_window_minutes: windowMinutes
+    }).single()
 
-function checkRateLimit(walletAddress: string): boolean {
-  const now = Date.now()
-  const lastRequest = rateLimitMap.get(walletAddress.toLowerCase())
-  
-  if (lastRequest && now - lastRequest < RATE_LIMIT_MS) {
-    return false // Rate limited
+    if (error) {
+      console.error('Rate limit check error:', error)
+      return { allowed: true } // Fail open on error
+    }
+
+    return {
+      allowed: data.allowed,
+      retryAfter: data.retry_after_seconds || undefined
+    }
+  } catch (error) {
+    console.error('Rate limit check failed:', error)
+    return { allowed: true } // Fail open on error
   }
-  
-  rateLimitMap.set(walletAddress.toLowerCase(), now)
-  return true
 }
 
 Deno.serve(async (req) => {
@@ -199,11 +214,14 @@ Deno.serve(async (req) => {
       }
     }
     
-    // Check rate limiting
-    if (!checkRateLimit(walletAddressHeader)) {
+    // Check rate limiting (database-backed)
+    const rateLimitResult = await checkRateLimit(supabase, walletAddressHeader, `redemption_${req.method.toLowerCase()}`)
+    if (!rateLimitResult.allowed) {
       console.warn('Rate limit exceeded for wallet:', walletAddressHeader)
       return new Response(
-        JSON.stringify({ error: 'Too many requests. Please wait before trying again.' }),
+        JSON.stringify({ 
+          error: `Too many requests. Please wait ${rateLimitResult.retryAfter || 60} seconds before trying again.` 
+        }),
         { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
