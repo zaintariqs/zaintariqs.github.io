@@ -104,13 +104,7 @@ Deno.serve(async (req) => {
       
       const { data, error } = await supabase
         .from('deposits')
-        .select(`
-          *,
-          transaction_fees (
-            fee_amount,
-            net_amount
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
 
       if (error) {
@@ -153,6 +147,35 @@ Deno.serve(async (req) => {
         })
       )
 
+      // Fetch transaction fees for completed deposits
+      const depositIds = depositsWithDecryptedPhones
+        .filter(d => d.status === 'completed')
+        .map(d => d.id)
+      
+      let feesMap = new Map()
+      if (depositIds.length > 0) {
+        const { data: fees } = await supabase
+          .from('transaction_fees')
+          .select('transaction_id, fee_amount, net_amount')
+          .in('transaction_id', depositIds)
+          .eq('transaction_type', 'deposit')
+        
+        if (fees) {
+          fees.forEach(fee => {
+            feesMap.set(fee.transaction_id, {
+              fee_amount: fee.fee_amount,
+              net_amount: fee.net_amount
+            })
+          })
+        }
+      }
+
+      // Add fee data to deposits
+      const depositsWithFees = depositsWithDecryptedPhones.map(deposit => ({
+        ...deposit,
+        transaction_fees: feesMap.has(deposit.id) ? [feesMap.get(deposit.id)] : []
+      }))
+
       // Log admin action
       await supabase.from('admin_actions').insert({
         action_type: 'admin_viewed_all_deposits',
@@ -161,7 +184,7 @@ Deno.serve(async (req) => {
       })
 
       return new Response(
-        JSON.stringify({ data: depositsWithDecryptedPhones }),
+        JSON.stringify({ data: depositsWithFees }),
         { status: 200, headers: responseHeaders }
       )
     }
