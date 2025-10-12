@@ -288,6 +288,49 @@ Deno.serve(async (req) => {
             )
           }
 
+          // SECURITY: Check if transaction hash has already been used (replay attack prevention)
+          const { data: existingRedemption, error: replayCheckError } = await supabase
+            .from('redemptions')
+            .select('id, user_id, created_at, status')
+            .eq('transaction_hash', transferTx.toLowerCase())
+            .maybeSingle()
+
+          if (replayCheckError) {
+            console.error('[redemptions] Error checking for transaction replay:', replayCheckError)
+          }
+
+          if (existingRedemption) {
+            console.warn('[redemptions] Transaction hash replay attempt detected:', {
+              txHash: transferTx,
+              existingRedemptionId: existingRedemption.id,
+              existingUser: existingRedemption.user_id,
+              newUser: body.walletAddress,
+              existingStatus: existingRedemption.status
+            })
+
+            // Log security incident
+            await supabase.from('admin_actions').insert({
+              action_type: 'redemption_replay_attack_prevented',
+              wallet_address: body.walletAddress.toLowerCase(),
+              details: {
+                transactionHash: transferTx,
+                existingRedemptionId: existingRedemption.id,
+                existingUser: existingRedemption.user_id,
+                existingCreatedAt: existingRedemption.created_at,
+                severity: 'high',
+                timestamp: new Date().toISOString()
+              }
+            })
+
+            return new Response(
+              JSON.stringify({ 
+                error: 'This transaction has already been used for a redemption. Each transaction can only be redeemed once.',
+                existingRedemptionCreated: existingRedemption.created_at
+              }),
+              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            )
+          }
+
           // Get master minter address
           const masterMinterAddress = await getMasterMinterAddress(supabase)
 
