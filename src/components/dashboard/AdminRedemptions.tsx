@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { RefreshCw, Banknote, Check, X, ExternalLink } from 'lucide-react'
+import { RefreshCw, Banknote, Check, X, ExternalLink, Copy } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
 interface Redemption {
@@ -357,8 +357,26 @@ export function AdminRedemptions() {
                       <TableCell className="font-medium">
                         {new Date(redemption.created_at).toLocaleDateString()}
                       </TableCell>
-                      <TableCell className="font-mono text-xs">
-                        {redemption.user_id.slice(0, 6)}...{redemption.user_id.slice(-4)}
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs">
+                            {redemption.user_id.slice(0, 6)}...{redemption.user_id.slice(-4)}
+                          </span>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0"
+                            onClick={() => {
+                              navigator.clipboard.writeText(redemption.user_id)
+                              toast({
+                                title: "Address copied",
+                                description: "Wallet address copied to clipboard",
+                              })
+                            }}
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </TableCell>
                       <TableCell>{redemption.pkrsc_amount.toLocaleString()} PKRSC</TableCell>
                       <TableCell>
