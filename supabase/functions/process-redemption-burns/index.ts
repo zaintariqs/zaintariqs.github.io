@@ -186,9 +186,9 @@ Deno.serve(async (req) => {
         const receipt = await tx.wait()
         console.log(`Burn transaction confirmed: ${receipt.hash}`)
 
-        // Update redemption status
+        // Update redemption status to burn_confirmed
         await supabase.from('redemptions').update({
-          status: 'pending', // Ready for admin to process bank transfer
+          status: 'burn_confirmed', // Tokens burned, ready for admin to process bank transfer
         }).eq('id', redemption.id)
 
         // SECURITY: Record burn operation in audit table
