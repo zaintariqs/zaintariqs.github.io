@@ -129,7 +129,7 @@ Deno.serve(async (req) => {
     // PATCH: Update redemption status (admin only)
     if (req.method === 'PATCH') {
       const body = await req.json()
-      const { redemptionId, status, bankTransactionId, cancellationReason, burnTransactionHash } = body
+      const { redemptionId, status, bankTransactionId, userTransferHash, cancellationReason, burnTransactionHash } = body
 
       if (!redemptionId || !status) {
         return new Response(
@@ -162,9 +162,32 @@ Deno.serve(async (req) => {
       }
 
       const updateData: any = { status }
-      if (bankTransactionId) updateData.bank_transaction_id = bankTransactionId
+      
+      // If admin is adding a transfer hash for the first time during completion
+      // Set status to pending_burn so the burn process can run first
+      if (userTransferHash && status === 'completed') {
+        const { data: existing } = await supabase
+          .from('redemptions')
+          .select('transaction_hash')
+          .eq('id', redemptionId)
+          .single()
+        
+        if (!existing?.transaction_hash) {
+          // Transfer hash is being added for first time - need to burn first
+          updateData.status = 'pending_burn'
+          updateData.transaction_hash = userTransferHash
+          console.log('Transfer hash added - setting status to pending_burn for burn process')
+        } else {
+          // Transfer already existed, proceed with completion
+          if (bankTransactionId) updateData.bank_transaction_id = bankTransactionId
+        }
+      } else {
+        if (bankTransactionId) updateData.bank_transaction_id = bankTransactionId
+        if (userTransferHash) updateData.transaction_hash = userTransferHash
+      }
+      
       if (cancellationReason) updateData.cancellation_reason = cancellationReason
-      if (burnTransactionHash) updateData.transaction_hash = burnTransactionHash
+      if (burnTransactionHash && !userTransferHash) updateData.transaction_hash = burnTransactionHash
 
       // Get redemption details before updating (for reserve tracking)
       const { data: redemptionData, error: fetchError } = await supabase

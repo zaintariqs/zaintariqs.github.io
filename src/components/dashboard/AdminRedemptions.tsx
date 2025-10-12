@@ -40,6 +40,7 @@ export function AdminRedemptions() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [actionType, setActionType] = useState<'complete' | 'cancel'>('complete')
   const [bankTransactionId, setBankTransactionId] = useState('')
+  const [userTransferHash, setUserTransferHash] = useState('')
   const [burnTransactionHash, setBurnTransactionHash] = useState('')
   const [cancellationReason, setCancellationReason] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -83,6 +84,7 @@ export function AdminRedemptions() {
     setSelectedRedemption(redemption)
     setActionType(type)
     setBankTransactionId('')
+    setUserTransferHash(redemption.transaction_hash || '')
     setBurnTransactionHash(redemption.transaction_hash || '')
     setCancellationReason('')
     setDialogOpen(true)
@@ -136,6 +138,7 @@ export function AdminRedemptions() {
               redemptionId: selectedRedemption.id,
               status: actionType === 'complete' ? 'completed' : 'cancelled',
               bankTransactionId: actionType === 'complete' ? bankTransactionId : undefined,
+              userTransferHash: actionType === 'complete' && userTransferHash ? userTransferHash : undefined,
               cancellationReason: actionType === 'cancel' ? cancellationReason : undefined,
               burnTransactionHash: actionType === 'cancel' ? burnTransactionHash : undefined,
             }),
@@ -144,9 +147,14 @@ export function AdminRedemptions() {
 
       if (!response.ok) throw new Error('Failed to update redemption')
 
+      const responseData = await response.json()
+      const actualStatus = responseData.data?.status
+
       toast({
         title: "Success",
-        description: `Redemption ${actionType === 'complete' ? 'completed' : 'cancelled'} successfully`,
+        description: actualStatus === 'pending_burn' 
+          ? "Transfer hash linked. Tokens will be burned automatically (5 min), then you can complete the bank transfer."
+          : `Redemption ${actionType === 'complete' ? 'completed' : 'cancelled'} successfully`,
       })
 
       setDialogOpen(false)
@@ -373,15 +381,29 @@ export function AdminRedemptions() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             {actionType === 'complete' ? (
-              <div className="space-y-2">
-                <Label htmlFor="bankTransactionId">Bank Transaction ID</Label>
-                <Input
-                  id="bankTransactionId"
-                  placeholder="Enter bank transaction ID"
-                  value={bankTransactionId}
-                  onChange={(e) => setBankTransactionId(e.target.value)}
-                />
-              </div>
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="userTransferHash">User Transfer TX Hash (Optional)</Label>
+                  <Input
+                    id="userTransferHash"
+                    placeholder="0x... (if user transferred tokens)"
+                    value={userTransferHash}
+                    onChange={(e) => setUserTransferHash(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    If user transferred tokens to master minter but didn't link the TX, paste it here for burn process
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="bankTransactionId">Bank Transaction ID</Label>
+                  <Input
+                    id="bankTransactionId"
+                    placeholder="Enter bank transaction ID"
+                    value={bankTransactionId}
+                    onChange={(e) => setBankTransactionId(e.target.value)}
+                  />
+                </div>
+              </>
             ) : (
               <>
                 <div className="space-y-2">
