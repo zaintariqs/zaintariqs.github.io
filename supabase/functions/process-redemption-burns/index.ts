@@ -60,9 +60,17 @@ Deno.serve(async (req) => {
     console.log('Master Minter Wallet:', masterMinterWallet.address)
 
     // Find redemptions that need burning (email verified, pending_burn status)
+    // Join with transaction_fees to get the net amount (amount to burn, excluding fee)
     const { data: pendingRedemptions, error: fetchError } = await supabase
       .from('redemptions')
-      .select('id, user_id, pkrsc_amount, transaction_hash, status')
+      .select(`
+        id, 
+        user_id, 
+        pkrsc_amount, 
+        transaction_hash, 
+        status,
+        desired_pkr_amount
+      `)
       .eq('status', 'pending_burn')
       .eq('email_verified', true)
       .order('created_at', { ascending: true })
@@ -87,11 +95,25 @@ Deno.serve(async (req) => {
 
     for (const redemption of pendingRedemptions) {
       try {
-        // Calculate burn amount (net amount after fee)
-        const burnAmount = redemption.pkrsc_amount
-        const burnAmountWei = ethers.parseUnits(burnAmount.toString(), PKRSC_DECIMALS)
+        // Get the net amount to burn (excluding the fee) from transaction_fees table
+        const { data: feeData } = await supabase
+          .from('transaction_fees')
+          .select('net_amount, fee_amount, original_amount')
+          .eq('transaction_id', redemption.id)
+          .single()
+        
+        // Calculate burn amount: should be the desired PKR amount in PKRSC (1:1), NOT the full transfer amount
+        // User transferred: original_amount (e.g., 1005.03 PKRSC)
+        // Fee: fee_amount (e.g., 5.03 PKRSC) - stays in master minter wallet
+        // Burn: net_amount (e.g., 1000 PKRSC) - matches the PKR sent to user's bank
+        const burnAmount = feeData?.net_amount || redemption.desired_pkr_amount || (redemption.pkrsc_amount / 1.005)
+        const feeAmount = feeData?.fee_amount || (redemption.pkrsc_amount * 0.005)
+        const burnAmountWei = ethers.parseUnits(burnAmount.toFixed(6), PKRSC_DECIMALS)
 
-        console.log(`Processing redemption ${redemption.id}: burning ${burnAmount} PKRSC`)
+        console.log(`Processing redemption ${redemption.id}:`)
+        console.log(`  - User transferred: ${redemption.pkrsc_amount} PKRSC to master minter`)
+        console.log(`  - Burning: ${burnAmount} PKRSC (matches PKR to be sent to bank)`)
+        console.log(`  - Fee kept: ${feeAmount.toFixed(6)} PKRSC (remains in master minter wallet as revenue)`)
 
         // SECURITY CHECK 1: Check daily burn limit
         const { data: limitCheck, error: limitError } = await supabase.rpc('check_daily_burn_limit', {
