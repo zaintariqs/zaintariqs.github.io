@@ -153,6 +153,13 @@ async function checkRateLimit(
   }
 }
 
+// Hash helper using Web Crypto API (fallback if DB RPC unavailable)
+async function sha256Hex(input: string): Promise<string> {
+  const data = new TextEncoder().encode(input)
+  const digest = await crypto.subtle.digest('SHA-256', data)
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('')
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -415,14 +422,26 @@ Deno.serve(async (req) => {
           const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
           const expiresAt = new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
 
-          // Hash the verification code before storing
-          const { data: hashedCode, error: hashError } = await supabase.rpc('hash_verification_code', { code: verificationCode })
-          if (hashError || !hashedCode) {
-            console.error('[redemptions] Failed to hash verification code:', hashError)
-            return new Response(
-              JSON.stringify({ error: 'Failed to generate verification code' }),
-              { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            )
+          // Hash the verification code (DB RPC first, fallback to WebCrypto)
+          let hashedCode: string | null = null
+          try {
+            const { data: rpcHash, error: rpcErr } = await supabase.rpc('hash_verification_code', { code: verificationCode })
+            if (!rpcErr && rpcHash) {
+              hashedCode = rpcHash
+            }
+          } catch (e) {
+            console.warn('[redemptions] RPC hash failed, falling back to WebCrypto:', e)
+          }
+          if (!hashedCode) {
+            try {
+              hashedCode = await sha256Hex(verificationCode)
+            } catch (e) {
+              console.error('[redemptions] Failed to hash verification code (WebCrypto):', e)
+              return new Response(
+                JSON.stringify({ error: 'Failed to generate verification code' }),
+                { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              )
+            }
           }
 
           // Encrypt bank details before storing
