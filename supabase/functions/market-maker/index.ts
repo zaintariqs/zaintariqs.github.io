@@ -419,57 +419,18 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Calculate dynamic trade amount based on price deviation
-    // Larger deviation = larger trade to bring price back to target faster
-    const minTradeAmount = 1 // Minimum trade amount in USDT
-    const maxTradeAmount = 10 // Maximum trade size in USDT
+    // Use fixed trade amount from config (not dynamic)
+    const tradeAmountUsdt = parseFloat(config.trade_amount_usdt)
     
-    const deviationPercent = Math.abs(deviation)
-    // Scale trade amount between 1-10 USDT based on deviation
-    // At 0% deviation: 1 USDT, At 2%+ deviation: 10 USDT
-    let tradeAmountUsdt = minTradeAmount + (deviationPercent * 450) // 450 = (10-1)/0.02
-    
-    // Clamp between min and max
-    if (tradeAmountUsdt < minTradeAmount) {
-      tradeAmountUsdt = minTradeAmount
-    }
-    if (tradeAmountUsdt > maxTradeAmount) {
-      tradeAmountUsdt = maxTradeAmount
-    }
-    
-    // Round to 6 decimal places (USDT decimals) to prevent parsing errors
-    tradeAmountUsdt = Math.round(tradeAmountUsdt * 1e6) / 1e6
-    
-    console.log(`Dynamic trade amount: $${tradeAmountUsdt.toFixed(6)} (based on ${(deviationPercent * 100).toFixed(2)}% deviation)`)
-    
-    // Further limit trade to max 2% of pool liquidity if we have that data
-    if (liquidityUsd > 0) {
-      const maxTradeSize = liquidityUsd * 0.02 // 2% of liquidity
-      if (tradeAmountUsdt > maxTradeSize) {
-        console.log(`Reducing trade size from $${tradeAmountUsdt} to $${maxTradeSize.toFixed(2)} (2% of pool liquidity)`)
-        tradeAmountUsdt = maxTradeSize
-        
-        await supabase.from('admin_actions').insert({
-          wallet_address: walletAddress,
-          action_type: 'MARKET_MAKER_TRADE_SIZE_REDUCED',
-          details: { 
-            calculatedSize: tradeAmountUsdt,
-            adjustedSize: maxTradeSize,
-            liquidityUsd,
-            deviationPercent: (deviationPercent * 100).toFixed(2) + '%'
-          }
-        })
-      }
-    }
+    console.log(`Using fixed trade amount from config: $${tradeAmountUsdt.toFixed(2)} USDT`)
     
     await supabase.from('admin_actions').insert({
       wallet_address: walletAddress,
-      action_type: 'MARKET_MAKER_DYNAMIC_TRADE_SIZE',
+      action_type: 'MARKET_MAKER_FIXED_TRADE_SIZE',
       details: { 
-        deviation: (deviationPercent * 100).toFixed(2) + '%',
-        calculatedTradeAmount: tradeAmountUsdt,
-        minTradeAmount,
-        maxTradeAmount
+        tradeAmount: tradeAmountUsdt,
+        deviation: (Math.abs(deviation) * 100).toFixed(2) + '%',
+        source: 'config.trade_amount_usdt'
       }
     })
     
