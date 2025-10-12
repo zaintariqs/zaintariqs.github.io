@@ -452,14 +452,16 @@ export function AdminRedemptions() {
                                 Attach TX
                               </Button>
                             ) : null}
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => openDialog(redemption, 'retrigger-burn')}
-                              className="text-xs border-yellow-500/50 text-yellow-600 hover:bg-yellow-500/10"
-                            >
-                              🔥 Re-trigger Burn
-                            </Button>
+                            {!redemption.burn_tx_hash && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openDialog(redemption, 'retrigger-burn')}
+                                className="text-xs border-yellow-500/50 text-yellow-600 hover:bg-yellow-500/10"
+                              >
+                                🔥 Re-trigger Burn
+                              </Button>
+                            )}
                             {redemption.bank_transaction_id && (
                               <span className="text-xs text-muted-foreground font-mono">
                                 {redemption.bank_transaction_id}
