@@ -425,18 +425,25 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Use fixed trade amount from config (not dynamic)
-    const tradeAmountUsdt = parseFloat(config.trade_amount_usdt)
+    // Adaptive trade size: scale with how far we are beyond threshold and cap to base amount
+    const baseUsdt = parseFloat(config.trade_amount_usdt)
+    const absDev = Math.abs(deviation)
+    const over = Math.max(0, absDev - threshold)
+    // Scale: 0.25x at slight breach -> up to 1.0x at large breach; never below $1
+    const scale = Math.min(Math.max(over / threshold, 0.25), 1)
+    const tradeAmountUsdt = Math.max(1, parseFloat((baseUsdt * scale).toFixed(2)))
     
-    console.log(`Using fixed trade amount from config: $${tradeAmountUsdt.toFixed(2)} USDT`)
+    console.log(`Adaptive trade amount: $${tradeAmountUsdt.toFixed(2)} USDT (base $${baseUsdt.toFixed(2)}, deviation ${(absDev*100).toFixed(2)}%, threshold ${(threshold*100).toFixed(2)}%)`)
     
     await supabase.from('admin_actions').insert({
       wallet_address: walletAddress,
-      action_type: 'MARKET_MAKER_FIXED_TRADE_SIZE',
+      action_type: 'MARKET_MAKER_ADAPTIVE_TRADE_SIZE',
       details: { 
         tradeAmount: tradeAmountUsdt,
-        deviation: (Math.abs(deviation) * 100).toFixed(2) + '%',
-        source: 'config.trade_amount_usdt'
+        baseAmount: baseUsdt,
+        deviationPct: (absDev * 100).toFixed(2) + '%',
+        thresholdPct: (threshold * 100).toFixed(2) + '%',
+        rationale: 'Scale trade with excess deviation to avoid overshooting'
       }
     })
     
@@ -469,9 +476,9 @@ Deno.serve(async (req) => {
           console.log('USDT approved')
         }
 
-        // Execute swap: USDT -> PKRSC with 30% slippage tolerance (low-liquidity safety)
+        // Execute swap: USDT -> PKRSC with 10% slippage tolerance
         const expectedOut = ethers.parseUnits((tradeAmountUsdt / currentPrice).toFixed(6), 6)
-        const minOut = (expectedOut * BigInt(70)) / BigInt(100) // 30% slippage
+        const minOut = (expectedOut * BigInt(90)) / BigInt(100) // 10% slippage
         
         const params = {
           tokenIn: USDT_ADDRESS,
@@ -526,8 +533,8 @@ Deno.serve(async (req) => {
           console.log('PKRSC approved')
         }
 
-        // Execute swap: PKRSC -> USDT with 30% slippage tolerance (low-liquidity safety)
-        const expectedOut = ethers.parseUnits((tradeAmountUsdt * 0.70).toFixed(6), 6)
+        // Execute swap: PKRSC -> USDT with 10% slippage tolerance
+        const minOutUsdt = ethers.parseUnits((tradeAmountUsdt * 0.90).toFixed(6), 6)
         
         const params = {
           tokenIn: PKRSC_ADDRESS,
@@ -535,7 +542,7 @@ Deno.serve(async (req) => {
           fee: 100, // 0.01% fee tier
           recipient: wallet.address,
           amountIn: amountIn,
-          amountOutMinimum: expectedOut,
+          amountOutMinimum: minOutUsdt,
           sqrtPriceLimitX96: 0
         }
 
