@@ -117,17 +117,23 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Verify admin status
-    const isAdmin = await verifyAdmin(supabase, walletAddress)
-    if (!isAdmin) {
-      console.error('Unauthorized: Not an admin wallet')
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized: Admin access required' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    // Allow system cron calls without admin verification
+    const isSystemCron = walletAddress === 'system_cron'
+    
+    if (!isSystemCron) {
+      // Verify admin status for manual calls
+      const isAdmin = await verifyAdmin(supabase, walletAddress)
+      if (!isAdmin) {
+        console.error('Unauthorized: Not an admin wallet')
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized: Admin access required' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      console.log('Admin verified:', walletAddress)
+    } else {
+      console.log('System cron job triggered')
     }
-
-    console.log('Admin verified:', walletAddress)
 
     // Check for suspicious activity (circuit breaker)
     const { data: recentFailures } = await supabase
