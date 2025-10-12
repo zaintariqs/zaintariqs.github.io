@@ -423,6 +423,28 @@ Deno.serve(async (req) => {
       if (userEmail) {
         try {
           if (status === 'completed') {
+            // Decrypt bank details for user's email (safe because user provided these details)
+            let decryptedBankName = data.bank_name
+            let decryptedAccountNumber = data.account_number
+            let decryptedAccountTitle = data.account_title
+            
+            try {
+              if (isEncrypted(data.bank_name)) {
+                const decrypted = await decryptBankDetails({
+                  bankName: data.bank_name,
+                  accountNumber: data.account_number,
+                  accountTitle: data.account_title
+                })
+                decryptedBankName = decrypted.bankName
+                decryptedAccountNumber = decrypted.accountNumber
+                decryptedAccountTitle = decrypted.accountTitle
+                console.log('Bank details decrypted for user email')
+              }
+            } catch (decryptError) {
+              console.error('Failed to decrypt bank details for email:', decryptError)
+              // Continue with encrypted values as fallback
+            }
+
             // Success email
             await resend.emails.send({
               from: FROM_EMAIL,
@@ -442,6 +464,13 @@ Deno.serve(async (req) => {
                     <strong>Transaction Fee (0.5%):</strong> ${(data.pkrsc_amount * 0.005).toFixed(2)} PKR<br>
                     <strong>PKR Amount Received:</strong> ${(data.pkrsc_amount * 0.995).toFixed(2)} PKR<br>
                     <strong>Your Wallet:</strong> ${data.user_id}
+                  </div>
+
+                  <div style="background-color: #f9fafb; padding: 16px; border-radius: 8px; margin: 20px 0;">
+                    <strong>Bank Transfer Details:</strong><br><br>
+                    <strong>Bank Name:</strong> ${decryptedBankName}<br>
+                    <strong>Account Title:</strong> ${decryptedAccountTitle}<br>
+                    <strong>Account Number:</strong> ${decryptedAccountNumber}
                   </div>
                   
                   ${burnTransactionHash ? `
