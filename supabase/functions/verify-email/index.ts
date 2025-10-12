@@ -3,6 +3,13 @@ import { corsHeaders, responseHeaders } from '../_shared/cors.ts'
 
 const MAX_ATTEMPTS = 5
 
+// Hash helper using Web Crypto API (fallback if DB RPC unavailable)
+async function sha256Hex(input: string): Promise<string> {
+  const data = new TextEncoder().encode(input)
+  const digest = await crypto.subtle.digest('SHA-256', data)
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('')
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -74,13 +81,25 @@ Deno.serve(async (req) => {
     }
 
     // Verify the code (support both legacy plain and new hashed storage)
-    const { data: hashedInput, error: hashErr } = await supabase.rpc('hash_verification_code', { code: verificationCode })
-    if (hashErr || !hashedInput) {
-      console.error('Error hashing verification code:', hashErr)
-      return new Response(
-        JSON.stringify({ error: 'Verification failed. Please try again.' }),
-        { status: 500, headers: responseHeaders }
-      )
+    let hashedInput: string | null = null
+    try {
+      const { data: rpcHash, error: rpcErr } = await supabase.rpc('hash_verification_code', { code: verificationCode })
+      if (!rpcErr && rpcHash) {
+        hashedInput = rpcHash
+      }
+    } catch (e) {
+      console.warn('RPC hash failed, falling back to WebCrypto:', e)
+    }
+    if (!hashedInput) {
+      try {
+        hashedInput = await sha256Hex(verificationCode)
+      } catch (e) {
+        console.error('Error hashing verification code (WebCrypto):', e)
+        return new Response(
+          JSON.stringify({ error: 'Verification failed. Please try again.' }),
+          { status: 500, headers: responseHeaders }
+        )
+      }
     }
 
     const isMatch = request.verification_code === verificationCode || request.verification_code === hashedInput
