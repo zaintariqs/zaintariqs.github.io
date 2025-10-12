@@ -51,10 +51,27 @@ Deno.serve(async (req) => {
       throw new Error('Failed to fetch bank reserves')
     }
 
+    // Fetch total burned tokens from burn_operations
+    const { data: burnOps, error: burnError } = await supabaseClient
+      .from('burn_operations')
+      .select('burn_amount')
+      .eq('status', 'completed')
+
+    let totalBurned = 0
+    if (!burnError && burnOps) {
+      totalBurned = burnOps.reduce((sum, op) => {
+        return sum + parseFloat(String(op.burn_amount || 0))
+      }, 0)
+      console.log('Total burned tokens:', totalBurned, 'PKRSC')
+    } else if (burnError) {
+      console.error('Error fetching burn operations:', burnError)
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
-        reserves: reserves || []
+        reserves: reserves || [],
+        burnedTokens: totalBurned.toFixed(6)
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

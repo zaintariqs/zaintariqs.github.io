@@ -46,6 +46,9 @@ export function BankReserves() {
 
       setReserves(data.reserves || [])
       console.log('[BankReserves] Reserves loaded:', data.reserves)
+      
+      // Return burned tokens for parent component to use
+      return data.burnedTokens || '0'
     } catch (error) {
       console.error('[BankReserves] Error fetching bank reserves:', error)
       toast({
@@ -53,6 +56,7 @@ export function BankReserves() {
         description: "Failed to load bank reserves",
         variant: "destructive",
       })
+      return '0'
     } finally {
       setIsLoading(false)
     }

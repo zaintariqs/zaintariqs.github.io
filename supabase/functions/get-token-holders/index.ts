@@ -63,41 +63,31 @@ const MASTER_MINTER_ADDRESS = '0x50c46b0286028c3ab12b947003129feb39ccf082';
 // Optional BaseScan API key for reliable holder lookup
 const BASESCAN_API_KEY = Deno.env.get('BASESCAN_API_KEY');
 
-// Calculate burned tokens using BaseScan tokentx (sum transfers to zero address)
-async function calculateBurnedTokens(decimals: number): Promise<string> {
-  const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
-  const divisor = Math.pow(10, decimals);
-  if (!BASESCAN_API_KEY) return '0.00';
-
+// Calculate burned tokens from burn_operations table
+async function calculateBurnedTokens(supabase: any): Promise<string> {
   try {
-    console.log('Calculating burned tokens via BaseScan tokentx...');
-    let total = 0n;
-    const MAX_PAGES = 10; // safeguard
+    console.log('Calculating burned tokens from burn_operations table...');
+    
+    const { data, error } = await supabase
+      .from('burn_operations')
+      .select('burn_amount')
+      .eq('status', 'completed');
 
-    for (let page = 1; page <= MAX_PAGES; page++) {
-      const txUrl = `https://api.basescan.org/api?module=account&action=tokentx&contractaddress=${PKRSC_CONTRACT_ADDRESS}&page=${page}&offset=100&sort=asc&apikey=${BASESCAN_API_KEY}`;
-      const txRes = await fetch(txUrl);
-      const txJson = await txRes.json();
-      if (txJson.status !== '1' || !Array.isArray(txJson.result) || txJson.result.length === 0) break;
-
-      for (const t of txJson.result) {
-        const to = String(t.to || '').toLowerCase();
-        if (to === ZERO_ADDRESS) {
-          // Etherscan-style API returns value as decimal string (raw units)
-          try {
-            const raw = BigInt(t.value || '0');
-            total += raw;
-          } catch (_) {}
-        }
-      }
-      if (txJson.result.length < 100) break; // no more pages
+    if (error) {
+      console.error('Error fetching burn_operations:', error);
+      return '0.00';
     }
 
-    const burnedFormatted = (Number(total) / divisor).toFixed(2);
-    console.log('Burned (from BaseScan):', burnedFormatted);
+    // Sum up all burn amounts
+    const total = data?.reduce((sum: number, op: any) => {
+      return sum + parseFloat(String(op.burn_amount || 0));
+    }, 0) || 0;
+
+    const burnedFormatted = total.toFixed(2);
+    console.log('Burned (from burn_operations):', burnedFormatted);
     return burnedFormatted;
   } catch (e) {
-    console.warn('Failed to calculate burned via BaseScan:', e);
+    console.warn('Failed to calculate burned from burn_operations:', e);
     return '0.00';
   }
 }
@@ -440,9 +430,9 @@ Deno.serve(async (req) => {
           console.warn('Failed to fetch totalSupply:', e);
         }
 
-        // Calculate burned tokens from Transfer events to zero address
+        // Calculate burned tokens from burn_operations table
         try {
-          metrics.burned = await calculateBurnedTokens(decimals);
+          metrics.burned = await calculateBurnedTokens(supabase);
         } catch (e) {
           console.warn('Failed to calculate burned tokens:', e);
         }
@@ -655,7 +645,7 @@ Deno.serve(async (req) => {
       console.warn('Failed to fetch totalSupply:', e);
     }
     try {
-      metrics.burned = await calculateBurnedTokens(decimals);
+      metrics.burned = await calculateBurnedTokens(supabase);
     } catch (e) {
       console.warn('Failed to calculate burned tokens:', e);
     }

@@ -312,27 +312,24 @@ export function AdminSection() {
     }
   }, [address, isAdmin])
 
-  // Fetch burned tokens from burn_operations table
+  // Fetch burned tokens from get-bank-reserves edge function
   const fetchBurnedTokens = async () => {
     if (!address) return
 
     try {
-      const { data, error } = await supabase
-        .from('burn_operations')
-        .select('burn_amount')
-        .eq('status', 'completed')
+      const { data, error } = await supabase.functions.invoke('get-bank-reserves', {
+        body: { walletAddress: address }
+      })
 
       if (error) {
-        console.error('Error fetching burn operations:', error)
+        console.error('Error fetching bank reserves:', error)
         return
       }
 
-      // Sum up all burn amounts
-      const totalBurned = data?.reduce((sum, op) => sum + parseFloat(String(op.burn_amount || 0)), 0) || 0
-      
-      // Format as decimal string for parseUnits
-      setBurnedTokens(totalBurned.toFixed(6))
-      console.log('🔥 Total burned from burn_operations:', totalBurned, 'PKRSC')
+      if (data?.burnedTokens) {
+        setBurnedTokens(data.burnedTokens)
+        console.log('🔥 Total burned from burn_operations:', data.burnedTokens, 'PKRSC')
+      }
     } catch (error) {
       console.error('Error fetching burned tokens:', error)
     }
