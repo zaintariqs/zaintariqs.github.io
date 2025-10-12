@@ -352,24 +352,6 @@ export function MarketMakerSection() {
           </div>
         )}
 
-        {/* Automation Status */}
-        <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-primary/20">
-          <div className="flex items-center gap-3">
-            <Clock className={`h-5 w-5 ${cronStatus?.active ? 'text-crypto-green animate-pulse' : 'text-muted-foreground'}`} />
-            <div>
-              <div className="font-medium">Automated Scheduling</div>
-              <div className="text-sm text-muted-foreground">
-                {cronStatus?.active ? 'Running every 5 minutes' : 'Paused'}
-              </div>
-            </div>
-          </div>
-          <Switch 
-            checked={cronStatus?.active || false}
-            onCheckedChange={toggleCronJob}
-            disabled={updating}
-          />
-        </div>
-
         {/* Status */}
         <div className="space-y-3">
           <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
