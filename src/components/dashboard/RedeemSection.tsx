@@ -40,11 +40,21 @@ export function RedeemSection() {
   const { writeContractAsync } = useWriteContract()
   const { toast } = useToast()
   const [formData, setFormData] = useState({
-    amount: '',
+    amount: '', // PKR amount to receive (whole number)
     bankName: '',
     accountNumber: '',
     accountTitle: ''
   })
+  
+  // Calculate PKRSC needed based on desired PKR
+  const calculatePKRSCNeeded = (desiredPKR: number) => {
+    const FEE_PERCENTAGE = 0.5
+    return desiredPKR / (1 - FEE_PERCENTAGE / 100)
+  }
+  
+  const pkrAmount = parseFloat(formData.amount) || 0
+  const pkrscNeeded = calculatePKRSCNeeded(pkrAmount)
+  const feeAmount = pkrscNeeded - pkrAmount
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [pendingTxHash, setPendingTxHash] = useState<string | null>(null)
   const [redemptionId, setRedemptionId] = useState<string | null>(null)
@@ -164,7 +174,7 @@ export function RedeemSection() {
           },
           body: JSON.stringify({
             walletAddress: address,
-            pkrscAmount: parseFloat(formData.amount),
+            desiredPKR: parseInt(formData.amount), // Whole number PKR
             bankName: formData.bankName,
             accountNumber: formData.accountNumber,
             accountTitle: formData.accountTitle,
@@ -239,15 +249,15 @@ export function RedeemSection() {
       })
 
       // Transfer full amount to master minter (they will handle fee & burn)
-      const amount = parseFloat(formData.amount)
+      const pkrscAmount = calculatePKRSCNeeded(parseInt(formData.amount))
       
-      console.log(`Transferring ${amount} PKRSC to master minter for redemption`)
+      console.log(`Transferring ${pkrscAmount.toFixed(6)} PKRSC to master minter for ${formData.amount} PKR redemption`)
 
       const txHash = await writeContractAsync({
         address: PKRSC_TOKEN_ADDRESS as `0x${string}`,
         abi: ERC20_ABI,
         functionName: 'transfer',
-        args: [MASTER_MINTER_ADDRESS as `0x${string}`, parseUnits(amount.toFixed(6), 6)],
+        args: [MASTER_MINTER_ADDRESS as `0x${string}`, parseUnits(pkrscAmount.toFixed(6), 6)],
         account: address,
         chain: base,
       })
@@ -309,21 +319,47 @@ export function RedeemSection() {
       <CardContent className="space-y-6">
         {!showVerification && !redemptionId ? (
           <>
-            {/* Amount Input */}
+            {/* PKR Amount Input */}
             <div className="space-y-2">
-              <Label htmlFor="amount">Amount (PKRSC)</Label>
+              <Label htmlFor="amount">PKR Amount to Receive</Label>
               <Input
                 id="amount"
                 type="number"
-                placeholder="0.00"
+                placeholder="0"
                 value={formData.amount}
-                onChange={(e) => handleInputChange('amount', e.target.value)}
-                min="1"
-                step="0.01"
+                onChange={(e) => {
+                  const value = e.target.value
+                  // Only allow whole numbers
+                  if (value === '' || /^\d+$/.test(value)) {
+                    handleInputChange('amount', value)
+                  }
+                }}
+                min="100"
+                step="1"
               />
               <p className="text-xs text-muted-foreground">
-                Minimum redemption: 100 PKRSC
+                Minimum: 100 PKR • Bank transfers must be whole numbers
               </p>
+              
+              {pkrAmount >= 100 && (
+                <div className="mt-2 p-3 bg-muted/50 rounded-lg border border-border">
+                  <p className="text-xs font-medium text-card-foreground mb-1">Transaction Breakdown:</p>
+                  <div className="space-y-1 text-xs text-muted-foreground">
+                    <div className="flex justify-between">
+                      <span>You will receive:</span>
+                      <span className="font-semibold text-primary">{pkrAmount} PKR</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>PKRSC to burn:</span>
+                      <span>{pkrscNeeded.toFixed(6)} PKRSC</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Processing fee (0.5%):</span>
+                      <span>{feeAmount.toFixed(6)} PKRSC</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Bank Details */}
@@ -373,8 +409,9 @@ export function RedeemSection() {
               <h4 className="font-medium text-sm text-card-foreground">Processing Information</h4>
               <ul className="text-xs text-muted-foreground space-y-1">
                 <li>• Processing time: 1-3 business days</li>
-                <li>• Processing fees 100rs</li>
+                <li>• 0.5% processing fee (deducted from PKRSC)</li>
                 <li>• 1:1 exchange rate (1 PKRSC = 1 PKR)</li>
+                <li>• Bank receives exact whole PKR amount</li>
                 <li>• Transfers processed during banking hours</li>
               </ul>
             </div>
@@ -418,10 +455,10 @@ export function RedeemSection() {
               <div className="bg-yellow-500/10 rounded-lg p-4 border border-yellow-500/20">
                 <p className="text-sm text-yellow-600 dark:text-yellow-400">
                   <strong>Important:</strong> After verification:
-                  <br />• You will transfer {parseFloat(formData.amount)} PKRSC to master minter wallet
-                  <br />• 0.5% fee ({(parseFloat(formData.amount) * 0.005).toFixed(2)} PKRSC) will be kept as processing fee
-                  <br />• Remaining 99.5% will be automatically burned
-                  <br />• You will receive PKR equivalent in your bank account
+                  <br />• You will transfer {pkrscNeeded.toFixed(6)} PKRSC to master minter wallet
+                  <br />• 0.5% fee ({feeAmount.toFixed(6)} PKRSC) will be kept as processing fee
+                  <br />• Remaining amount will be automatically burned
+                  <br />• You will receive exactly {pkrAmount} PKR in your bank account (whole number)
                 </p>
               </div>
 
@@ -478,7 +515,7 @@ export function RedeemSection() {
                   <div className="flex-1">
                     <p className="font-medium text-sm text-card-foreground">Transfer Confirmed!</p>
                     <p className="text-xs text-muted-foreground">
-                      {formData.amount} PKRSC transferred to master minter. Automated burn will process shortly.
+                      {pkrscNeeded.toFixed(6)} PKRSC transferred to master minter. You will receive {pkrAmount} PKR in your bank.
                     </p>
                     {pendingTxHash && (
                       <a

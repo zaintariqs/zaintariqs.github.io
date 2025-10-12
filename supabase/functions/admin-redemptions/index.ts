@@ -288,10 +288,10 @@ Deno.serve(async (req) => {
         if (burnTransactionHash && !userTransferHash) updateData.transaction_hash = burnTransactionHash
       }
 
-      // Get redemption details before updating (for reserve tracking)
+      // Get redemption details before updating
       const { data: redemptionData, error: fetchError } = await supabase
         .from('redemptions')
-        .select('pkrsc_amount')
+        .select('pkrsc_amount, desired_pkr_amount')
         .eq('id', redemptionId)
         .single()
 
@@ -325,28 +325,24 @@ Deno.serve(async (req) => {
       }
 
       // Update PKR reserves when redemption is completed (skip for attach-only)
-      // Note: Transaction fees are now recorded upfront when redemption is created
+      // Bank transfers the whole PKR amount from desired_pkr_amount field
       let reserveUpdated = false
-      if (!attachOnly && status === 'completed' && redemptionData?.pkrsc_amount) {
-        // Calculate net amount (amount user receives after 0.5% fee)
-        const FEE_PERCENTAGE = 0.5
-        const netAmount = redemptionData.pkrsc_amount / 1.005 // Amount bank actually pays
-        const feeAmount = redemptionData.pkrsc_amount - netAmount // Fee in PKRSC
+      if (!attachOnly && status === 'completed' && redemptionData) {
+        const wholePKRAmount = redemptionData.desired_pkr_amount || Math.floor(redemptionData.pkrsc_amount / 1.005)
 
-        console.log(`Redemption completion: User Paid=${redemptionData.pkrsc_amount} PKRSC, Fee=${feeAmount.toFixed(2)} PKRSC (${FEE_PERCENTAGE}%), Bank Pays=${netAmount.toFixed(2)} PKR`)
+        console.log(`Redemption completion: Bank transfers ${wholePKRAmount} PKR (whole number) to user`)
 
-        // Update PKR reserves (subtract net amount - what user actually receives)
+        // Update PKR reserves (subtract whole PKR amount)
         const { error: reserveError } = await supabase.rpc('update_pkr_reserves', {
-          amount_change: -netAmount, // Negative to subtract the net amount
+          amount_change: -wholePKRAmount,
           updated_by_wallet: walletAddress.toLowerCase()
         })
 
         if (reserveError) {
           console.error('Error updating PKR reserves:', reserveError)
-          // Log but don't fail the redemption
         } else {
           reserveUpdated = true
-          console.log(`Updated PKR reserves: -${netAmount} PKR`)
+          console.log(`Updated PKR reserves: -${wholePKRAmount} PKR`)
         }
       }
 

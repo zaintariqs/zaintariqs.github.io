@@ -394,11 +394,13 @@ Deno.serve(async (req) => {
           }
 
           // Calculate 0.5% transaction fee
+          // User transfers PKRSC, we calculate the whole PKR they'll receive
           const FEE_PERCENTAGE = 0.5
           const feeAmount = (amount * FEE_PERCENTAGE) / 100
           const netAmount = amount - feeAmount
+          const desiredPKR = Math.floor(netAmount) // Bank gets whole numbers only
 
-          console.log(`[redemptions] Fee calculation (transfer to master minter): Original=${amount} PKRSC, Fee=${feeAmount} PKRSC (${FEE_PERCENTAGE}%), Net=${netAmount} PKRSC to burn`)
+          console.log(`[redemptions] Fee calculation (transfer to master minter): Transferred=${amount} PKRSC, Fee=${feeAmount} PKRSC (${FEE_PERCENTAGE}%), Bank will receive=${desiredPKR} PKR (whole number)`)
 
           // Get user's email for verification
           const { data: emailData, error: emailFetchError } = await supabase
@@ -453,7 +455,8 @@ Deno.serve(async (req) => {
             .from('redemptions')
             .insert({
               user_id: body.walletAddress.toLowerCase(),
-              pkrsc_amount: netAmount, // Store net amount (what user will receive in PKR)
+              pkrsc_amount: netAmount, // PKRSC to burn (with decimals)
+              desired_pkr_amount: desiredPKR, // Whole PKR for bank transfer
               bank_name: encryptedBankDetails.bankName,
               account_number: encryptedBankDetails.accountNumber,
               account_title: encryptedBankDetails.accountTitle,
@@ -567,20 +570,31 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Default flow: user will burn after creating redemption
-      if (!body.pkrscAmount || body.pkrscAmount < 100) {
+      // NEW FLOW: User specifies desired PKR (whole number)
+      // We calculate PKRSC needed (with decimals)
+      if (!body.desiredPKR || body.desiredPKR < 100) {
         return new Response(
-          JSON.stringify({ error: 'Minimum redemption is 100 PKRSC' }),
+          JSON.stringify({ error: 'Minimum redemption is 100 PKR' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
 
-      // Calculate 0.5% transaction fee
-      const FEE_PERCENTAGE = 0.5
-      const feeAmount = (body.pkrscAmount * FEE_PERCENTAGE) / 100
-      const netAmount = body.pkrscAmount - feeAmount
+      // Validate whole number
+      if (body.desiredPKR !== Math.floor(body.desiredPKR)) {
+        return new Response(
+          JSON.stringify({ error: 'PKR amount must be a whole number' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
 
-      console.log(`[redemptions] Fee calculation (v2): Original=${body.pkrscAmount} PKRSC, Fee=${feeAmount} PKRSC (${FEE_PERCENTAGE}%), Net=${netAmount} PKRSC`)
+      // Calculate PKRSC needed (reverse calculation)
+      // Formula: pkrscNeeded = desiredPKR / (1 - feePercentage)
+      const FEE_PERCENTAGE = 0.5
+      const desiredPKR = body.desiredPKR
+      const pkrscNeeded = desiredPKR / (1 - FEE_PERCENTAGE / 100)
+      const feeAmount = pkrscNeeded - desiredPKR
+
+      console.log(`[redemptions] New flow: User wants ${desiredPKR} PKR → needs to burn ${pkrscNeeded.toFixed(6)} PKRSC (Fee: ${feeAmount.toFixed(6)} PKRSC, ${FEE_PERCENTAGE}%)`)
 
       // Get user's email for verification
       const { data: emailData, error: emailFetchError } = await supabase
@@ -636,7 +650,8 @@ Deno.serve(async (req) => {
         .from('redemptions')
         .insert({
           user_id: body.walletAddress.toLowerCase(),
-          pkrsc_amount: body.pkrscAmount,
+          pkrsc_amount: pkrscNeeded, // Total PKRSC to burn (includes fee)
+          desired_pkr_amount: desiredPKR, // Whole PKR for bank
           bank_name: encryptedBankDetails.bankName,
           account_number: encryptedBankDetails.accountNumber,
           account_title: encryptedBankDetails.accountTitle,
@@ -681,7 +696,12 @@ Deno.serve(async (req) => {
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
               <h2 style="color: #00A86B;">Verify Your Redemption Request</h2>
               <p>Hi,</p>
-              <p>You've initiated a redemption request of <strong>${body.pkrscAmount} PKRSC</strong>.</p>
+              <p>You've initiated a redemption request:</p>
+              <ul style="background-color: #f9f9f9; padding: 20px; border-left: 4px solid #00A86B;">
+                <li><strong>You will receive:</strong> ${desiredPKR} PKR (whole number)</li>
+                <li><strong>PKRSC to burn:</strong> ${pkrscNeeded.toFixed(6)} PKRSC</li>
+                <li><strong>Fee (0.5%):</strong> ${feeAmount.toFixed(6)} PKRSC</li>
+              </ul>
               <p>Please use the following verification code to confirm your request:</p>
               <div style="background-color: #f4f4f4; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; margin: 20px 0;">
                 ${verificationCode}
@@ -703,10 +723,10 @@ Deno.serve(async (req) => {
         transaction_type: 'redemption',
         transaction_id: data.id,
         user_id: body.walletAddress.toLowerCase(),
-        original_amount: body.pkrscAmount,
+        original_amount: pkrscNeeded,
         fee_percentage: FEE_PERCENTAGE,
         fee_amount: feeAmount,
-        net_amount: netAmount
+        net_amount: desiredPKR
       })
       
       // Log success for audit
@@ -715,9 +735,9 @@ Deno.serve(async (req) => {
         wallet_address: body.walletAddress.toLowerCase(),
         details: { 
           redemptionId: data.id,
-          amount: body.pkrscAmount,
+          desiredPKR,
+          pkrscNeeded,
           feeAmount,
-          netAmount,
           timestamp: new Date().toISOString()
         }
       })

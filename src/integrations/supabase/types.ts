@@ -596,6 +596,7 @@ export type Database = {
           burn_address: string
           cancellation_reason: string | null
           created_at: string
+          desired_pkr_amount: number
           email_verified: boolean | null
           id: string
           pkrsc_amount: number
@@ -617,6 +618,7 @@ export type Database = {
           burn_address?: string
           cancellation_reason?: string | null
           created_at?: string
+          desired_pkr_amount: number
           email_verified?: boolean | null
           id?: string
           pkrsc_amount: number
@@ -638,6 +640,7 @@ export type Database = {
           burn_address?: string
           cancellation_reason?: string | null
           created_at?: string
+          desired_pkr_amount?: number
           email_verified?: boolean | null
           id?: string
           pkrsc_amount?: number

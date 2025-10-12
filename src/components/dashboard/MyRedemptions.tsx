@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast'
 interface Redemption {
   id: string
   pkrsc_amount: number
+  desired_pkr_amount?: number
   status: string
   transaction_hash?: string
   burn_tx_hash?: string
@@ -287,7 +288,16 @@ export function MyRedemptions() {
                     <TableCell className="font-medium">
                       {new Date(redemption.created_at).toLocaleDateString()}
                     </TableCell>
-                    <TableCell>{redemption.pkrsc_amount.toLocaleString()} PKRSC</TableCell>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium text-primary">
+                          {redemption.desired_pkr_amount?.toLocaleString() || Math.floor(redemption.pkrsc_amount / 1.005)} PKR
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {redemption.pkrsc_amount.toFixed(6)} PKRSC
+                        </div>
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <div className="max-w-[150px]">
                         <div className="font-medium text-sm">{redemption.bankName || redemption.bank_name}</div>

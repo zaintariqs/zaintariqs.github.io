@@ -16,6 +16,7 @@ interface Redemption {
   id: string
   user_id: string
   pkrsc_amount: number
+  desired_pkr_amount?: number
   status: string
   transaction_hash?: string
   burn_tx_hash?: string
@@ -378,7 +379,16 @@ export function AdminRedemptions() {
                           </Button>
                         </div>
                       </TableCell>
-                      <TableCell>{redemption.pkrsc_amount.toLocaleString()} PKRSC</TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium text-primary">
+                            {redemption.desired_pkr_amount?.toLocaleString() || Math.floor(redemption.pkrsc_amount / 1.005)} PKR
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Burn: {redemption.pkrsc_amount.toFixed(6)} PKRSC
+                          </div>
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <div className="max-w-[200px]">
                           <div className="font-medium text-sm">{redemption.bankName || redemption.bank_name}</div>
@@ -502,7 +512,10 @@ export function AdminRedemptions() {
                     <strong>Redemption ID:</strong> {selectedRedemption?.id.slice(0, 8)}...
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    <strong>Amount:</strong> {selectedRedemption?.pkrsc_amount.toLocaleString()} PKRSC
+                    <strong>Bank Transfer Amount:</strong> {selectedRedemption?.desired_pkr_amount?.toLocaleString() || Math.floor((selectedRedemption?.pkrsc_amount || 0) / 1.005)} PKR
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    <strong>PKRSC to Burn:</strong> {selectedRedemption?.pkrsc_amount.toFixed(6)} PKRSC
                   </p>
                   <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 mt-3">
                     <p className="text-sm text-yellow-700 dark:text-yellow-300 font-medium mb-2">
