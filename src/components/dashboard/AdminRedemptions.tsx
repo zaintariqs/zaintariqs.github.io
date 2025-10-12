@@ -124,10 +124,10 @@ export function AdminRedemptions() {
     }
 
     if (actionType === 'attach') {
-      if (!userTransferHash.trim() && !burnTransactionHash.trim()) {
+      if (!userTransferHash.trim()) {
         toast({
           title: "Error",
-          description: "At least one transaction hash is required",
+          description: "User transfer transaction hash is required",
           variant: "destructive",
         })
         return
@@ -420,15 +420,15 @@ export function AdminRedemptions() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="burnTransactionHash">Burn Transaction Hash</Label>
+                  <Label htmlFor="burnTransactionHash">Burn Transaction Hash (Optional)</Label>
                   <Input
                     id="burnTransactionHash"
-                    placeholder="0x... (burn proof)"
+                    placeholder="0x... (added automatically by cron job after 5 mins)"
                     value={burnTransactionHash}
                     onChange={(e) => setBurnTransactionHash(e.target.value)}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Add transaction hashes for record-keeping. This won't change the redemption status.
+                    The burn transaction is automatically executed by the cron job. You only need to add the user transfer hash now.
                   </p>
                 </div>
               </>
