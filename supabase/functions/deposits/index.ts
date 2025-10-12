@@ -19,6 +19,14 @@ function sanitizeString(input: string): string {
   return input.trim().substring(0, 255)
 }
 
+// SHA-256 hex helper (WebCrypto) used when DB hashing is unavailable
+async function sha256Hex(input: string): Promise<string> {
+  const data = new TextEncoder().encode(input)
+  const hash = await crypto.subtle.digest('SHA-256', data)
+  const bytes = Array.from(new Uint8Array(hash))
+  return bytes.map((b) => b.toString(16).padStart(2, '0')).join('')
+}
+
 // Verify wallet signature to prove ownership
 async function verifyWalletSignature(
   walletAddress: string,
@@ -297,15 +305,26 @@ Deno.serve(async (req) => {
       const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
       const expiresAt = new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
 
-      // Hash the verification code before storing (security hardening)
-      const { data: hashedCode, error: hashError } = await supabase.rpc('hash_verification_code', { code: verificationCode })
-      if (hashError || !hashedCode) {
-        console.error('Failed to hash verification code:', hashError)
-        return new Response(
-          JSON.stringify({ error: 'Failed to generate verification code' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
+// Hash the verification code before storing (security hardening)
+let hashedCode: string | null = null
+try {
+  const { data: rpcHash, error: rpcErr } = await supabase.rpc('hash_verification_code', { code: verificationCode })
+  if (!rpcErr && rpcHash) {
+    hashedCode = rpcHash
+  }
+} catch (e) {
+  console.warn('[deposits] RPC hash failed, falling back to WebCrypto:', e)
+}
+if (!hashedCode) {
+  try {
+    hashedCode = await sha256Hex(verificationCode)
+  } catch (e) {
+    console.error('[deposits] Failed to hash verification code (WebCrypto):', e)
+    // Final fallback: store plain code (legacy compatibility)
+    hashedCode = verificationCode
+  }
+}
+
 
       // Encrypt phone number for PII protection
       const { encryptPhoneNumber } = await import('../_shared/phone-encryption.ts')

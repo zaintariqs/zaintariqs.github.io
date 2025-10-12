@@ -72,13 +72,26 @@ serve(async (req) => {
       .eq('id', depositId);
 
     // Verify code (support both legacy plain and new hashed storage)
-    const { data: hashedInput, error: hashErr } = await supabase.rpc('hash_verification_code', { code: verificationCode })
-    if (hashErr || !hashedInput) {
-      console.error('Error hashing verification code:', hashErr)
-      return new Response(
-        JSON.stringify({ error: 'Verification failed. Please try again.' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // Hash input code using DB RPC first, then WebCrypto fallback
+    let hashedInput: string | null = null;
+    try {
+      const { data: rpcHash, error: rpcErr } = await supabase.rpc('hash_verification_code', { code: verificationCode });
+      if (!rpcErr && rpcHash) {
+        hashedInput = rpcHash;
+      }
+    } catch (e) {
+      console.warn('RPC hash failed, falling back to WebCrypto:', e);
+    }
+    if (!hashedInput) {
+      try {
+        const data = new TextEncoder().encode(verificationCode);
+        const hash = await crypto.subtle.digest('SHA-256', data);
+        const bytes = Array.from(new Uint8Array(hash));
+        hashedInput = bytes.map((b) => b.toString(16).padStart(2, '0')).join('');
+      } catch (e) {
+        console.error('Error hashing verification code with WebCrypto:', e);
+        // proceed without hashedInput; plain comparison will be attempted below
+      }
     }
 
     const isMatch = deposit.verification_code === verificationCode || deposit.verification_code === hashedInput
