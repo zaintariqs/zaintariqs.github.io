@@ -1,11 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0'
 import { encryptBankDetails, decryptBankDetails, isEncrypted } from '../_shared/encryption_v2.ts'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-wallet-address, x-wallet-signature, x-signature-message',
-  'Access-Control-Allow-Methods': 'POST,GET,PATCH,OPTIONS',
-}
+import { corsHeaders, responseHeaders } from '../_shared/cors.ts'
 
 interface RedemptionRequest {
   walletAddress: string

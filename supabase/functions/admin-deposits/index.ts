@@ -1,10 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-wallet-address, x-wallet-signature, x-signature-message, x-nonce',
-  'Access-Control-Allow-Methods': 'GET,POST,PATCH,OPTIONS',
-}
+import { corsHeaders, responseHeaders } from '../_shared/cors.ts'
 
 // Verify wallet signature to prove ownership
 async function verifyWalletSignature(

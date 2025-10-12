@@ -2,15 +2,10 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { Resend } from 'npm:resend@2.0.0'
 import { decryptEmail } from '../_shared/email-encryption.ts'
 import { decryptBankDetails, isEncrypted } from '../_shared/encryption_v2.ts'
+import { corsHeaders, responseHeaders } from '../_shared/cors.ts'
 
 const resend = new Resend(Deno.env.get('RESEND_API_KEY'))
 const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'team@pkrsc.org'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-wallet-address',
-  'Access-Control-Allow-Methods': 'GET,POST,PATCH,OPTIONS',
-}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {

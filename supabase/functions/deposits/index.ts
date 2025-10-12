@@ -1,10 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-wallet-address, x-wallet-signature, x-signature-message',
-  'Access-Control-Allow-Methods': 'POST,GET,PATCH,DELETE,OPTIONS',
-}
+import { corsHeaders, responseHeaders } from '../_shared/cors.ts'
 
 // Valid payment methods for deposits
 const VALID_PAYMENT_METHODS = ['easypaisa', 'jazzcash', 'bank']
