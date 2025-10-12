@@ -92,7 +92,7 @@ export function RedeemSection() {
               body: JSON.stringify({
                 redemptionId,
                 transactionHash: pendingTxHash,
-                status: 'burn_confirmed',
+                status: 'transfer_confirmed',
               }),
             }
           )
@@ -100,8 +100,8 @@ export function RedeemSection() {
           if (response.ok) {
             console.log('Redemption updated successfully')
             toast({
-              title: "Burn Transaction Confirmed!",
-              description: "Your tokens have been burned. Bank transfer will be processed soon.",
+              title: "Transfer Transaction Confirmed!",
+              description: "Your tokens have been transferred. Automated burning will occur shortly.",
             })
           } else {
             const errorData = await response.json()
@@ -198,7 +198,7 @@ export function RedeemSection() {
     }
   }
 
-  const handleVerifyAndBurn = async () => {
+  const handleVerifyAndTransfer = async () => {
     if (!verificationCode || verificationCode.length !== 6) {
       toast({
         title: "Invalid Code",
@@ -235,45 +235,25 @@ export function RedeemSection() {
 
       toast({
         title: "Email Verified",
-        description: "Processing: Transferring fee and burning tokens...",
+        description: "Transferring tokens to master minter...",
       })
 
-      // Calculate amounts
-      // If redeeming 1000 PKRSC: burn 1000, transfer 5 (0.5% fee) to master minter
-      const baseAmount = parseFloat(formData.amount)
-      const feeAmount = baseAmount * 0.005
+      // Transfer full amount to master minter (they will handle fee & burn)
+      const amount = parseFloat(formData.amount)
       
-      console.log(`Redemption: ${baseAmount} PKRSC will be burned, ${feeAmount} PKRSC fee transferred to master minter`)
+      console.log(`Transferring ${amount} PKRSC to master minter for redemption`)
 
-      // Step 1: Transfer 0.5% fee to master minter
-      const feeTxHash = await writeContractAsync({
+      const txHash = await writeContractAsync({
         address: PKRSC_TOKEN_ADDRESS as `0x${string}`,
         abi: ERC20_ABI,
         functionName: 'transfer',
-        args: [MASTER_MINTER_ADDRESS as `0x${string}`, parseUnits(feeAmount.toFixed(6), 6)],
+        args: [MASTER_MINTER_ADDRESS as `0x${string}`, parseUnits(amount.toFixed(6), 6)],
         account: address,
         chain: base,
       })
 
-      console.log('Fee transfer transaction:', feeTxHash)
-
-      toast({
-        title: "Fee Transferred",
-        description: "Now burning your PKRSC tokens...",
-      })
-
-      // Step 2: Burn the base redemption amount
-      const burnTxHash = await writeContractAsync({
-        address: PKRSC_TOKEN_ADDRESS as `0x${string}`,
-        abi: ERC20_ABI,
-        functionName: 'burn',
-        args: [parseUnits(baseAmount.toFixed(6), 6)],
-        account: address,
-        chain: base,
-      })
-
-      setPendingTxHash(burnTxHash)
-      console.log('Burn transaction:', burnTxHash)
+      setPendingTxHash(txHash)
+      console.log('Transfer transaction:', txHash)
       
       toast({
         title: "Transaction Submitted",
@@ -281,10 +261,10 @@ export function RedeemSection() {
       })
 
     } catch (error) {
-      console.error('Error verifying or burning:', error)
+      console.error('Error verifying or transferring:', error)
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Verification or burn failed",
+        description: error instanceof Error ? error.message : "Verification or transfer failed",
         variant: "destructive",
       })
     } finally {
@@ -438,18 +418,20 @@ export function RedeemSection() {
               <div className="bg-yellow-500/10 rounded-lg p-4 border border-yellow-500/20">
                 <p className="text-sm text-yellow-600 dark:text-yellow-400">
                   <strong>Important:</strong> After verification:
-                  <br />• {parseFloat(formData.amount)} PKRSC will be burned
-                  <br />• {(parseFloat(formData.amount) * 0.005).toFixed(2)} PKRSC transaction fee will be transferred
+                  <br />• You will transfer {parseFloat(formData.amount)} PKRSC to master minter wallet
+                  <br />• 0.5% fee ({(parseFloat(formData.amount) * 0.005).toFixed(2)} PKRSC) will be kept as processing fee
+                  <br />• Remaining 99.5% will be automatically burned
+                  <br />• You will receive PKR equivalent in your bank account
                 </p>
               </div>
 
               <div className="flex gap-3">
                 <Button 
-                  onClick={handleVerifyAndBurn}
+                  onClick={handleVerifyAndTransfer}
                   disabled={isVerifying || verificationCode.length !== 6}
                   className="flex-1"
                 >
-                  {isVerifying ? "Verifying..." : "Verify & Burn Tokens"}
+                  {isVerifying ? "Processing..." : "Verify & Transfer Tokens"}
                 </Button>
                 <Button 
                   variant="outline"
@@ -467,7 +449,7 @@ export function RedeemSection() {
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <ArrowDownToLine className="h-5 w-5 text-primary" />
-                <h3 className="font-medium text-card-foreground">Burn Transaction</h3>
+                <h3 className="font-medium text-card-foreground">Transfer Transaction</h3>
               </div>
 
               {!isTxConfirmed ? (
@@ -494,9 +476,9 @@ export function RedeemSection() {
                 <div className="flex items-center gap-3 p-4 bg-crypto-green/10 rounded-lg border border-crypto-green/20">
                   <CheckCircle className="h-5 w-5 text-crypto-green" />
                   <div className="flex-1">
-                    <p className="font-medium text-sm text-card-foreground">Transaction Confirmed</p>
+                    <p className="font-medium text-sm text-card-foreground">Transfer Confirmed!</p>
                     <p className="text-xs text-muted-foreground">
-                      {formData.amount} PKRSC successfully burned
+                      {formData.amount} PKRSC transferred to master minter. Automated burn will process shortly.
                     </p>
                     {pendingTxHash && (
                       <a
@@ -509,7 +491,7 @@ export function RedeemSection() {
                       </a>
                     )}
                     <Badge variant="secondary" className="mt-2">
-                      Awaiting PKR Transfer to Bank Account
+                      Awaiting Burn & PKR Bank Transfer
                     </Badge>
                   </div>
                 </div>

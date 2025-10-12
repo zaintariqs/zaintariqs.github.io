@@ -170,7 +170,7 @@ export function MyRedemptions() {
           },
           body: JSON.stringify({
             walletAddress: address,
-            existingBurnTx: selectedRedemption.transaction_hash,
+            existingTransferTx: selectedRedemption.transaction_hash,
             bankName: formData.bankName,
             accountNumber: formData.accountNumber,
             accountTitle: formData.accountTitle,

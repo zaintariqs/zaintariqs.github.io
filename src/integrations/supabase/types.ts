@@ -884,6 +884,16 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: number
       }
+      get_redemption_burn_cron_status: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          active: boolean
+          jobname: string
+          last_run: string
+          next_run: string
+          schedule: string
+        }[]
+      }
       has_admin_permission: {
         Args: {
           _permission: Database["public"]["Enums"]["admin_permission"]
@@ -967,6 +977,8 @@ export type Database = {
         | "failed"
         | "cancelled"
         | "draft"
+        | "pending_burn"
+        | "error"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1119,6 +1131,8 @@ export const Constants = {
         "failed",
         "cancelled",
         "draft",
+        "pending_burn",
+        "error",
       ],
     },
   },
