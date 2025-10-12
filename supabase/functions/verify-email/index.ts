@@ -73,8 +73,18 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Verify the code
-    if (request.verification_code !== verificationCode) {
+    // Verify the code (support both legacy plain and new hashed storage)
+    const { data: hashedInput, error: hashErr } = await supabase.rpc('hash_verification_code', { code: verificationCode })
+    if (hashErr || !hashedInput) {
+      console.error('Error hashing verification code:', hashErr)
+      return new Response(
+        JSON.stringify({ error: 'Verification failed. Please try again.' }),
+        { status: 500, headers: responseHeaders }
+      )
+    }
+
+    const isMatch = request.verification_code === verificationCode || request.verification_code === hashedInput
+    if (!isMatch) {
       // Increment failed attempts
       await supabase
         .from('whitelist_requests')

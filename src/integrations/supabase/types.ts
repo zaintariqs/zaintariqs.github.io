@@ -908,6 +908,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      hash_verification_code: {
+        Args: { code: string }
+        Returns: string
+      }
       is_admin_wallet: {
         Args: { wallet_addr: string }
         Returns: boolean

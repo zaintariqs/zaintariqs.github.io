@@ -354,6 +354,16 @@ Deno.serve(async (req) => {
           const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
           const expiresAt = new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
 
+          // Hash the verification code before storing
+          const { data: hashedCode, error: hashError } = await supabase.rpc('hash_verification_code', { code: verificationCode })
+          if (hashError || !hashedCode) {
+            console.error('[redemptions] Failed to hash verification code:', hashError)
+            return new Response(
+              JSON.stringify({ error: 'Failed to generate verification code' }),
+              { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            )
+          }
+
           // Encrypt bank details before storing
           const encryptedBankDetails = await encryptBankDetails({
             bankName: sanitizeString(body.bankName),
@@ -373,7 +383,7 @@ Deno.serve(async (req) => {
               transaction_hash: transferTx,
               status: 'pending_burn', // Needs backend to burn the tokens
               email_verified: false,
-              verification_code: verificationCode,
+              verification_code: hashedCode,
               verification_expires_at: expiresAt.toISOString(),
               verification_attempts: 0
             })
@@ -496,6 +506,17 @@ Deno.serve(async (req) => {
       const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
       const expiresAt = new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
 
+      // Hash the verification code before storing
+      const { data: hashedCode, error: hashError } = await supabase.rpc('hash_verification_code', { code: verificationCode })
+      if (hashError || !hashedCode) {
+        console.error('[redemptions] Failed to hash verification code:', hashError)
+        return new Response(
+          JSON.stringify({ error: 'Failed to generate verification code' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+
       // Encrypt bank details before storing
       const encryptedBankDetails = await encryptBankDetails({
         bankName: sanitizeString(body.bankName),
@@ -514,7 +535,7 @@ Deno.serve(async (req) => {
           burn_address: ZERO_ADDRESS,
           status: 'draft',
           email_verified: false,
-          verification_code: verificationCode,
+          verification_code: hashedCode,
           verification_expires_at: expiresAt.toISOString(),
           verification_attempts: 0
         })

@@ -285,6 +285,18 @@ serve(async (req) => {
       const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
       const expiresAt = new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
 
+      // Hash the verification code before storing (security hardening)
+      const { data: hashedCode, error: hashError } = await supabase.rpc('hash_verification_code', {
+        code: verificationCode,
+      })
+      if (hashError || !hashedCode) {
+        console.error('Failed to hash verification code:', hashError)
+        return new Response(
+          JSON.stringify({ error: 'Failed to generate verification code' }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        )
+      }
+
       // Encrypt email and store separately
       const encryptedEmail = await encryptEmail(emailStr.toLowerCase())
       
@@ -294,7 +306,7 @@ serve(async (req) => {
         encrypted_email: encryptedEmail
       })
 
-      // Create new whitelist request with verification code
+      // Create new whitelist request with hashed verification code
       const { data, error } = await supabase
         .from("whitelist_requests")
         .insert({
@@ -304,7 +316,7 @@ serve(async (req) => {
           nonce: nonceHeader,
           client_ip: clientIp,
           email_verified: false,
-          verification_code: verificationCode,
+          verification_code: hashedCode,
           verification_expires_at: expiresAt.toISOString(),
           verification_attempts: 0
         })

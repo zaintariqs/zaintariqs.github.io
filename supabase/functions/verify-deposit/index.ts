@@ -71,8 +71,18 @@ serve(async (req) => {
       .update({ verification_attempts: deposit.verification_attempts + 1 })
       .eq('id', depositId);
 
-    // Verify code
-    if (deposit.verification_code !== verificationCode) {
+    // Verify code (support both legacy plain and new hashed storage)
+    const { data: hashedInput, error: hashErr } = await supabase.rpc('hash_verification_code', { code: verificationCode })
+    if (hashErr || !hashedInput) {
+      console.error('Error hashing verification code:', hashErr)
+      return new Response(
+        JSON.stringify({ error: 'Verification failed. Please try again.' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const isMatch = deposit.verification_code === verificationCode || deposit.verification_code === hashedInput
+    if (!isMatch) {
       return new Response(
         JSON.stringify({ error: 'Invalid verification code' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
