@@ -190,6 +190,47 @@ export type Database = {
         }
         Relationships: []
       }
+      burn_operations: {
+        Row: {
+          burn_amount: number
+          burn_tx_hash: string
+          created_at: string
+          id: string
+          master_minter_address: string
+          redemption_id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          burn_amount: number
+          burn_tx_hash: string
+          created_at?: string
+          id?: string
+          master_minter_address: string
+          redemption_id: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          burn_amount?: number
+          burn_tx_hash?: string
+          created_at?: string
+          id?: string
+          master_minter_address?: string
+          redemption_id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_redemption"
+            columns: ["redemption_id"]
+            isOneToOne: false
+            referencedRelation: "redemptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deposits: {
         Row: {
           amount_pkr: number
@@ -855,9 +896,25 @@ export type Database = {
           retry_after_seconds: number
         }[]
       }
+      check_daily_burn_limit: {
+        Args: { burn_amount_pkrsc: number }
+        Returns: {
+          allowed: boolean
+          current_daily_total: number
+          limit_remaining: number
+        }[]
+      }
       cleanup_old_rate_limits: {
         Args: Record<PropertyKey, never>
         Returns: number
+      }
+      detect_burn_anomaly: {
+        Args: { burn_amount_pkrsc: number }
+        Returns: {
+          is_anomaly: boolean
+          reason: string
+          severity: string
+        }[]
       }
       get_market_maker_cron_status: {
         Args: Record<PropertyKey, never>

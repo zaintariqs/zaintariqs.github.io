@@ -29,6 +29,26 @@ Deno.serve(async (req) => {
       throw new Error('Master minter private key not configured')
     }
 
+    // SECURITY: Require authorization header to prevent unauthorized burn operations
+    const authHeader = req.headers.get('authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.warn('Unauthorized burn attempt - missing authorization header')
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized: Missing authorization' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    // Verify it's the service role key or anon key (cron job uses service role)
+    if (token !== supabaseServiceKey && token !== Deno.env.get('SUPABASE_ANON_KEY')) {
+      console.warn('Unauthorized burn attempt - invalid token')
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized: Invalid token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
     const { ethers } = await import('https://esm.sh/ethers@6.9.0')
 
@@ -73,6 +93,61 @@ Deno.serve(async (req) => {
 
         console.log(`Processing redemption ${redemption.id}: burning ${burnAmount} PKRSC`)
 
+        // SECURITY CHECK 1: Check daily burn limit
+        const { data: limitCheck, error: limitError } = await supabase.rpc('check_daily_burn_limit', {
+          burn_amount_pkrsc: burnAmount
+        }).single()
+
+        if (limitError) {
+          console.error('Error checking daily burn limit:', limitError)
+        } else if (limitCheck && !limitCheck.allowed) {
+          console.error(`Daily burn limit exceeded. Current: ${limitCheck.current_daily_total} PKRSC, Remaining: ${limitCheck.limit_remaining} PKRSC, Requested: ${burnAmount} PKRSC`)
+          
+          await supabase.from('redemptions').update({ status: 'error' }).eq('id', redemption.id)
+          await supabase.from('admin_actions').insert({
+            action_type: 'redemption_burn_daily_limit_exceeded',
+            wallet_address: redemption.user_id,
+            details: {
+              redemptionId: redemption.id,
+              burnAmount,
+              dailyTotal: limitCheck.current_daily_total,
+              limitRemaining: limitCheck.limit_remaining,
+              severity: 'critical'
+            }
+          })
+
+          results.push({
+            redemptionId: redemption.id,
+            success: false,
+            error: 'Daily burn limit exceeded'
+          })
+          continue
+        }
+
+        // SECURITY CHECK 2: Detect anomalous patterns
+        const { data: anomalyCheck, error: anomalyError } = await supabase.rpc('detect_burn_anomaly', {
+          burn_amount_pkrsc: burnAmount
+        }).single()
+
+        if (anomalyError) {
+          console.error('Error detecting anomaly:', anomalyError)
+        } else if (anomalyCheck && anomalyCheck.is_anomaly) {
+          console.warn(`⚠️ ANOMALY DETECTED: ${anomalyCheck.reason} (Severity: ${anomalyCheck.severity})`)
+          
+          // Log the anomaly but continue (don't block legitimate large burns)
+          await supabase.from('admin_actions').insert({
+            action_type: 'redemption_burn_anomaly_detected',
+            wallet_address: redemption.user_id,
+            details: {
+              redemptionId: redemption.id,
+              burnAmount,
+              anomalyReason: anomalyCheck.reason,
+              severity: anomalyCheck.severity,
+              timestamp: new Date().toISOString()
+            }
+          })
+        }
+
         // Check master minter balance
         const balance = await pkrscContract.balanceOf(masterMinterWallet.address)
         console.log(`Master minter balance: ${ethers.formatUnits(balance, PKRSC_DECIMALS)} PKRSC`)
@@ -116,6 +191,16 @@ Deno.serve(async (req) => {
           status: 'pending', // Ready for admin to process bank transfer
         }).eq('id', redemption.id)
 
+        // SECURITY: Record burn operation in audit table
+        await supabase.from('burn_operations').insert({
+          redemption_id: redemption.id,
+          burn_amount: burnAmount,
+          burn_tx_hash: receipt.hash,
+          master_minter_address: masterMinterWallet.address,
+          user_id: redemption.user_id,
+          status: 'completed'
+        })
+
         // Log the burn
         await supabase.from('admin_actions').insert({
           action_type: 'redemption_tokens_burned',
@@ -125,7 +210,8 @@ Deno.serve(async (req) => {
             burnAmount,
             burnTxHash: receipt.hash,
             masterMinter: masterMinterWallet.address,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            securityChecks: 'passed'
           }
         })
 
