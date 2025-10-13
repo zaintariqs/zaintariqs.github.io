@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton'
 import { Banknote, ExternalLink, RefreshCcw } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { ManualTriggerBurn } from './ManualTriggerBurn'
 
 interface Redemption {
   id: string
@@ -270,6 +271,8 @@ export function MyRedemptions() {
         </CardTitle>
       </CardHeader>
       <CardContent>
+        <ManualTriggerBurn />
+        
         {redemptions.length === 0 ? (
           <div className="text-center py-12">
             <Banknote className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
