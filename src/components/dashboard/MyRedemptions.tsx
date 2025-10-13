@@ -212,9 +212,10 @@ export function MyRedemptions() {
 
   const getStatusBadge = (status: string) => {
     const statusLabels: Record<string, string> = {
-      pending: 'Pending',
+      pending: 'Pending Verification',
+      pending_burn: 'Tokens Being Burned',
       waiting_for_burn: 'Waiting for Burn',
-      burn_confirmed: 'Burn Confirmed',
+      burn_confirmed: 'Burn Confirmed - Awaiting Transfer',
       processing_transfer: 'Processing Transfer',
       completed: 'Completed',
       cancelled: 'Cancelled'
@@ -222,6 +223,7 @@ export function MyRedemptions() {
 
     const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline", className: string }> = {
       pending: { variant: "secondary", className: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" },
+      pending_burn: { variant: "secondary", className: "bg-orange-500/10 text-orange-500 border-orange-500/20" },
       waiting_for_burn: { variant: "secondary", className: "bg-orange-500/10 text-orange-500 border-orange-500/20" },
       burn_confirmed: { variant: "secondary", className: "bg-blue-500/10 text-blue-500 border-blue-500/20" },
       processing_transfer: { variant: "secondary", className: "bg-blue-500/10 text-blue-500 border-blue-500/20" },

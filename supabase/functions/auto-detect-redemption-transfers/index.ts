@@ -47,11 +47,12 @@ Deno.serve(async (req) => {
     const masterMinterAddress = masterMinterData.master_minter_address.toLowerCase()
     console.log('Master minter address:', masterMinterAddress)
 
-    // Get pending redemptions (no transaction hash yet)
+    // Get pending redemptions (email verified, no transaction hash yet)
     const { data: pendingRedemptions, error: redemptionsError } = await supabase
       .from('redemptions')
       .select('id, user_id, pkrsc_amount, created_at')
       .eq('status', 'pending')
+      .eq('email_verified', true)
       .is('transaction_hash', null)
       .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // Last 24 hours
       .order('created_at', { ascending: false })
@@ -132,11 +133,12 @@ Deno.serve(async (req) => {
           console.log(`   Amount: ${transferAmount} PKRSC`)
           console.log(`   From: ${transfer.from}`)
 
-          // Update redemption with transaction hash
+          // Update redemption with transaction hash and set to pending_burn
           const { error: updateError } = await supabase
             .from('redemptions')
             .update({ 
               transaction_hash: transfer.hash,
+              status: 'pending_burn',
               updated_at: new Date().toISOString()
             })
             .eq('id', redemption.id)

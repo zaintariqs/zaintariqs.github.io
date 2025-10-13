@@ -432,37 +432,43 @@ Deno.serve(async (req) => {
         }
       }
 
-      if (userEmail) {
+      if (userEmail && status === 'completed') {
         try {
-          if (status === 'completed') {
-            // Decrypt bank details for user's email (safe because user provided these details)
-            let decryptedBankName = data.bank_name
-            let decryptedAccountNumber = data.account_number
-            let decryptedAccountTitle = data.account_title
-            
-            try {
-              if (isEncrypted(data.bank_name)) {
-                const decrypted = await decryptBankDetails({
-                  bankName: data.bank_name,
-                  accountNumber: data.account_number,
-                  accountTitle: data.account_title
-                })
-                decryptedBankName = decrypted.bankName
-                decryptedAccountNumber = decrypted.accountNumber
-                decryptedAccountTitle = decrypted.accountTitle
-                console.log('Bank details decrypted for user email')
-              }
-            } catch (decryptError) {
-              console.error('Failed to decrypt bank details for email:', decryptError)
-              // Continue with encrypted values as fallback
+          // Decrypt bank details for user's email (safe because user provided these details)
+          let decryptedBankName = data.bank_name
+          let decryptedAccountNumber = data.account_number
+          let decryptedAccountTitle = data.account_title
+          
+          try {
+            if (isEncrypted(data.bank_name)) {
+              const decrypted = await decryptBankDetails({
+                bankName: data.bank_name,
+                accountNumber: data.account_number,
+                accountTitle: data.account_title
+              })
+              decryptedBankName = decrypted.bankName
+              decryptedAccountNumber = decrypted.accountNumber
+              decryptedAccountTitle = decrypted.accountTitle
+              console.log('Bank details decrypted for user email')
             }
+          } catch (decryptError) {
+            console.error('Failed to decrypt bank details for email:', decryptError)
+            // Continue with encrypted values as fallback
+          }
 
-            // Success email
-            await resend.emails.send({
-              from: FROM_EMAIL,
-              to: [userEmail],
-              subject: 'PKRSC Redemption Completed',
-              html: `
+          // Get burn transaction hash
+          const { data: burnData } = await supabase
+            .from('burn_operations')
+            .select('burn_tx_hash')
+            .eq('redemption_id', redemptionId)
+            .single()
+
+          // Success email
+          await resend.emails.send({
+            from: FROM_EMAIL,
+            to: [userEmail],
+            subject: 'PKRSC Redemption Completed - Funds Transferred',
+            html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                   <h2 style="color: #059669;">Redemption Successful!</h2>
                   
@@ -485,11 +491,11 @@ Deno.serve(async (req) => {
                     <strong>Account Number:</strong> ${decryptedAccountNumber}
                   </div>
                   
-                  ${burnTransactionHash ? `
+                  ${burnData?.burn_tx_hash ? `
                     <div style="background-color: #f9fafb; padding: 16px; border-radius: 8px; margin: 20px 0;">
-                      <strong>Burn Transaction:</strong><br>
-                      <a href="https://basescan.org/tx/${burnTransactionHash}" style="color: #2563eb; word-break: break-all;">
-                        ${burnTransactionHash}
+                      <strong>Burn Transaction (Tokens Destroyed):</strong><br>
+                      <a href="https://basescan.org/tx/${burnData.burn_tx_hash}" style="color: #2563eb; word-break: break-all;">
+                        ${burnData.burn_tx_hash}
                       </a>
                     </div>
                   ` : ''}
@@ -501,13 +507,13 @@ Deno.serve(async (req) => {
                   ` : ''}
                   
                   <div style="background-color: #f0fdf4; padding: 16px; border-radius: 8px; margin: 20px 0;">
-                    <strong>Bank Account Details:</strong><br>
-                    <strong>Bank:</strong> ${data.bank_name}<br>
-                    <strong>Account:</strong> ${data.account_number}<br>
-                    <strong>Title:</strong> ${data.account_title}
+                    <strong>Transfer Transaction Hash:</strong><br>
+                    <a href="https://basescan.org/tx/${data.transaction_hash}" style="color: #2563eb; word-break: break-all;">
+                      ${data.transaction_hash}
+                    </a>
                   </div>
                   
-                  <p>Please allow 1-2 business days for the funds to appear in your bank account.</p>
+                  <p>Your PKRSC tokens have been permanently burned and PKR has been transferred to your account.</p>
                   
                   <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
                   
