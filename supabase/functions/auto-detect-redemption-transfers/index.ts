@@ -72,10 +72,11 @@ Deno.serve(async (req) => {
 
     console.log(`Found ${pendingRedemptions.length} pending redemptions`)
 
-    // Fetch recent token transfers to master minter using Etherscan API V2 for Base
-    // Base network uses api.basescan.org endpoint
-    const apiUrl = `https://api.basescan.org/api`
+    // Fetch recent token transfers to master minter using Etherscan API V2
+    // Base network uses chainId 8453
+    const apiUrl = `https://api.etherscan.io/v2/api`
     const params = new URLSearchParams({
+      chainid: '8453', // Base network
       module: 'account',
       action: 'tokentx',
       contractaddress: PKRSC_TOKEN_ADDRESS,
@@ -88,7 +89,7 @@ Deno.serve(async (req) => {
     
     const fullUrl = `${apiUrl}?${params.toString()}`
     
-    console.log('Fetching transfers from Base Etherscan API V2...')
+    console.log('Fetching transfers from Etherscan API V2 for Base (chainId 8453)...')
     console.log('API URL (without key):', fullUrl.replace(basescanApiKey, 'REDACTED'))
     
     const response = await fetch(fullUrl, {
