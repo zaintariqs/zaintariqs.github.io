@@ -5,7 +5,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const PKRSC_TOKEN_ADDRESS = '0x43CCbDAC0726E0dFd00c6F454A6253441F25D521'
+const PKRSC_TOKEN_ADDRESS = '0x220aC54E22056B834522cD1A6A3DfeCA63bC3C6e'
 const PKRSC_DECIMALS = 6
 const BASE_RPC_URL = 'https://mainnet.base.org'
 
