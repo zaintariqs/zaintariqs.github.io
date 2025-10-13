@@ -26,7 +26,8 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const basescanApiKey = Deno.env.get('BASESCAN_API_KEY')!
+    // Use hardcoded API key for Base network
+    const basescanApiKey = 'VCHJ2UNA6HAZUR89PYBVJ2GIY6PIW8DBWK'
 
     const supabase = createClient(supabaseUrl, supabaseKey)
 
