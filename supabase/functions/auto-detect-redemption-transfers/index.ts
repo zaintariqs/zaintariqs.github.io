@@ -110,9 +110,24 @@ Deno.serve(async (req) => {
     console.log('Etherscan API Response Message:', apiData.message)
     console.log('Result Count:', Array.isArray(apiData.result) ? apiData.result.length : 'N/A')
 
-    // Check for API errors
+    // Check for API errors (but "No transactions found" is not an error)
     if (apiData.status !== '1') {
       const errorMsg = apiData.message || apiData.result || 'Unknown error'
+      
+      // "No transactions found" is a valid response, not an error
+      if (errorMsg.includes('No transactions') || errorMsg.includes('No records')) {
+        console.log('No transfers found yet for master minter address')
+        return new Response(
+          JSON.stringify({ 
+            success: true,
+            message: 'No transfers found on blockchain yet',
+            pending_redemptions: pendingRedemptions.length,
+            matched_count: 0
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      
       console.error('Etherscan API error details:', {
         status: apiData.status,
         message: errorMsg,
@@ -140,20 +155,6 @@ Deno.serve(async (req) => {
       }
       
       throw new Error(`Etherscan API error: ${errorMsg}`)
-    }
-
-    // Handle "No transactions found" which returns status 0 but is not an error
-    if (!apiData.result || (typeof apiData.result === 'string' && apiData.result.includes('No transactions'))) {
-      console.log('No transfers found yet for master minter address')
-      return new Response(
-        JSON.stringify({ 
-          success: true,
-          message: 'No transfers found on blockchain yet',
-          pending_redemptions: pendingRedemptions.length,
-          matched_count: 0
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
     }
 
     if (!Array.isArray(apiData.result)) {
