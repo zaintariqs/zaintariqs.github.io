@@ -467,65 +467,68 @@ Deno.serve(async (req) => {
           await resend.emails.send({
             from: FROM_EMAIL,
             to: [userEmail],
-            subject: 'PKRSC Redemption Completed - Funds Transferred',
+            subject: 'PKRSC Redemption Completed Successfully',
             html: `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                  <h2 style="color: #059669;">Redemption Successful!</h2>
-                  
-                  <p>Dear User,</p>
-                  
-                  <p>Your PKRSC redemption has been successfully completed and funds have been transferred to your bank account.</p>
-                  
-                  <div style="background-color: #f0fdf4; border-left: 4px solid #059669; padding: 16px; margin: 20px 0;">
-                    <strong>Redemption Details:</strong><br><br>
-                    <strong>PKRSC Amount Redeemed:</strong> ${data.pkrsc_amount} PKRSC<br>
-                    <strong>Transaction Fee (0.5%):</strong> ${(data.pkrsc_amount * 0.005).toFixed(2)} PKR<br>
-                    <strong>PKR Amount Received:</strong> ${(data.pkrsc_amount * 0.995).toFixed(2)} PKR<br>
-                    <strong>Your Wallet:</strong> ${data.user_id}
-                  </div>
-
-                  <div style="background-color: #f9fafb; padding: 16px; border-radius: 8px; margin: 20px 0;">
-                    <strong>Bank Transfer Details:</strong><br><br>
-                    <strong>Bank Name:</strong> ${decryptedBankName}<br>
-                    <strong>Account Title:</strong> ${decryptedAccountTitle}<br>
-                    <strong>Account Number:</strong> ${decryptedAccountNumber}
-                  </div>
-                  
-                  ${burnData?.burn_tx_hash ? `
-                    <div style="background-color: #f9fafb; padding: 16px; border-radius: 8px; margin: 20px 0;">
-                      <strong>Burn Transaction (Tokens Destroyed):</strong><br>
-                      <a href="https://basescan.org/tx/${burnData.burn_tx_hash}" style="color: #2563eb; word-break: break-all;">
-                        ${burnData.burn_tx_hash}
-                      </a>
-                    </div>
-                  ` : ''}
-                  
-                  ${bankTransactionId ? `
-                    <div style="background-color: #f9fafb; padding: 16px; border-radius: 8px; margin: 20px 0;">
-                      <strong>Bank Transaction ID:</strong> ${bankTransactionId}
-                    </div>
-                  ` : ''}
-                  
-                  <div style="background-color: #f0fdf4; padding: 16px; border-radius: 8px; margin: 20px 0;">
-                    <strong>Transfer Transaction Hash:</strong><br>
-                    <a href="https://basescan.org/tx/${data.transaction_hash}" style="color: #2563eb; word-break: break-all;">
-                      ${data.transaction_hash}
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #059669;">Redemption Completed Successfully!</h2>
+                
+                <p>Dear User,</p>
+                
+                <p>Great news! Your PKRSC redemption has been completed successfully.</p>
+                
+                <div style="background-color: #f0fdf4; border-left: 4px solid #059669; padding: 16px; margin: 20px 0;">
+                  <strong>Redemption Details:</strong><br><br>
+                  <strong>PKRSC Burned:</strong> ${data.pkrsc_amount} PKRSC<br>
+                  <strong>PKR Transferred:</strong> ${data.desired_pkr_amount} PKR<br>
+                  <strong>Your Wallet:</strong> ${data.user_id}
+                </div>
+                
+                <div style="background-color: #f9fafb; padding: 16px; border-radius: 8px; margin: 20px 0;">
+                  <strong>Bank Details:</strong><br><br>
+                  <strong>Bank:</strong> ${decryptedBankName}<br>
+                  <strong>Account Title:</strong> ${decryptedAccountTitle}<br>
+                  <strong>Account Number:</strong> ${decryptedAccountNumber}
+                </div>
+                
+                ${burnData?.burn_tx_hash ? `
+                  <div style="background-color: #fef3c7; padding: 16px; border-radius: 8px; margin: 20px 0;">
+                    <strong>Burn Transaction Hash:</strong><br>
+                    <a href="https://basescan.org/tx/${burnData.burn_tx_hash}" style="color: #2563eb; word-break: break-all;">
+                      ${burnData.burn_tx_hash}
                     </a>
                   </div>
-                  
-                  <p>Your PKRSC tokens have been permanently burned and PKR has been transferred to your account.</p>
-                  
-                  <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-                  
-                  <p style="color: #6b7280; font-size: 12px;">
-                    If you have any questions, contact us at <a href="mailto:team@pkrsc.org">team@pkrsc.org</a>
-                  </p>
+                ` : ''}
+                
+                ${bankTransactionId ? `
+                  <div style="background-color: #f9fafb; padding: 16px; border-radius: 8px; margin: 20px 0;">
+                    <strong>Bank Transaction ID:</strong> ${bankTransactionId}
+                  </div>
+                ` : ''}
+                
+                <div style="background-color: #f0fdf4; padding: 16px; border-radius: 8px; margin: 20px 0;">
+                  <strong>Transfer Transaction Hash:</strong><br>
+                  <a href="https://basescan.org/tx/${data.transaction_hash}" style="color: #2563eb; word-break: break-all;">
+                    ${data.transaction_hash}
+                  </a>
                 </div>
-              `,
-            })
-            console.log(`Redemption success email sent to ${userEmail}`)
-          } else if (status === 'cancelled') {
-            // Cancellation email
+                
+                <p>Your PKRSC tokens have been permanently burned and PKR has been transferred to your account.</p>
+                
+                <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+                
+                <p style="color: #6b7280; font-size: 12px;">
+                  If you have any questions, contact us at <a href="mailto:team@pkrsc.org">team@pkrsc.org</a>
+                </p>
+              </div>
+            `,
+          })
+          console.log(`Redemption success email sent to ${userEmail}`)
+        } catch (emailError) {
+          console.error('Error sending redemption email:', emailError)
+        }
+      } else if (userEmail && status === 'cancelled') {
+        try {
+          // Cancellation email
             await resend.emails.send({
               from: FROM_EMAIL,
               to: [userEmail],
@@ -572,9 +575,8 @@ Deno.serve(async (req) => {
                   </p>
                 </div>
               `,
-            })
-            console.log(`Redemption cancellation email sent to ${userEmail}`)
-          }
+          })
+          console.log(`Redemption cancellation email sent to ${userEmail}`)
         } catch (emailError) {
           console.error('Error sending redemption email:', emailError)
         }
