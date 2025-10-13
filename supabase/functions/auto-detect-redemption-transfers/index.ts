@@ -7,6 +7,7 @@ const corsHeaders = {
 
 const PKRSC_TOKEN_ADDRESS = '0x43CCbDAC0726E0dFd00c6F454A6253441F25D521'
 const PKRSC_DECIMALS = 6
+const BASE_RPC_URL = 'https://mainnet.base.org'
 
 interface BaseScanTransaction {
   hash: string
@@ -16,6 +17,176 @@ interface BaseScanTransaction {
   timeStamp: string
   tokenDecimal: string
   tokenSymbol: string
+}
+
+interface TransferEvent {
+  address: string
+  topics: string[]
+  data: string
+  blockNumber: string
+  transactionHash: string
+  timeStamp?: number
+}
+
+// Helper function to detect transfers via RPC (faster than Etherscan)
+async function detectTransfersViaRPC(supabase: any, pendingRedemptions: any[], masterMinterAddress: string) {
+  const matches = []
+  
+  try {
+    // Get current block number
+    const blockResponse = await fetch(BASE_RPC_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'eth_blockNumber',
+        params: []
+      })
+    })
+    
+    const blockData = await blockResponse.json()
+    const currentBlock = parseInt(blockData.result, 16)
+    const fromBlock = currentBlock - 1000 // Check last ~1000 blocks (about 30 min on Base)
+    
+    console.log(`Scanning blocks ${fromBlock} to ${currentBlock} via RPC...`)
+    
+    // ERC20 Transfer event signature: Transfer(address,address,uint256)
+    const transferEventSignature = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
+    
+    // Get Transfer events to master minter
+    const logsResponse = await fetch(BASE_RPC_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 2,
+        method: 'eth_getLogs',
+        params: [{
+          fromBlock: `0x${fromBlock.toString(16)}`,
+          toBlock: `0x${currentBlock.toString(16)}`,
+          address: PKRSC_TOKEN_ADDRESS,
+          topics: [
+            transferEventSignature,
+            null, // from (any address)
+            `0x000000000000000000000000${masterMinterAddress.slice(2).toLowerCase()}` // to (master minter)
+          ]
+        }]
+      })
+    })
+    
+    const logsData = await logsResponse.json()
+    
+    if (!logsData.result || logsData.result.length === 0) {
+      console.log('No transfer events found via RPC')
+      return []
+    }
+    
+    console.log(`Found ${logsData.result.length} transfer events via RPC`)
+    
+    // Check which hashes are already used
+    const transferHashes = logsData.result.map((log: TransferEvent) => log.transactionHash.toLowerCase())
+    const { data: usedHashes } = await supabase
+      .from('used_transaction_hashes')
+      .select('transaction_hash')
+      .in('transaction_hash', transferHashes)
+    
+    const usedHashSet = new Set(usedHashes?.map((h: any) => h.transaction_hash.toLowerCase()) || [])
+    
+    // Match transfers to redemptions
+    for (const redemption of pendingRedemptions) {
+      const expectedAmount = parseFloat(redemption.pkrsc_amount)
+      const userAddress = redemption.user_id.toLowerCase()
+      const redemptionTime = new Date(redemption.created_at).getTime() / 1000
+      
+      for (const log of logsData.result) {
+        const txHash = log.transactionHash.toLowerCase()
+        
+        if (usedHashSet.has(txHash)) continue
+        
+        // Decode transfer event
+        const fromAddress = '0x' + log.topics[1].slice(26).toLowerCase()
+        const amount = parseInt(log.data, 16) / Math.pow(10, PKRSC_DECIMALS)
+        
+        // Get block timestamp
+        const blockResponse = await fetch(BASE_RPC_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            id: 3,
+            method: 'eth_getBlockByNumber',
+            params: [log.blockNumber, false]
+          })
+        })
+        
+        const blockData = await blockResponse.json()
+        const blockTimestamp = parseInt(blockData.result.timestamp, 16)
+        
+        // Check if matches redemption
+        const amountMatch = Math.abs(amount - expectedAmount) / expectedAmount < 0.001
+        const timeMatch = blockTimestamp >= redemptionTime && blockTimestamp <= redemptionTime + 24 * 60 * 60
+        const addressMatch = fromAddress === userAddress
+        
+        if (addressMatch && amountMatch && timeMatch) {
+          console.log(`✅ RPC Match found for redemption ${redemption.id}:`)
+          console.log(`   TX Hash: ${log.transactionHash}`)
+          console.log(`   Amount: ${amount} PKRSC`)
+          console.log(`   From: ${fromAddress}`)
+          
+          // Update redemption
+          const { error: updateError } = await supabase
+            .from('redemptions')
+            .update({ 
+              transaction_hash: log.transactionHash,
+              status: 'pending_burn',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', redemption.id)
+          
+          if (!updateError) {
+            // Mark hash as used
+            await supabase
+              .from('used_transaction_hashes')
+              .insert({
+                transaction_hash: log.transactionHash.toLowerCase(),
+                transaction_type: 'redemption',
+                used_by: redemption.user_id
+              })
+            
+            // Log action
+            await supabase
+              .from('admin_actions')
+              .insert({
+                action_type: 'auto_detect_redemption_transfer_rpc',
+                wallet_address: 'system',
+                details: {
+                  redemption_id: redemption.id,
+                  transaction_hash: log.transactionHash,
+                  amount: amount,
+                  user: redemption.user_id,
+                  method: 'rpc'
+                }
+              })
+            
+            matches.push({
+              redemption_id: redemption.id,
+              transaction_hash: log.transactionHash,
+              amount: amount
+            })
+            
+            usedHashSet.add(txHash)
+          }
+          
+          break
+        }
+      }
+    }
+  } catch (error) {
+    console.error('RPC detection error:', error)
+  }
+  
+  return matches
 }
 
 Deno.serve(async (req) => {
@@ -73,6 +244,27 @@ Deno.serve(async (req) => {
 
     console.log(`Found ${pendingRedemptions.length} pending redemptions`)
 
+    // First, try RPC-based lookup for faster detection
+    console.log('Attempting RPC-based transfer detection...')
+    const rpcMatches = await detectTransfersViaRPC(supabase, pendingRedemptions, masterMinterAddress)
+    
+    if (rpcMatches.length > 0) {
+      console.log(`✅ RPC detection found ${rpcMatches.length} matches`)
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: `RPC-based detection complete`,
+          pending_redemptions: pendingRedemptions.length,
+          matched_count: rpcMatches.length,
+          matches: rpcMatches
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Fallback to Etherscan API if RPC didn't find anything
+    console.log('RPC detection found no matches, falling back to Etherscan API...')
+    
     // Fetch recent token transfers to master minter using Etherscan API V2
     // Base network uses chainId 8453
     const apiUrl = `https://api.etherscan.io/v2/api`
