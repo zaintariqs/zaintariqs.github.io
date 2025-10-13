@@ -76,12 +76,43 @@ Deno.serve(async (req) => {
     const basescanUrl = `https://api.basescan.org/api?module=account&action=tokentx&contractaddress=${PKRSC_TOKEN_ADDRESS}&address=${masterMinterAddress}&startblock=0&endblock=99999999&sort=desc&apikey=${basescanApiKey}`
     
     console.log('Fetching transfers from BaseScan...')
+    console.log('BaseScan URL (without key):', basescanUrl.replace(basescanApiKey, 'REDACTED'))
+    
     const basescanResponse = await fetch(basescanUrl)
     const basescanData = await basescanResponse.json()
 
-    if (basescanData.status !== '1' || !basescanData.result) {
-      console.error('BaseScan API error:', basescanData.message)
-      throw new Error(`BaseScan API error: ${basescanData.message}`)
+    console.log('BaseScan Response Status:', basescanData.status)
+    console.log('BaseScan Response Message:', basescanData.message)
+    console.log('BaseScan Result Count:', Array.isArray(basescanData.result) ? basescanData.result.length : 'N/A')
+
+    if (basescanData.status !== '1') {
+      const errorMsg = basescanData.message || basescanData.result || 'Unknown error'
+      console.error('BaseScan API error details:', {
+        status: basescanData.status,
+        message: errorMsg,
+        apiKeyExists: !!basescanApiKey,
+        apiKeyLength: basescanApiKey?.length || 0
+      })
+      
+      // If no API key or invalid, provide helpful error
+      if (!basescanApiKey || basescanApiKey.length < 10) {
+        throw new Error('BASESCAN_API_KEY is missing or invalid. Please add it in Supabase Edge Function secrets.')
+      }
+      
+      throw new Error(`BaseScan API error: ${errorMsg}. Check your API key at https://basescan.org/myapikey`)
+    }
+
+    if (!basescanData.result || !Array.isArray(basescanData.result)) {
+      console.warn('BaseScan returned no results or invalid format')
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          message: 'No transfers found on BaseScan',
+          pending_redemptions: pendingRedemptions.length,
+          matched_count: 0
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
     const recentTransfers = basescanData.result as BaseScanTransaction[]
