@@ -72,42 +72,81 @@ Deno.serve(async (req) => {
 
     console.log(`Found ${pendingRedemptions.length} pending redemptions`)
 
-    // Fetch recent token transfers to master minter from BaseScan
-    const basescanUrl = `https://api.basescan.org/api?module=account&action=tokentx&contractaddress=${PKRSC_TOKEN_ADDRESS}&address=${masterMinterAddress}&startblock=0&endblock=99999999&sort=desc&apikey=${basescanApiKey}`
+    // Fetch recent token transfers to master minter using Etherscan API V2 for Base
+    // Base network uses api.basescan.org endpoint
+    const apiUrl = `https://api.basescan.org/api`
+    const params = new URLSearchParams({
+      module: 'account',
+      action: 'tokentx',
+      contractaddress: PKRSC_TOKEN_ADDRESS,
+      address: masterMinterAddress,
+      page: '1',
+      offset: '100', // Get last 100 transfers
+      sort: 'desc',
+      apikey: basescanApiKey
+    })
     
-    console.log('Fetching transfers from BaseScan...')
-    console.log('BaseScan URL (without key):', basescanUrl.replace(basescanApiKey, 'REDACTED'))
+    const fullUrl = `${apiUrl}?${params.toString()}`
     
-    const basescanResponse = await fetch(basescanUrl)
-    const basescanData = await basescanResponse.json()
+    console.log('Fetching transfers from Base Etherscan API V2...')
+    console.log('API URL (without key):', fullUrl.replace(basescanApiKey, 'REDACTED'))
+    
+    const response = await fetch(fullUrl, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    
+    const apiData = await response.json()
 
-    console.log('BaseScan Response Status:', basescanData.status)
-    console.log('BaseScan Response Message:', basescanData.message)
-    console.log('BaseScan Result Count:', Array.isArray(basescanData.result) ? basescanData.result.length : 'N/A')
+    console.log('Etherscan API Response Status:', apiData.status)
+    console.log('Etherscan API Response Message:', apiData.message)
+    console.log('Result Count:', Array.isArray(apiData.result) ? apiData.result.length : 'N/A')
 
-    if (basescanData.status !== '1') {
-      const errorMsg = basescanData.message || basescanData.result || 'Unknown error'
-      console.error('BaseScan API error details:', {
-        status: basescanData.status,
+    // Check for API errors
+    if (apiData.status !== '1') {
+      const errorMsg = apiData.message || apiData.result || 'Unknown error'
+      console.error('Etherscan API error details:', {
+        status: apiData.status,
         message: errorMsg,
+        result: apiData.result,
         apiKeyExists: !!basescanApiKey,
         apiKeyLength: basescanApiKey?.length || 0
       })
       
-      // If no API key or invalid, provide helpful error
-      if (!basescanApiKey || basescanApiKey.length < 10) {
-        throw new Error('BASESCAN_API_KEY is missing or invalid. Please add it in Supabase Edge Function secrets.')
+      // Common error messages
+      if (errorMsg.includes('Invalid API Key')) {
+        throw new Error('Invalid BASESCAN_API_KEY. Get your API key from https://basescan.org/myapikey')
       }
       
-      throw new Error(`BaseScan API error: ${errorMsg}. Check your API key at https://basescan.org/myapikey`)
+      if (errorMsg.includes('rate limit')) {
+        console.warn('Rate limit reached, will retry on next cron run')
+        return new Response(
+          JSON.stringify({ 
+            success: true,
+            message: 'Rate limit reached, will retry later',
+            pending_redemptions: pendingRedemptions.length,
+            matched_count: 0
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      
+      throw new Error(`Etherscan API error: ${errorMsg}`)
     }
 
-    if (!basescanData.result || !Array.isArray(basescanData.result)) {
-      console.warn('BaseScan returned no results or invalid format')
+    // Handle "No transactions found" which returns status 0 but is not an error
+    if (!apiData.result || (typeof apiData.result === 'string' && apiData.result.includes('No transactions'))) {
+      console.log('No transfers found yet for master minter address')
       return new Response(
         JSON.stringify({ 
           success: true,
-          message: 'No transfers found on BaseScan',
+          message: 'No transfers found on blockchain yet',
           pending_redemptions: pendingRedemptions.length,
           matched_count: 0
         }),
@@ -115,7 +154,20 @@ Deno.serve(async (req) => {
       )
     }
 
-    const recentTransfers = basescanData.result as BaseScanTransaction[]
+    if (!Array.isArray(apiData.result)) {
+      console.warn('Unexpected API response format:', apiData.result)
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          message: 'Unexpected API response format',
+          pending_redemptions: pendingRedemptions.length,
+          matched_count: 0
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const recentTransfers = apiData.result as BaseScanTransaction[]
     console.log(`Found ${recentTransfers.length} recent transfers to master minter`)
 
     // Check if these transaction hashes are already used
