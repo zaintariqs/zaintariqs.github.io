@@ -47,9 +47,10 @@ async function detectTransfersViaRPC(supabase: any, pendingRedemptions: any[], m
     
     const blockData = await blockResponse.json()
     const currentBlock = parseInt(blockData.result, 16)
-    const fromBlock = currentBlock - 1000 // Check last ~1000 blocks (about 30 min on Base)
+    const fromBlock = currentBlock - 2000 // Check last ~2000 blocks (about 66 min on Base, 2s block time)
     
     console.log(`Scanning blocks ${fromBlock} to ${currentBlock} via RPC...`)
+    console.log(`Block range covers approximately ${(2000 * 2 / 60).toFixed(1)} minutes`)
     
     // ERC20 Transfer event signature: Transfer(address,address,uint256)
     const transferEventSignature = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
@@ -77,12 +78,19 @@ async function detectTransfersViaRPC(supabase: any, pendingRedemptions: any[], m
     
     const logsData = await logsResponse.json()
     
+    if (logsData.error) {
+      console.error('RPC getLogs error:', logsData.error)
+      return []
+    }
+    
     if (!logsData.result || logsData.result.length === 0) {
       console.log('No transfer events found via RPC')
+      console.log(`(Checked ${pendingRedemptions.length} pending redemptions)`)
       return []
     }
     
     console.log(`Found ${logsData.result.length} transfer events via RPC`)
+    console.log(`Matching against ${pendingRedemptions.length} pending redemptions...`)
     
     // Check which hashes are already used
     const transferHashes = logsData.result.map((log: TransferEvent) => log.transactionHash.toLowerCase())
@@ -127,6 +135,17 @@ async function detectTransfersViaRPC(supabase: any, pendingRedemptions: any[], m
         const amountMatch = Math.abs(amount - expectedAmount) / expectedAmount < 0.001
         const timeMatch = blockTimestamp >= redemptionTime && blockTimestamp <= redemptionTime + 24 * 60 * 60
         const addressMatch = fromAddress === userAddress
+        
+        // Debug logging for non-matches
+        if (addressMatch && !amountMatch) {
+          console.log(`  ⚠️  Amount mismatch for ${redemption.id}: expected ${expectedAmount}, got ${amount}`)
+        }
+        if (amountMatch && !addressMatch) {
+          console.log(`  ⚠️  Address mismatch: expected ${userAddress}, got ${fromAddress}`)
+        }
+        if (addressMatch && amountMatch && !timeMatch) {
+          console.log(`  ⚠️  Time mismatch: redemption at ${redemptionTime}, tx at ${blockTimestamp}`)
+        }
         
         if (addressMatch && amountMatch && timeMatch) {
           console.log(`✅ RPC Match found for redemption ${redemption.id}:`)
