@@ -1,5 +1,8 @@
 project_id = "jdjreuxhvzmzockuduyq"
 
+[functions.changehero-exchange]
+verify_jwt = false
+
 [functions.verify-email]
 verify_jwt = false
 

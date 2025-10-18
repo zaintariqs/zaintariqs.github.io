@@ -9,7 +9,8 @@ import {
   Receipt, 
   DollarSign,
   Activity,
-  PieChart
+  PieChart,
+  ArrowDownUp
 } from 'lucide-react'
 
 import {
@@ -41,6 +42,12 @@ const adminMenuItems = [
     url: '/dashboard/uniswap', 
     icon: Repeat,
     description: 'Trading interface'
+  },
+  { 
+    title: 'Crypto Exchange', 
+    url: '/dashboard/crypto-exchange', 
+    icon: ArrowDownUp,
+    description: 'Convert crypto to USDT'
   },
   { 
     title: 'Whitelisting', 

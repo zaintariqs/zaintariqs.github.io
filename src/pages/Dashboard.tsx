@@ -23,6 +23,8 @@ import AllRedemptionsPage from './admin/AllRedemptionsPage'
 import TransactionFeesPage from './admin/TransactionFeesPage'
 import MyActivityPage from './admin/MyActivityPage'
 import UserBalancesPage from './admin/UserBalancesPage'
+import CryptoExchangePage from './admin/CryptoExchangePage'
+import { CryptoExchangeSection } from '@/components/dashboard/CryptoExchangeSection'
 
 export default function Dashboard() {
   const { isConnected, address } = useAccount()
@@ -107,6 +109,7 @@ export default function Dashboard() {
                   {location.pathname === '/dashboard' && <AdminOverview />}
                   {location.pathname === '/dashboard/market-maker' && <MarketMakerPage />}
                   {location.pathname === '/dashboard/uniswap' && <UniswapPage />}
+                  {location.pathname === '/dashboard/crypto-exchange' && <CryptoExchangePage />}
                   {location.pathname === '/dashboard/whitelisting' && <WhitelistingPage />}
                   {location.pathname === '/dashboard/login-attempts' && <LoginAttemptsPage />}
                   {location.pathname === '/dashboard/all-deposits' && <AllDepositsPage />}
@@ -135,8 +138,9 @@ export default function Dashboard() {
             <BalanceCard />
 
             <Tabs defaultValue="topup" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="topup">Top-up</TabsTrigger>
+                <TabsTrigger value="exchange">Exchange</TabsTrigger>
                 <TabsTrigger value="redeem">Redeem</TabsTrigger>
                 <TabsTrigger value="deposits">My Deposits</TabsTrigger>
                 <TabsTrigger value="redemptions">My Redemptions</TabsTrigger>
@@ -144,6 +148,10 @@ export default function Dashboard() {
               
               <TabsContent value="topup" className="mt-6">
                 <TopUpSection />
+              </TabsContent>
+
+              <TabsContent value="exchange" className="mt-6">
+                <CryptoExchangeSection />
               </TabsContent>
               
               <TabsContent value="redeem" className="mt-6">
