@@ -214,9 +214,10 @@ export function CryptoExchangeSection() {
               <div className="space-y-2">
                 <Label>Your USDT Receiving Address</Label>
                 <Input
-                  placeholder="0x..."
+                  placeholder="Connect wallet to see address"
                   value={receivingAddress}
-                  onChange={(e) => setReceivingAddress(e.target.value)}
+                  disabled
+                  className="bg-muted"
                 />
               </div>
 
