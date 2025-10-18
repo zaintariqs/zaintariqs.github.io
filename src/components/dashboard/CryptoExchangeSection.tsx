@@ -269,10 +269,6 @@ export function CryptoExchangeSection() {
               </Button>
             </div>
           )}
-
-          <div className="text-xs text-muted-foreground">
-            Powered by ChangeHero • No registration required
-          </div>
         </CardContent>
       </Card>
     </div>
