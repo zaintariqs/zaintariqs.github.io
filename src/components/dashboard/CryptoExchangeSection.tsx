@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ArrowDownUp, Loader2, ExternalLink } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useAccount } from "wagmi";
 
 interface Currency {
   name: string;
@@ -22,6 +23,7 @@ interface ExchangeRate {
 }
 
 export function CryptoExchangeSection() {
+  const { address } = useAccount();
   const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [loading, setLoading] = useState(false);
   const [fromCurrency, setFromCurrency] = useState<string>("");
@@ -35,6 +37,12 @@ export function CryptoExchangeSection() {
   useEffect(() => {
     loadCurrencies();
   }, []);
+
+  useEffect(() => {
+    if (address) {
+      setReceivingAddress(address);
+    }
+  }, [address]);
 
   useEffect(() => {
     if (fromCurrency && toCurrency) {
