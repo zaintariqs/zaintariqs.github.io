@@ -45,6 +45,12 @@ const adminMenuItems = [
     description: 'Trading interface'
   },
   { 
+    title: 'Balancer Trading', 
+    url: '/dashboard/balancer', 
+    icon: Repeat,
+    description: 'Balancer DEX'
+  },
+  { 
     title: 'Crypto Exchange', 
     url: '/dashboard/crypto-exchange', 
     icon: ArrowDownUp,

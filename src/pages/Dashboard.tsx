@@ -6,6 +6,7 @@ import PKRFooter from '@/components/PKRFooter'
 import { BalanceCard } from '@/components/dashboard/BalanceCard'
 import { TopUpSection } from '@/components/dashboard/TopUpSection'
 import { UniswapSection } from '@/components/dashboard/UniswapSection'
+import { BalancerSection } from '@/components/dashboard/BalancerSection'
 import { RedeemSection } from '@/components/dashboard/RedeemSection'
 import { MyDepositsWrapper } from '@/components/dashboard/MyDepositsWrapper'
 import { MyRedemptions } from '@/components/dashboard/MyRedemptions'
@@ -17,6 +18,7 @@ import { supabase } from '@/integrations/supabase/client'
 import AdminOverview from './admin/AdminOverview'
 import MarketMakerPage from './admin/MarketMakerPage'
 import UniswapPage from './admin/UniswapPage'
+import BalancerPage from './admin/BalancerPage'
 import WhitelistingPage from './admin/WhitelistingPage'
 import LoginAttemptsPage from './admin/LoginAttemptsPage'
 import AllDepositsPage from './admin/AllDepositsPage'
@@ -111,6 +113,7 @@ export default function Dashboard() {
                   {location.pathname === '/dashboard' && <AdminOverview />}
                   {location.pathname === '/dashboard/market-maker' && <MarketMakerPage />}
                   {location.pathname === '/dashboard/uniswap' && <UniswapPage />}
+                  {location.pathname === '/dashboard/balancer' && <BalancerPage />}
                   {location.pathname === '/dashboard/crypto-exchange' && <CryptoExchangePage />}
                   {location.pathname === '/dashboard/whitelisting' && <WhitelistingPage />}
                   {location.pathname === '/dashboard/login-attempts' && <LoginAttemptsPage />}
@@ -173,6 +176,7 @@ export default function Dashboard() {
             <div className="space-y-8">
               <MyTradeHistory />
               <UniswapSection />
+              <BalancerSection />
             </div>
           </div>
         </main>
