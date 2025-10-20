@@ -681,6 +681,51 @@ export type Database = {
         }
         Relationships: []
       }
+      trade_history: {
+        Row: {
+          amount_in: number
+          amount_out: number
+          block_number: number
+          created_at: string
+          id: string
+          pool_address: string
+          price_at_trade: number
+          timestamp: string
+          token_in: string
+          token_out: string
+          transaction_hash: string
+          user_wallet_address: string
+        }
+        Insert: {
+          amount_in: number
+          amount_out: number
+          block_number: number
+          created_at?: string
+          id?: string
+          pool_address?: string
+          price_at_trade: number
+          timestamp: string
+          token_in: string
+          token_out: string
+          transaction_hash: string
+          user_wallet_address: string
+        }
+        Update: {
+          amount_in?: number
+          amount_out?: number
+          block_number?: number
+          created_at?: string
+          id?: string
+          pool_address?: string
+          price_at_trade?: number
+          timestamp?: string
+          token_in?: string
+          token_out?: string
+          transaction_hash?: string
+          user_wallet_address?: string
+        }
+        Relationships: []
+      }
       transaction_fees: {
         Row: {
           created_at: string

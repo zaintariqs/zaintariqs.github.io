@@ -10,7 +10,8 @@ import {
   DollarSign,
   Activity,
   PieChart,
-  ArrowDownUp
+  ArrowDownUp,
+  TrendingUp
 } from 'lucide-react'
 
 import {
@@ -90,6 +91,12 @@ const adminMenuItems = [
     url: '/dashboard/user-balances', 
     icon: PieChart,
     description: 'Token holder balances'
+  },
+  { 
+    title: 'Trade History', 
+    url: '/dashboard/trade-history', 
+    icon: TrendingUp,
+    description: 'Uniswap trade records'
   },
 ]
 

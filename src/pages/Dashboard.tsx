@@ -9,6 +9,7 @@ import { UniswapSection } from '@/components/dashboard/UniswapSection'
 import { RedeemSection } from '@/components/dashboard/RedeemSection'
 import { MyDeposits } from '@/components/dashboard/MyDeposits'
 import { MyRedemptions } from '@/components/dashboard/MyRedemptions'
+import { MyTradeHistory } from '@/components/dashboard/MyTradeHistory'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { AdminSidebar } from '@/components/dashboard/AdminSidebar'
@@ -24,6 +25,7 @@ import TransactionFeesPage from './admin/TransactionFeesPage'
 import MyActivityPage from './admin/MyActivityPage'
 import UserBalancesPage from './admin/UserBalancesPage'
 import CryptoExchangePage from './admin/CryptoExchangePage'
+import MyTradeHistoryPage from './admin/MyTradeHistoryPage'
 import { CryptoExchangeSection } from '@/components/dashboard/CryptoExchangeSection'
 
 export default function Dashboard() {
@@ -117,6 +119,7 @@ export default function Dashboard() {
                   {location.pathname === '/dashboard/fees' && <TransactionFeesPage />}
                   {location.pathname === '/dashboard/my-activity' && <MyActivityPage />}
                   {location.pathname === '/dashboard/user-balances' && <UserBalancesPage />}
+                  {location.pathname === '/dashboard/trade-history' && <MyTradeHistoryPage />}
                 </div>
               </main>
             </div>
@@ -138,12 +141,13 @@ export default function Dashboard() {
             <BalanceCard />
 
             <Tabs defaultValue="topup" className="w-full">
-              <TabsList className="grid w-full grid-cols-5">
+              <TabsList className="grid w-full grid-cols-6">
                 <TabsTrigger value="topup">Top-up</TabsTrigger>
                 <TabsTrigger value="exchange">Exchange</TabsTrigger>
                 <TabsTrigger value="redeem">Redeem</TabsTrigger>
                 <TabsTrigger value="deposits">My Deposits</TabsTrigger>
                 <TabsTrigger value="redemptions">My Redemptions</TabsTrigger>
+                <TabsTrigger value="trades">Trade History</TabsTrigger>
               </TabsList>
               
               <TabsContent value="topup" className="mt-6">
@@ -164,6 +168,10 @@ export default function Dashboard() {
               
               <TabsContent value="redemptions" className="mt-6">
                 <MyRedemptions />
+              </TabsContent>
+              
+              <TabsContent value="trades" className="mt-6">
+                <MyTradeHistory />
               </TabsContent>
             </Tabs>
 
