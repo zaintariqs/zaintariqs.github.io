@@ -1,4 +1,4 @@
-import { MyDeposits } from '@/components/dashboard/MyDeposits'
+import { MyDepositsWrapper } from '@/components/dashboard/MyDepositsWrapper'
 import { MyRedemptions } from '@/components/dashboard/MyRedemptions'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
@@ -10,7 +10,7 @@ export default function MyActivityPage() {
           My Activity
         </h1>
         <p className="text-white/70">
-          View your personal deposits and redemptions
+          View your deposits and redemptions
         </p>
       </div>
 
@@ -21,7 +21,7 @@ export default function MyActivityPage() {
         </TabsList>
         
         <TabsContent value="deposits" className="mt-6">
-          <MyDeposits />
+          <MyDepositsWrapper />
         </TabsContent>
         
         <TabsContent value="redemptions" className="mt-6">

@@ -762,6 +762,39 @@ export type Database = {
         }
         Relationships: []
       }
+      usdt_deposits: {
+        Row: {
+          amount_usdt: number
+          block_number: number
+          created_at: string
+          from_address: string
+          id: string
+          timestamp: string
+          transaction_hash: string
+          user_wallet_address: string
+        }
+        Insert: {
+          amount_usdt: number
+          block_number: number
+          created_at?: string
+          from_address: string
+          id?: string
+          timestamp: string
+          transaction_hash: string
+          user_wallet_address: string
+        }
+        Update: {
+          amount_usdt?: number
+          block_number?: number
+          created_at?: string
+          from_address?: string
+          id?: string
+          timestamp?: string
+          transaction_hash?: string
+          user_wallet_address?: string
+        }
+        Relationships: []
+      }
       used_transaction_hashes: {
         Row: {
           created_at: string

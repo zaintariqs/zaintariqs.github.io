@@ -7,7 +7,7 @@ import { BalanceCard } from '@/components/dashboard/BalanceCard'
 import { TopUpSection } from '@/components/dashboard/TopUpSection'
 import { UniswapSection } from '@/components/dashboard/UniswapSection'
 import { RedeemSection } from '@/components/dashboard/RedeemSection'
-import { MyDeposits } from '@/components/dashboard/MyDeposits'
+import { MyDepositsWrapper } from '@/components/dashboard/MyDepositsWrapper'
 import { MyRedemptions } from '@/components/dashboard/MyRedemptions'
 import { MyTradeHistory } from '@/components/dashboard/MyTradeHistory'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -141,13 +141,12 @@ export default function Dashboard() {
             <BalanceCard />
 
             <Tabs defaultValue="topup" className="w-full">
-              <TabsList className="grid w-full grid-cols-6">
+              <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="topup">Top-up</TabsTrigger>
                 <TabsTrigger value="exchange">Exchange</TabsTrigger>
                 <TabsTrigger value="redeem">Redeem</TabsTrigger>
-                <TabsTrigger value="deposits">My Deposits</TabsTrigger>
-                <TabsTrigger value="redemptions">My Redemptions</TabsTrigger>
-                <TabsTrigger value="trades">Trade History</TabsTrigger>
+                <TabsTrigger value="deposits">Deposits</TabsTrigger>
+                <TabsTrigger value="redemptions">Redemptions</TabsTrigger>
               </TabsList>
               
               <TabsContent value="topup" className="mt-6">
@@ -163,19 +162,18 @@ export default function Dashboard() {
               </TabsContent>
               
               <TabsContent value="deposits" className="mt-6">
-                <MyDeposits />
+                <MyDepositsWrapper />
               </TabsContent>
               
               <TabsContent value="redemptions" className="mt-6">
                 <MyRedemptions />
               </TabsContent>
-              
-              <TabsContent value="trades" className="mt-6">
-                <MyTradeHistory />
-              </TabsContent>
             </Tabs>
 
-            <UniswapSection />
+            <div className="space-y-8">
+              <MyTradeHistory />
+              <UniswapSection />
+            </div>
           </div>
         </main>
       )}
