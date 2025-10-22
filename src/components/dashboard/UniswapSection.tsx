@@ -1,18 +1,66 @@
 import { useState, useEffect } from 'react'
+import { useAccount } from 'wagmi'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ExternalLink, TrendingUp } from 'lucide-react'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { ExternalLink, TrendingUp, Lock, Loader2 } from 'lucide-react'
 
 // PKRSC Contract Address
 const PKRSC_CONTRACT_ADDRESS = '0x220aC54E22056B834522cD1A6A3DfeCA63bC3C6e'
 
 export function UniswapSection() {
+  const { address, isConnected } = useAccount()
   const [poolData, setPoolData] = useState({
     tvl: '$0',
     volume24h: '$0',
     loading: true
   })
+  const [whitelistStatus, setWhitelistStatus] = useState<{
+    isWhitelisted: boolean
+    isAdmin: boolean
+    checking: boolean
+  }>({
+    isWhitelisted: false,
+    isAdmin: false,
+    checking: true
+  })
   
+
+  // Check whitelist status
+  useEffect(() => {
+    const checkWhitelist = async () => {
+      if (!isConnected || !address) {
+        setWhitelistStatus({ isWhitelisted: false, isAdmin: false, checking: false })
+        return
+      }
+
+      try {
+        const response = await fetch(
+          'https://jdjreuxhvzmzockuduyq.supabase.co/functions/v1/check-whitelist',
+          {
+            method: 'GET',
+            headers: {
+              'x-wallet-address': address,
+            },
+          }
+        )
+
+        if (response.ok) {
+          const data = await response.json()
+          setWhitelistStatus({
+            isWhitelisted: data.isWhitelisted || data.isAdmin,
+            isAdmin: data.isAdmin,
+            checking: false
+          })
+        }
+      } catch (error) {
+        console.error('Error checking whitelist:', error)
+        setWhitelistStatus({ isWhitelisted: false, isAdmin: false, checking: false })
+      }
+    }
+
+    checkWhitelist()
+  }, [address, isConnected])
 
   // Fetch actual PKRSC/USDT pool data from Uniswap V3 subgraph
   useEffect(() => {
@@ -118,6 +166,22 @@ export function UniswapSection() {
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Whitelist Status Check */}
+        {whitelistStatus.checking ? (
+          <Alert>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <AlertDescription>Verifying whitelist status...</AlertDescription>
+          </Alert>
+        ) : !whitelistStatus.isWhitelisted ? (
+          <Alert variant="destructive">
+            <Lock className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Access Restricted:</strong> Only whitelisted addresses can interact with this pool. 
+              Please complete the whitelist application process to trade on Uniswap.
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
         {/* Pool Information */}
         <div className="grid grid-cols-2 gap-4">
           <div className="p-4 bg-muted/30 rounded-lg">
@@ -136,46 +200,50 @@ export function UniswapSection() {
           </div>
         </div>
 
-        {/* Embedded Uniswap Swap Interface */}
-        <div className="bg-card border border-border rounded-lg overflow-hidden">
-          <iframe
-            src="https://app.uniswap.org/swap?chain=base&inputCurrency=0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2&outputCurrency=0x220aC54E22056B834522cD1A6A3DfeCA63bC3C6e&theme=dark"
-            width="100%"
-            height="660px"
-            style={{ border: 'none', minHeight: '660px' }}
-            title="Uniswap Swap Interface"
-          />
-        </div>
+        {/* Embedded Uniswap Swap Interface - Only for whitelisted users */}
+        {whitelistStatus.isWhitelisted && (
+          <>
+            <div className="bg-card border border-border rounded-lg overflow-hidden">
+              <iframe
+                src="https://app.uniswap.org/swap?chain=base&inputCurrency=0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2&outputCurrency=0x220aC54E22056B834522cD1A6A3DfeCA63bC3C6e&theme=dark"
+                width="100%"
+                height="660px"
+                style={{ border: 'none', minHeight: '660px' }}
+                title="Uniswap Swap Interface"
+              />
+            </div>
 
-        {/* Action Buttons */}
-        <div className="flex gap-3 justify-center">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              window.open(
-                'https://app.uniswap.org/swap?chain=base&inputCurrency=0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2&outputCurrency=0x220aC54E22056B834522cD1A6A3DfeCA63bC3C6e',
-                '_blank'
-              )
-            }
-          >
-            Open Swap
-            <ExternalLink className="ml-2 h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              window.open(
-                'https://app.uniswap.org/explore/pools/base/0x1bC6fB786B7B5BA4D31A7F47a75eC3Fd3B26690E',
-                '_blank'
-              )
-            }
-          >
-            View Pool
-            <ExternalLink className="ml-2 h-4 w-4" />
-          </Button>
-        </div>
+            {/* Action Buttons */}
+            <div className="flex gap-3 justify-center">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  window.open(
+                    'https://app.uniswap.org/swap?chain=base&inputCurrency=0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2&outputCurrency=0x220aC54E22056B834522cD1A6A3DfeCA63bC3C6e',
+                    '_blank'
+                  )
+                }
+              >
+                Open Swap
+                <ExternalLink className="ml-2 h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  window.open(
+                    'https://app.uniswap.org/explore/pools/base/0x1bC6fB786B7B5BA4D31A7F47a75eC3Fd3B26690E',
+                    '_blank'
+                  )
+                }
+              >
+                View Pool
+                <ExternalLink className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+          </>
+        )}
 
         {/* Warning */}
         <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">

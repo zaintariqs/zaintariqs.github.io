@@ -1,18 +1,66 @@
 import { useState, useEffect } from 'react'
+import { useAccount } from 'wagmi'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ExternalLink, TrendingUp } from 'lucide-react'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { ExternalLink, TrendingUp, Lock, Loader2 } from 'lucide-react'
 
 // PKRSC Contract Address
 const PKRSC_CONTRACT_ADDRESS = '0x220aC54E22056B834522cD1A6A3DfeCA63bC3C6e'
 const USDT_ADDRESS = '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2'
 
 export function BalancerSection() {
+  const { address, isConnected } = useAccount()
   const [poolData, setPoolData] = useState({
     tvl: '$0',
     volume24h: '$0',
     loading: true
   })
+  const [whitelistStatus, setWhitelistStatus] = useState<{
+    isWhitelisted: boolean
+    isAdmin: boolean
+    checking: boolean
+  }>({
+    isWhitelisted: false,
+    isAdmin: false,
+    checking: true
+  })
+
+  // Check whitelist status
+  useEffect(() => {
+    const checkWhitelist = async () => {
+      if (!isConnected || !address) {
+        setWhitelistStatus({ isWhitelisted: false, isAdmin: false, checking: false })
+        return
+      }
+
+      try {
+        const response = await fetch(
+          'https://jdjreuxhvzmzockuduyq.supabase.co/functions/v1/check-whitelist',
+          {
+            method: 'GET',
+            headers: {
+              'x-wallet-address': address,
+            },
+          }
+        )
+
+        if (response.ok) {
+          const data = await response.json()
+          setWhitelistStatus({
+            isWhitelisted: data.isWhitelisted || data.isAdmin,
+            isAdmin: data.isAdmin,
+            checking: false
+          })
+        }
+      } catch (error) {
+        console.error('Error checking whitelist:', error)
+        setWhitelistStatus({ isWhitelisted: false, isAdmin: false, checking: false })
+      }
+    }
+
+    checkWhitelist()
+  }, [address, isConnected])
 
   // Fetch pool data - you'll need to replace with your actual Balancer pool ID
   useEffect(() => {
@@ -52,6 +100,22 @@ export function BalancerSection() {
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Whitelist Status Check */}
+        {whitelistStatus.checking ? (
+          <Alert>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <AlertDescription>Verifying whitelist status...</AlertDescription>
+          </Alert>
+        ) : !whitelistStatus.isWhitelisted ? (
+          <Alert variant="destructive">
+            <Lock className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Access Restricted:</strong> Only whitelisted addresses can interact with this pool. 
+              Please complete the whitelist application process to trade on Balancer.
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
         {/* Pool Information */}
         <div className="grid grid-cols-2 gap-4">
           <div className="p-4 bg-muted/30 rounded-lg">
@@ -70,54 +134,58 @@ export function BalancerSection() {
           </div>
         </div>
 
-        {/* Embedded Balancer Swap Interface */}
-        <div className="bg-card border border-border rounded-lg overflow-hidden">
-          <iframe
-            src={`https://app.balancer.fi/#/base/swap/${USDT_ADDRESS}/${PKRSC_CONTRACT_ADDRESS}`}
-            width="100%"
-            height="660px"
-            style={{ border: 'none', minHeight: '660px' }}
-            title="Balancer Swap Interface"
-          />
-        </div>
+        {/* Embedded Balancer Swap Interface - Only for whitelisted users */}
+        {whitelistStatus.isWhitelisted && (
+          <>
+            <div className="bg-card border border-border rounded-lg overflow-hidden">
+              <iframe
+                src={`https://app.balancer.fi/#/base/swap/${USDT_ADDRESS}/${PKRSC_CONTRACT_ADDRESS}`}
+                width="100%"
+                height="660px"
+                style={{ border: 'none', minHeight: '660px' }}
+                title="Balancer Swap Interface"
+              />
+            </div>
 
-        {/* Action Buttons */}
-        <div className="flex gap-3 justify-center">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              window.open(
-                `https://app.balancer.fi/#/base/swap/${USDT_ADDRESS}/${PKRSC_CONTRACT_ADDRESS}`,
-                '_blank'
-              )
-            }
-          >
-            Open Swap
-            <ExternalLink className="ml-2 h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              window.open(
-                'https://app.balancer.fi/#/base/pools',
-                '_blank'
-              )
-            }
-          >
-            View Pools
-            <ExternalLink className="ml-2 h-4 w-4" />
-          </Button>
-        </div>
+            {/* Action Buttons */}
+            <div className="flex gap-3 justify-center">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  window.open(
+                    `https://app.balancer.fi/#/base/swap/${USDT_ADDRESS}/${PKRSC_CONTRACT_ADDRESS}`,
+                    '_blank'
+                  )
+                }
+              >
+                Open Swap
+                <ExternalLink className="ml-2 h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  window.open(
+                    'https://app.balancer.fi/#/base/pools',
+                    '_blank'
+                  )
+                }
+              >
+                View Pools
+                <ExternalLink className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
 
-        {/* Info Note */}
-        <div className="p-3 bg-primary/10 border border-primary/20 rounded-lg">
-          <div className="text-xs text-black dark:text-white">
-            <strong>Note:</strong> Once you create your permissioned pool on Balancer, 
-            update the pool ID in this component to fetch real-time data.
-          </div>
-        </div>
+            {/* Info Note */}
+            <div className="p-3 bg-primary/10 border border-primary/20 rounded-lg">
+              <div className="text-xs text-black dark:text-white">
+                <strong>Note:</strong> Once you create your permissioned pool on Balancer, 
+                update the pool ID in this component to fetch real-time data.
+              </div>
+            </div>
+          </>
+        )}
 
         {/* Warning */}
         <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
