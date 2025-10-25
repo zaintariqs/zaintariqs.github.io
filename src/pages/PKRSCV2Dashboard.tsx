@@ -26,8 +26,8 @@ const PKRSCV2Dashboard = () => {
   const [copied, setCopied] = useState(false);
 
   // Fee calculations
-  const MINT_FEE_PERCENT = 0.3;
-  const BURN_FEE_PERCENT = 0.3;
+  const MINT_FEE_PERCENT = 0.25;
+  const BURN_FEE_PERCENT = 0.25;
   const TOTAL_FEE_PERCENT = MINT_FEE_PERCENT + BURN_FEE_PERCENT;
 
   const grossPkrAmount = pkrAmount;
@@ -208,15 +208,15 @@ const PKRSCV2Dashboard = () => {
                           <span>{grossPkrAmount.toLocaleString('en-US', { maximumFractionDigits: 2 })} PKR</span>
                         </div>
                         <div className="flex justify-between text-white/70 text-sm">
-                          <span>Mint Fee (0.3%):</span>
+                          <span>Mint Fee (0.25%):</span>
                           <span>-{mintFee.toLocaleString('en-US', { maximumFractionDigits: 2 })} PKR</span>
                         </div>
                         <div className="flex justify-between text-white/70 text-sm">
-                          <span>Burn Fee (0.3%):</span>
+                          <span>Burn Fee (0.25%):</span>
                           <span>-{burnFee.toLocaleString('en-US', { maximumFractionDigits: 2 })} PKR</span>
                         </div>
                         <div className="border-t border-white/20 pt-2 flex justify-between text-white/70 text-sm">
-                          <span>Total Fees (0.6%):</span>
+                          <span>Total Fees (0.5%):</span>
                           <span>-{totalFees.toLocaleString('en-US', { maximumFractionDigits: 2 })} PKR</span>
                         </div>
                         <div className="border-t border-white/20 pt-2 flex justify-between">
@@ -297,15 +297,15 @@ const PKRSCV2Dashboard = () => {
                         <span>{grossPkrAmount.toLocaleString('en-US', { maximumFractionDigits: 2 })} PKR</span>
                       </div>
                       <div className="flex justify-between text-white/70 text-sm">
-                        <span>Mint Fee (0.3%):</span>
+                        <span>Mint Fee (0.25%):</span>
                         <span>-{mintFee.toLocaleString('en-US', { maximumFractionDigits: 2 })} PKR</span>
                       </div>
                       <div className="flex justify-between text-white/70 text-sm">
-                        <span>Burn Fee (0.3%):</span>
+                        <span>Burn Fee (0.25%):</span>
                         <span>-{burnFee.toLocaleString('en-US', { maximumFractionDigits: 2 })} PKR</span>
                       </div>
                       <div className="border-t border-white/20 pt-2 flex justify-between text-white/70 text-sm">
-                        <span>Total Fees (0.6%):</span>
+                        <span>Total Fees (0.5%):</span>
                         <span>-{totalFees.toLocaleString('en-US', { maximumFractionDigits: 2 })} PKR</span>
                       </div>
                       <div className="border-t border-white/20 pt-2 flex justify-between">
