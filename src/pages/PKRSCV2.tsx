@@ -1,10 +1,23 @@
 import PKRHeader from "@/components/PKRHeader";
 import PKRFooter from "@/components/PKRFooter";
+import WalletConnect from "@/components/WalletConnect";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Shield, Zap, Users } from "lucide-react";
+import { useAccount } from "wagmi";
+import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 
 const PKRSCV2 = () => {
+  const { isConnected } = useAccount();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isConnected) {
+      navigate("/pkrsc/v2/dashboard");
+    }
+  }, [isConnected, navigate]);
+
   return (
     <div className="min-h-screen bg-crypto-dark">
       <PKRHeader />
@@ -81,13 +94,9 @@ const PKRSCV2 = () => {
           {/* CTA Section */}
           <div className="text-center space-y-6 pt-8">
             <h2 className="text-2xl font-bold text-white">Ready to Experience V2?</h2>
-            <div className="flex gap-4 justify-center">
-              <Button size="lg" className="bg-primary hover:bg-primary/90">
-                Get Whitelisted
-              </Button>
-              <Button size="lg" variant="outline" className="border-white/20 text-white hover:bg-white/10">
-                View Documentation
-              </Button>
+            <p className="text-white/70 mb-6">Connect your wallet to get started</p>
+            <div className="flex justify-center">
+              <WalletConnect />
             </div>
           </div>
         </div>
