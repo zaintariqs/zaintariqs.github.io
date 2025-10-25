@@ -13,6 +13,7 @@ import Security from "./pages/Security";
 import LearnMore from "./pages/LearnMore";
 import FAQ from "./pages/FAQ";
 import Dashboard from "./pages/Dashboard";
+import PKRSCV2 from "./pages/PKRSCV2";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,6 +32,7 @@ const AppContent = () => {
         <Route path="/security" element={<Security />} />
         <Route path="/learn-more" element={<LearnMore />} />
         <Route path="/faq" element={<FAQ />} />
+        <Route path="/pkrsc/v2" element={<PKRSCV2 />} />
         <Route path="/dashboard/*" element={
           <WhitelistCheck>
             <Dashboard />

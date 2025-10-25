@@ -52,6 +52,9 @@ const PKRHeader = () => {
             <Link to="/learn-more" className="text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
               {t.learnMore}
             </Link>
+            <Link to="/pkrsc/v2" className="text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
+              V2
+            </Link>
           </nav>
         )}
 
@@ -110,6 +113,9 @@ const PKRHeader = () => {
                 </Link>
                 <Link to="/learn-more" className="block text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
                   {t.learnMore}
+                </Link>
+                <Link to="/pkrsc/v2" className="block text-sm font-medium text-gray-300 hover:text-crypto-green transition-colors">
+                  V2
                 </Link>
               </>
             )}
