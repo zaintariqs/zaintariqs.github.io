@@ -11,57 +11,66 @@ serve(async (req) => {
   }
 
   try {
-    console.log('Fetching USD/PKR exchange rate from xe.com...');
+    console.log('Fetching USD/PKR exchange rate from Google Finance...');
 
     let pkrRate: number | null = null;
 
     try {
-      const response = await fetch('https://www.xe.com/currencyconverter/convert/?Amount=1&From=USD&To=PKR', {
+      // Try Google Finance first
+      const response = await fetch('https://www.google.com/finance/quote/USD-PKR', {
         headers: {
-          'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36',
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
           'Accept-Language': 'en-US,en;q=0.9',
         },
       });
 
       if (!response.ok) {
-        throw new Error(`xe.com responded with status ${response.status}`);
+        throw new Error(`Google Finance responded with status ${response.status}`);
       }
 
       const html = await response.text();
+      console.log('Fetched Google Finance page, parsing...');
 
+      // Google Finance patterns
       const patterns = [
-        /(\d{1,3}(?:,\d{3})*(?:\.\d+)?)[\s]*Pakistani\s*Rupees?/i, // e.g., "283.12 Pakistani Rupees"
-        /1\s*USD\s*=\s*(\d{1,3}(?:,\d{3})*(?:\.\d+)?)[\s]*PKR/i,   // e.g., "1 USD = 283.12 PKR"
-        /"to"[^}]*"amount":"(\d{1,3}(?:,\d{3})*(?:\.\d+)?)"/,     // JSON blob in the page
+        /data-last-price="(\d+\.?\d*)"/,  // data-last-price attribute
+        /data-mid="(\d+\.?\d*)"/,          // data-mid attribute
+        /"price":"(\d+\.?\d*)"/,           // JSON price field
+        /class="[^"]*YMlKec[^"]*">(\d+\.?\d*)</,  // Google Finance price class
       ];
 
-      for (const p of patterns) {
-        const m = html.match(p);
-        if (m && m[1]) {
-          const normalized = m[1].replace(/,/g, '');
-          const parsed = parseFloat(normalized);
-          if (!Number.isNaN(parsed)) {
+      for (const pattern of patterns) {
+        const match = html.match(pattern);
+        if (match && match[1]) {
+          const parsed = parseFloat(match[1]);
+          if (!Number.isNaN(parsed) && parsed > 0) {
             pkrRate = parsed;
+            console.log('Found rate using pattern:', pattern.source);
             break;
           }
         }
       }
 
       if (pkrRate) {
-        console.log('USD/PKR rate (xe.com):', pkrRate);
+        console.log('USD/PKR rate (Google Finance):', pkrRate);
         return new Response(
-          JSON.stringify({ success: true, rate: pkrRate, timestamp: new Date().toISOString(), base: 'USD', source: 'xe.com' }),
+          JSON.stringify({ 
+            success: true, 
+            rate: pkrRate, 
+            timestamp: new Date().toISOString(), 
+            base: 'USD', 
+            source: 'Google Finance' 
+          }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 },
         );
       }
 
-      throw new Error('Could not parse rate from xe.com HTML');
-    } catch (xeError) {
-      console.warn('xe.com fetch/parse failed, falling back to exchangerate.host:', (xeError as Error)?.message || xeError);
+      throw new Error('Could not parse rate from Google Finance');
+    } catch (googleError) {
+      console.warn('Google Finance failed, falling back to exchangerate.host:', (googleError as Error)?.message || googleError);
 
-      // Fallback: exchangerate.host (free, reliable)
+      // Fallback to exchangerate.host
       const fbRes = await fetch('https://api.exchangerate.host/latest?base=USD&symbols=PKR');
       if (!fbRes.ok) {
         throw new Error(`Fallback provider error: ${fbRes.status}`);
@@ -73,9 +82,15 @@ serve(async (req) => {
         throw new Error('PKR rate not found in fallback response');
       }
 
-      console.log('USD/PKR rate (fallback exchangerate.host):', pkrRate);
+      console.log('USD/PKR rate (exchangerate.host):', pkrRate);
       return new Response(
-        JSON.stringify({ success: true, rate: pkrRate, timestamp: new Date().toISOString(), base: 'USD', source: 'exchangerate.host' }),
+        JSON.stringify({ 
+          success: true, 
+          rate: pkrRate, 
+          timestamp: new Date().toISOString(), 
+          base: 'USD', 
+          source: 'exchangerate.host' 
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 },
       );
     }
