@@ -846,6 +846,54 @@ export type Database = {
         }
         Relationships: []
       }
+      v2_deposits: {
+        Row: {
+          chain: string
+          completed_at: string | null
+          confirmations: number | null
+          created_at: string
+          deposit_address: string
+          exchange_rate_at_creation: number
+          expected_pkr_amount: number
+          id: string
+          status: string
+          transaction_hash: string | null
+          updated_at: string
+          usdt_amount: number
+          wallet_address: string
+        }
+        Insert: {
+          chain?: string
+          completed_at?: string | null
+          confirmations?: number | null
+          created_at?: string
+          deposit_address: string
+          exchange_rate_at_creation: number
+          expected_pkr_amount: number
+          id?: string
+          status?: string
+          transaction_hash?: string | null
+          updated_at?: string
+          usdt_amount: number
+          wallet_address: string
+        }
+        Update: {
+          chain?: string
+          completed_at?: string | null
+          confirmations?: number | null
+          created_at?: string
+          deposit_address?: string
+          exchange_rate_at_creation?: number
+          expected_pkr_amount?: number
+          id?: string
+          status?: string
+          transaction_hash?: string | null
+          updated_at?: string
+          usdt_amount?: number
+          wallet_address?: string
+        }
+        Relationships: []
+      }
       welcome_bonuses: {
         Row: {
           amount: number
@@ -985,10 +1033,7 @@ export type Database = {
           limit_remaining: number
         }[]
       }
-      cleanup_old_rate_limits: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
+      cleanup_old_rate_limits: { Args: never; Returns: number }
       detect_burn_anomaly: {
         Args: { burn_amount_pkrsc: number }
         Returns: {
@@ -998,7 +1043,7 @@ export type Database = {
         }[]
       }
       get_market_maker_cron_status: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           active: boolean
           jobname: string
@@ -1008,22 +1053,16 @@ export type Database = {
         }[]
       }
       get_market_maker_status: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           last_trade_at: string
           status: Database["public"]["Enums"]["bot_status"]
         }[]
       }
-      get_master_minter_address: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      get_promotional_reserve_balance: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
+      get_master_minter_address: { Args: never; Returns: string }
+      get_promotional_reserve_balance: { Args: never; Returns: number }
       get_redemption_burn_cron_status: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           active: boolean
           jobname: string
@@ -1046,26 +1085,11 @@ export type Database = {
         }
         Returns: boolean
       }
-      hash_verification_code: {
-        Args: { code: string }
-        Returns: string
-      }
-      is_admin_wallet: {
-        Args: { wallet_addr: string }
-        Returns: boolean
-      }
-      is_nonce_used: {
-        Args: { _nonce: string }
-        Returns: boolean
-      }
-      is_wallet_owner: {
-        Args: { wallet_address: string }
-        Returns: boolean
-      }
-      is_wallet_whitelisted: {
-        Args: { wallet_addr: string }
-        Returns: boolean
-      }
+      hash_verification_code: { Args: { code: string }; Returns: string }
+      is_admin_wallet: { Args: { wallet_addr: string }; Returns: boolean }
+      is_nonce_used: { Args: { _nonce: string }; Returns: boolean }
+      is_wallet_owner: { Args: { wallet_address: string }; Returns: boolean }
+      is_wallet_whitelisted: { Args: { wallet_addr: string }; Returns: boolean }
       log_pii_access: {
         Args: {
           p_accessed_by: string
@@ -1077,14 +1101,8 @@ export type Database = {
         }
         Returns: undefined
       }
-      mask_phone_number: {
-        Args: { phone: string }
-        Returns: string
-      }
-      toggle_market_maker_cron: {
-        Args: { enable: boolean }
-        Returns: boolean
-      }
+      mask_phone_number: { Args: { phone: string }; Returns: string }
+      toggle_market_maker_cron: { Args: { enable: boolean }; Returns: boolean }
       update_pkr_reserves: {
         Args: { amount_change: number; updated_by_wallet: string }
         Returns: undefined

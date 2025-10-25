@@ -1,6 +1,6 @@
 import PKRHeader from "@/components/PKRHeader";
 import PKRFooter from "@/components/PKRFooter";
-import WalletConnect from "@/components/WalletConnect";
+import { WalletConnect } from "@/components/WalletConnect";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Shield, Zap, Users } from "lucide-react";

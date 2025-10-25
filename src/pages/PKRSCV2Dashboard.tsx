@@ -3,7 +3,7 @@ import { useAccount } from "wagmi";
 import { useNavigate } from "react-router-dom";
 import PKRHeader from "@/components/PKRHeader";
 import PKRFooter from "@/components/PKRFooter";
-import WhitelistCheck from "@/components/WhitelistCheck";
+import { WhitelistCheck } from "@/components/WhitelistCheck";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
