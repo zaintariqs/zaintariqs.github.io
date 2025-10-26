@@ -9,7 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowRight, RefreshCw, Loader2, Copy, CheckCircle2 } from "lucide-react";
+import { ArrowRight, RefreshCw, Loader2, Copy, CheckCircle2, Building2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { z } from "zod";
 
 const PKRSCV2Dashboard = () => {
   const { address, isConnected } = useAccount();
@@ -23,7 +26,13 @@ const PKRSCV2Dashboard = () => {
   const [depositAddress, setDepositAddress] = useState("");
   const [depositId, setDepositId] = useState("");
   const [showDeposit, setShowDeposit] = useState(false);
+  const [showBankDetails, setShowBankDetails] = useState(false);
   const [copied, setCopied] = useState(false);
+  
+  // Bank details state
+  const [selectedBank, setSelectedBank] = useState("");
+  const [iban, setIban] = useState("");
+  const [accountHolderName, setAccountHolderName] = useState("");
 
   // Fee calculations
   const MINT_FEE_PERCENT = 0.25;
@@ -35,6 +44,43 @@ const PKRSCV2Dashboard = () => {
   const burnFee = (grossPkrAmount * BURN_FEE_PERCENT) / 100;
   const totalFees = mintFee + burnFee;
   const netPkrAmount = grossPkrAmount - totalFees;
+
+  // Pakistani banks list
+  const pakistaniBanks = [
+    "EasyPaisa",
+    "JazzCash",
+    "HBL (Habib Bank Limited)",
+    "UBL (United Bank Limited)",
+    "MCB (Muslim Commercial Bank)",
+    "Allied Bank",
+    "Bank Alfalah",
+    "Meezan Bank",
+    "Faysal Bank",
+    "Standard Chartered Bank",
+    "Bank Al-Habib",
+    "Askari Bank",
+    "National Bank of Pakistan",
+    "Soneri Bank",
+    "JS Bank",
+    "Silk Bank",
+    "Summit Bank",
+    "Samba Bank",
+  ];
+
+  // Validation schema
+  const bankDetailsSchema = z.object({
+    bank: z.string().min(1, "Please select a bank"),
+    iban: z.string()
+      .trim()
+      .min(24, "IBAN must be at least 24 characters")
+      .max(24, "IBAN must be exactly 24 characters")
+      .regex(/^PK\d{2}[A-Z]{4}\d{16}$/, "Invalid IBAN format (e.g., PK36ABCD0000001234567890)"),
+    accountHolderName: z.string()
+      .trim()
+      .min(3, "Account holder name must be at least 3 characters")
+      .max(100, "Account holder name must be less than 100 characters")
+      .regex(/^[a-zA-Z\s]+$/, "Account holder name can only contain letters and spaces"),
+  });
 
   useEffect(() => {
     if (!isConnected) {
@@ -82,7 +128,7 @@ const PKRSCV2Dashboard = () => {
     }
   };
 
-  const handleProceedToDeposit = async () => {
+  const handleProceedToBankDetails = () => {
     if (!usdtAmount || parseFloat(usdtAmount) <= 0) {
       toast({
         title: "Invalid Amount",
@@ -90,6 +136,27 @@ const PKRSCV2Dashboard = () => {
         variant: "destructive",
       });
       return;
+    }
+    setShowBankDetails(true);
+  };
+
+  const handleSubmitBankDetails = async () => {
+    // Validate bank details
+    try {
+      bankDetailsSchema.parse({
+        bank: selectedBank,
+        iban: iban,
+        accountHolderName: accountHolderName,
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast({
+          title: "Validation Error",
+          description: error.errors[0].message,
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     setLoading(true);
@@ -101,7 +168,12 @@ const PKRSCV2Dashboard = () => {
         body: {
           usdtAmount: parseFloat(usdtAmount),
           pkrAmount,
-          exchangeRate: usdPkrRate
+          exchangeRate: usdPkrRate,
+          bankDetails: {
+            bank: selectedBank,
+            iban: iban.toUpperCase(),
+            accountHolderName: accountHolderName.trim(),
+          }
         }
       });
 
@@ -110,6 +182,7 @@ const PKRSCV2Dashboard = () => {
       if (data?.success) {
         setDepositAddress(data.depositAddress);
         setDepositId(data.depositId);
+        setShowBankDetails(false);
         setShowDeposit(true);
         toast({
           title: "Deposit Address Generated",
@@ -140,10 +213,14 @@ const PKRSCV2Dashboard = () => {
 
   const startNewExchange = () => {
     setShowDeposit(false);
+    setShowBankDetails(false);
     setUsdtAmount("");
     setPkrAmount(0);
     setDepositAddress("");
     setDepositId("");
+    setSelectedBank("");
+    setIban("");
+    setAccountHolderName("");
   };
 
   return (
@@ -158,7 +235,7 @@ const PKRSCV2Dashboard = () => {
               <p className="text-white/70">Convert USDT to Pakistani Rupees instantly</p>
             </div>
 
-            {!showDeposit ? (
+            {!showDeposit && !showBankDetails ? (
               <>
                 {/* Exchange Rate Card */}
                 <Card className="p-6 bg-white/5 border-white/10">
@@ -229,10 +306,93 @@ const PKRSCV2Dashboard = () => {
                     </div>
 
                     <Button
-                      onClick={handleProceedToDeposit}
-                      disabled={loading || !usdtAmount}
+                      onClick={handleProceedToBankDetails}
+                      disabled={!usdtAmount}
                       className="w-full bg-primary hover:bg-primary/90"
                       size="lg"
+                    >
+                      Continue
+                    </Button>
+                  </div>
+                </Card>
+              </>
+            ) : showBankDetails ? (
+              /* Bank Details Form */
+              <Card className="p-6 bg-white/5 border-white/10">
+                <div className="space-y-6">
+                  <div className="text-center">
+                    <Building2 className="w-16 h-16 text-primary mx-auto mb-4" />
+                    <h2 className="text-2xl font-bold text-white mb-2">Bank Account Details</h2>
+                    <p className="text-white/70">Enter your bank details to receive PKR</p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="bank" className="text-white text-sm mb-2 block">Select Bank</Label>
+                      <Select value={selectedBank} onValueChange={setSelectedBank}>
+                        <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                          <SelectValue placeholder="Choose your bank" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-crypto-dark border-white/20 z-50">
+                          {pakistaniBanks.map((bank) => (
+                            <SelectItem 
+                              key={bank} 
+                              value={bank}
+                              className="text-white hover:bg-white/10 focus:bg-white/10 cursor-pointer"
+                            >
+                              {bank}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="iban" className="text-white text-sm mb-2 block">IBAN Number</Label>
+                      <Input
+                        id="iban"
+                        type="text"
+                        placeholder="PK36ABCD0000001234567890"
+                        value={iban}
+                        onChange={(e) => setIban(e.target.value.toUpperCase())}
+                        className="bg-white/10 border-white/20 text-white placeholder:text-white/50 font-mono"
+                        maxLength={24}
+                      />
+                      <p className="text-white/50 text-xs mt-1">24 characters starting with PK</p>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="accountHolder" className="text-white text-sm mb-2 block">Account Holder Name</Label>
+                      <Input
+                        id="accountHolder"
+                        type="text"
+                        placeholder="Enter full name as per bank account"
+                        value={accountHolderName}
+                        onChange={(e) => setAccountHolderName(e.target.value)}
+                        className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                        maxLength={100}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="bg-primary/10 border border-primary/20 rounded-md p-4">
+                    <p className="text-white text-sm">
+                      <strong>Important:</strong> Ensure your bank details are correct. PKR will be transferred to this account after USDT deposit confirmation.
+                    </p>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={() => setShowBankDetails(false)}
+                      variant="outline"
+                      className="flex-1 border-white/20 text-white hover:bg-white/10"
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      onClick={handleSubmitBankDetails}
+                      disabled={loading || !selectedBank || !iban || !accountHolderName}
+                      className="flex-1 bg-primary hover:bg-primary/90"
                     >
                       {loading ? (
                         <>
@@ -240,12 +400,12 @@ const PKRSCV2Dashboard = () => {
                           Processing...
                         </>
                       ) : (
-                        "Proceed to Deposit"
+                        "Generate Deposit Address"
                       )}
                     </Button>
                   </div>
-                </Card>
-              </>
+                </div>
+              </Card>
             ) : (
               /* Deposit Instructions */
               <Card className="p-6 bg-white/5 border-white/10">
