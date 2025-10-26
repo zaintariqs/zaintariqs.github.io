@@ -321,7 +321,7 @@ const PKRSCV2Dashboard = () => {
                 <Card className="p-6 bg-white/5 border-white/10">
                   <div className="flex items-center justify-between mb-6">
                     <div>
-                      <p className="text-white/70 text-sm mb-1">Current Exchange Rate</p>
+                      <p className="text-white/70 text-sm mb-1">bestpossible rates</p>
                       <p className="text-3xl font-bold text-white">
                         1 USD = {usdPkrRate.toFixed(2)} PKR
                       </p>
