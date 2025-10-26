@@ -15,6 +15,8 @@ import { Label } from "@/components/ui/label";
 import { z } from "zod";
 import { verifyIBAN, formatIBAN } from "@/lib/mock-bank-verification";
 import { AlertCircle, CheckCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import QRCode from "react-qr-code";
 
 const PKRSCV2Dashboard = () => {
   const { address, isConnected } = useAccount();
@@ -29,6 +31,7 @@ const PKRSCV2Dashboard = () => {
   const [depositId, setDepositId] = useState("");
   const [showDeposit, setShowDeposit] = useState(false);
   const [showBankDetails, setShowBankDetails] = useState(false);
+  const [showAddressDialog, setShowAddressDialog] = useState(false);
   const [copied, setCopied] = useState(false);
   
   // Bank details state
@@ -189,6 +192,7 @@ const PKRSCV2Dashboard = () => {
         setDepositId(data.depositId);
         setShowBankDetails(false);
         setShowDeposit(true);
+        setShowAddressDialog(true);
         toast({
           title: "Deposit Address Generated",
           description: "Send USDT to the address below",
@@ -214,6 +218,10 @@ const PKRSCV2Dashboard = () => {
       title: "Copied!",
       description: "Deposit address copied to clipboard",
     });
+  };
+
+  const handleViewAddress = () => {
+    setShowAddressDialog(true);
   };
 
   const handleVerifyIBAN = async () => {
@@ -509,28 +517,17 @@ const PKRSCV2Dashboard = () => {
                 <div className="space-y-6">
                   <div className="text-center">
                     <CheckCircle2 className="w-16 h-16 text-primary mx-auto mb-4" />
-                    <h2 className="text-2xl font-bold text-white mb-2">Send USDT to Complete</h2>
+                    <h2 className="text-2xl font-bold text-white mb-2">Deposit Address Generated</h2>
                     <p className="text-white/70">Send exactly {usdtAmount} USDT on Base mainnet</p>
                   </div>
 
-                  <div>
-                    <label className="text-white text-sm mb-2 block">Deposit Address (Base Network)</label>
-                    <div className="flex gap-2">
-                      <Input
-                        value={depositAddress}
-                        readOnly
-                        className="bg-white/10 border-white/20 text-white font-mono"
-                      />
-                      <Button
-                        onClick={copyToClipboard}
-                        variant="outline"
-                        size="icon"
-                        className="border-white/20 text-white hover:bg-white/10"
-                      >
-                        {copied ? <CheckCircle2 className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                      </Button>
-                    </div>
-                  </div>
+                  <Button
+                    onClick={handleViewAddress}
+                    className="w-full bg-primary hover:bg-primary/90"
+                    size="lg"
+                  >
+                    View Deposit Address & QR Code
+                  </Button>
 
                   <div className="bg-primary/10 border border-primary/20 rounded-md p-4">
                     <p className="text-white text-sm">
@@ -585,6 +582,72 @@ const PKRSCV2Dashboard = () => {
           </div>
         </main>
       </WhitelistCheck>
+
+      {/* Deposit Address Dialog with QR Code */}
+      <Dialog open={showAddressDialog} onOpenChange={setShowAddressDialog}>
+        <DialogContent className="bg-crypto-dark border-white/20 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-center">Deposit Address</DialogTitle>
+            <DialogDescription className="text-white/70 text-center">
+              Scan QR code or copy address to send USDT on Base
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            {/* QR Code */}
+            <div className="flex justify-center p-6 bg-white rounded-lg">
+              <QRCode
+                value={depositAddress}
+                size={200}
+                level="H"
+              />
+            </div>
+
+            {/* Address with Copy Button */}
+            <div className="space-y-2">
+              <label className="text-white/70 text-sm">Deposit Address (Base Network)</label>
+              <div className="flex gap-2">
+                <Input
+                  value={depositAddress}
+                  readOnly
+                  className="bg-white/10 border-white/20 text-white font-mono text-sm"
+                />
+                <Button
+                  onClick={copyToClipboard}
+                  variant="outline"
+                  size="icon"
+                  className="border-white/20 text-white hover:bg-white/10 shrink-0"
+                >
+                  {copied ? <CheckCircle2 className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                </Button>
+              </div>
+            </div>
+
+            {/* Warning */}
+            <div className="bg-primary/10 border border-primary/20 rounded-md p-4">
+              <p className="text-white text-sm">
+                <strong>⚠️ Important:</strong> Only send USDT on Base mainnet. Sending on other networks will result in permanent loss of funds.
+              </p>
+            </div>
+
+            {/* Amount Info */}
+            <div className="bg-white/10 rounded-md p-4">
+              <div className="flex justify-between text-white">
+                <span>Amount to Send:</span>
+                <span className="font-bold text-primary">{usdtAmount} USDT</span>
+              </div>
+            </div>
+
+            <Button
+              onClick={() => setShowAddressDialog(false)}
+              className="w-full bg-primary hover:bg-primary/90"
+            >
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <PKRFooter />
     </div>
   );
