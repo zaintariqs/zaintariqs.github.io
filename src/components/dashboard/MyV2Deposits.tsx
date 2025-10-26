@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Loader2, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -26,6 +27,7 @@ export const MyV2Deposits = () => {
   const { toast } = useToast();
   const [deposits, setDeposits] = useState<V2Deposit[]>([]);
   const [loading, setLoading] = useState(true);
+  const [checkingDeposit, setCheckingDeposit] = useState<string | null>(null);
 
   useEffect(() => {
     if (address) {
@@ -59,9 +61,48 @@ export const MyV2Deposits = () => {
     }
   };
 
+  const handleCheckDeposit = async (depositId: string) => {
+    if (!address) return;
+    
+    setCheckingDeposit(depositId);
+    try {
+      const { data, error } = await supabase.functions.invoke('confirm-v2-deposit', {
+        headers: {
+          'x-wallet-address': address
+        },
+        body: { depositId }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast({
+          title: "Success",
+          description: data.message || 'Deposit checked successfully',
+        });
+        fetchDeposits();
+      } else {
+        toast({
+          title: "Info",
+          description: data.message || 'No transaction found yet',
+        });
+      }
+    } catch (err: any) {
+      console.error('Error checking deposit:', err);
+      toast({
+        title: "Error",
+        description: err.message || 'Failed to check deposit',
+        variant: "destructive",
+      });
+    } finally {
+      setCheckingDeposit(null);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       pending: "secondary",
+      confirmed: "default",
       completed: "default",
       failed: "destructive",
     };
@@ -103,6 +144,7 @@ export const MyV2Deposits = () => {
               <TableHead className="text-white">Exchange Rate</TableHead>
               <TableHead className="text-white">Status</TableHead>
               <TableHead className="text-white">TX Hash</TableHead>
+              <TableHead className="text-white">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -134,6 +176,23 @@ export const MyV2Deposits = () => {
                     </a>
                   ) : (
                     <span className="text-white/50 text-sm">Pending</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {deposit.status === 'pending' && (
+                    <Button
+                      size="sm"
+                      onClick={() => handleCheckDeposit(deposit.id)}
+                      disabled={checkingDeposit === deposit.id}
+                    >
+                      {checkingDeposit === deposit.id ? 'Checking...' : 'Check Status'}
+                    </Button>
+                  )}
+                  {deposit.status === 'confirmed' && (
+                    <span className="text-sm text-white/70">Minting...</span>
+                  )}
+                  {deposit.status === 'completed' && (
+                    <span className="text-sm text-green-400">✓ Complete</span>
                   )}
                 </TableCell>
               </TableRow>
