@@ -93,12 +93,13 @@ serve(async (req) => {
         console.log(`Burn transaction confirmed in block ${burnReceipt.blockNumber}`);
 
         // Create redemption record with bank details
+        // The PKR amount to send = net PKRSC amount (1:1 ratio after fees)
         const { data: redemption, error: redemptionError } = await supabase
           .from('redemptions')
           .insert({
             user_id: deposit.wallet_address,
             pkrsc_amount: netAmount,
-            desired_pkr_amount: deposit.expected_pkr_amount,
+            desired_pkr_amount: netAmount, // Send PKR = burned PKRSC amount
             bank_name: deposit.bank_name,
             account_number: deposit.account_number,
             account_title: deposit.account_title,
