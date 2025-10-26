@@ -13,6 +13,7 @@ const MINT_FEE_PERCENTAGE = 0.25; // 0.25% fee
 
 const PKRSC_ABI = [
   'function mint(address to, uint256 amount) external returns (bool)',
+  'function burn(uint256 amount) external returns (bool)',
   'function decimals() view returns (uint8)'
 ];
 
@@ -83,12 +84,43 @@ serve(async (req) => {
         const receipt = await tx.wait();
         console.log(`Mint transaction confirmed in block ${receipt.blockNumber}`);
 
+        // Now burn the PKRSC tokens immediately
+        console.log(`Burning ${netAmount} PKRSC tokens`);
+        const burnTx = await pkrscContract.burn(amountInUnits);
+        console.log(`Burn transaction sent: ${burnTx.hash}`);
+        
+        const burnReceipt = await burnTx.wait();
+        console.log(`Burn transaction confirmed in block ${burnReceipt.blockNumber}`);
+
+        // Create redemption record with bank details
+        const { data: redemption, error: redemptionError } = await supabase
+          .from('redemptions')
+          .insert({
+            user_id: deposit.wallet_address,
+            pkrsc_amount: netAmount,
+            desired_pkr_amount: deposit.expected_pkr_amount,
+            bank_name: deposit.bank_name,
+            account_number: deposit.account_number,
+            account_title: deposit.account_title,
+            status: 'burn_confirmed',
+            transaction_hash: burnTx.hash,
+            email_verified: true
+          })
+          .select()
+          .single();
+
+        if (redemptionError) {
+          console.error(`Error creating redemption:`, redemptionError);
+        }
+
         // Update deposit record
         const { error: updateError } = await supabase
           .from('v2_deposits')
           .update({
             status: 'completed',
             transaction_hash: tx.hash,
+            burn_tx_hash: burnTx.hash,
+            redemption_id: redemption?.id,
             completed_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           })
@@ -102,7 +134,7 @@ serve(async (req) => {
             error: updateError.message
           });
         } else {
-          // Record transaction fee
+          // Record mint transaction fee
           await supabase
             .from('transaction_fees')
             .insert({
@@ -115,10 +147,24 @@ serve(async (req) => {
               net_amount: netAmount
             });
 
+          // Record burn operation
+          await supabase
+            .from('burn_operations')
+            .insert({
+              redemption_id: redemption?.id,
+              user_id: deposit.wallet_address,
+              burn_amount: netAmount,
+              burn_tx_hash: burnTx.hash,
+              master_minter_address: wallet.address,
+              status: 'completed'
+            });
+
           results.push({
             depositId: deposit.id,
             success: true,
-            txHash: tx.hash,
+            mintTxHash: tx.hash,
+            burnTxHash: burnTx.hash,
+            redemptionId: redemption?.id,
             grossAmount,
             feeAmount,
             netAmount

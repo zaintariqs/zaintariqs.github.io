@@ -16,6 +16,7 @@ interface V2Deposit {
   exchange_rate_at_creation: number;
   deposit_address: string;
   transaction_hash: string | null;
+  burn_tx_hash: string | null;
   status: string;
   confirmations: number;
   created_at: string;
@@ -143,7 +144,8 @@ export const MyV2Deposits = () => {
               <TableHead className="text-white">PKR Amount</TableHead>
               <TableHead className="text-white">Exchange Rate</TableHead>
               <TableHead className="text-white">Status</TableHead>
-              <TableHead className="text-white">TX Hash</TableHead>
+              <TableHead className="text-white">Mint TX</TableHead>
+              <TableHead className="text-white">Burn TX</TableHead>
               <TableHead className="text-white">Action</TableHead>
             </TableRow>
           </TableHeader>
@@ -176,6 +178,21 @@ export const MyV2Deposits = () => {
                     </a>
                   ) : (
                     <span className="text-white/50 text-sm">Pending</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {deposit.burn_tx_hash ? (
+                    <a
+                      href={`https://basescan.org/tx/${deposit.burn_tx_hash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:text-primary/80 flex items-center gap-1 text-sm"
+                    >
+                      {deposit.burn_tx_hash.slice(0, 6)}...{deposit.burn_tx_hash.slice(-4)}
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  ) : (
+                    <span className="text-white/50 text-sm">-</span>
                   )}
                 </TableCell>
                 <TableCell>

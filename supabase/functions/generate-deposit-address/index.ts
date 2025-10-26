@@ -25,7 +25,7 @@ serve(async (req) => {
       );
     }
 
-    const { usdtAmount, pkrAmount, exchangeRate } = await req.json();
+    const { usdtAmount, pkrAmount, exchangeRate, bankDetails } = await req.json();
 
     console.log('Generating deposit address for wallet:', walletAddress);
 
@@ -33,7 +33,7 @@ serve(async (req) => {
     // or use a payment processor that provides unique deposit addresses
     const masterDepositAddress = '0x1234567890123456789012345678901234567890'; // Replace with actual master wallet
 
-    // Create a deposit record
+    // Create a deposit record with bank details
     const { data: deposit, error } = await supabase
       .from('v2_deposits')
       .insert({
@@ -43,7 +43,10 @@ serve(async (req) => {
         exchange_rate_at_creation: exchangeRate,
         deposit_address: masterDepositAddress,
         status: 'pending',
-        chain: 'base'
+        chain: 'base',
+        bank_name: bankDetails?.bank,
+        account_number: bankDetails?.iban,
+        account_title: bankDetails?.accountHolderName
       })
       .select()
       .single();

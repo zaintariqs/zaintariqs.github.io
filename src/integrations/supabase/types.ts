@@ -848,6 +848,10 @@ export type Database = {
       }
       v2_deposits: {
         Row: {
+          account_number: string | null
+          account_title: string | null
+          bank_name: string | null
+          burn_tx_hash: string | null
           chain: string
           completed_at: string | null
           confirmations: number | null
@@ -856,6 +860,7 @@ export type Database = {
           exchange_rate_at_creation: number
           expected_pkr_amount: number
           id: string
+          redemption_id: string | null
           status: string
           transaction_hash: string | null
           updated_at: string
@@ -863,6 +868,10 @@ export type Database = {
           wallet_address: string
         }
         Insert: {
+          account_number?: string | null
+          account_title?: string | null
+          bank_name?: string | null
+          burn_tx_hash?: string | null
           chain?: string
           completed_at?: string | null
           confirmations?: number | null
@@ -871,6 +880,7 @@ export type Database = {
           exchange_rate_at_creation: number
           expected_pkr_amount: number
           id?: string
+          redemption_id?: string | null
           status?: string
           transaction_hash?: string | null
           updated_at?: string
@@ -878,6 +888,10 @@ export type Database = {
           wallet_address: string
         }
         Update: {
+          account_number?: string | null
+          account_title?: string | null
+          bank_name?: string | null
+          burn_tx_hash?: string | null
           chain?: string
           completed_at?: string | null
           confirmations?: number | null
@@ -886,6 +900,7 @@ export type Database = {
           exchange_rate_at_creation?: number
           expected_pkr_amount?: number
           id?: string
+          redemption_id?: string | null
           status?: string
           transaction_hash?: string | null
           updated_at?: string
