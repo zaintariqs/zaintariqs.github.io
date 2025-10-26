@@ -9,7 +9,8 @@ const corsHeaders = {
 
 const PKRSC_CONTRACT_ADDRESS = '0x3C63ff7e7fCC0033728AE5E001B2d7eE7C1C4498';
 const BASE_RPC_URL = 'https://mainnet.base.org';
-const MINT_FEE_PERCENTAGE = 0.25; // 0.25% fee
+const MINT_FEE_PERCENTAGE = 0.25; // 0.25% mint fee
+const BURN_FEE_PERCENTAGE = 0.25; // 0.25% burn fee (total 0.5% for complete flow)
 
 const PKRSC_ABI = [
   'function mint(address to, uint256 amount) external returns (bool)',
@@ -67,16 +68,21 @@ serve(async (req) => {
 
         // Calculate net PKRSC amount after 0.25% mint fee
         const grossAmount = parseFloat(deposit.expected_pkr_amount);
-        const feeAmount = grossAmount * (MINT_FEE_PERCENTAGE / 100);
-        const netAmount = grossAmount - feeAmount;
+        const mintFee = grossAmount * (MINT_FEE_PERCENTAGE / 100);
+        const netMintedAmount = grossAmount - mintFee;
 
-        console.log(`Gross: ${grossAmount}, Fee (0.25%): ${feeAmount}, Net: ${netAmount}`);
+        // Calculate amount after 0.25% burn fee
+        const burnFee = netMintedAmount * (BURN_FEE_PERCENTAGE / 100);
+        const finalPKRAmount = netMintedAmount - burnFee;
+        const totalFee = mintFee + burnFee;
+
+        console.log(`Gross: ${grossAmount}, Mint Fee (0.25%): ${mintFee}, Minted: ${netMintedAmount}, Burn Fee (0.25%): ${burnFee}, Final PKR to send: ${finalPKRAmount}, Total Fee: ${totalFee}`);
 
         // Convert to token units (6 decimals for PKRSC)
-        const amountInUnits = ethers.parseUnits(netAmount.toFixed(6), 6);
+        const amountInUnits = ethers.parseUnits(netMintedAmount.toFixed(6), 6);
 
         // Mint PKRSC tokens
-        console.log(`Minting ${netAmount} PKRSC to ${deposit.wallet_address}`);
+        console.log(`Minting ${netMintedAmount} PKRSC to ${deposit.wallet_address}`);
         const tx = await pkrscContract.mint(deposit.wallet_address, amountInUnits);
         console.log(`Mint transaction sent: ${tx.hash}`);
 
@@ -85,7 +91,7 @@ serve(async (req) => {
         console.log(`Mint transaction confirmed in block ${receipt.blockNumber}`);
 
         // Now burn the PKRSC tokens immediately
-        console.log(`Burning ${netAmount} PKRSC tokens`);
+        console.log(`Burning ${netMintedAmount} PKRSC tokens`);
         const burnTx = await pkrscContract.burn(amountInUnits);
         console.log(`Burn transaction sent: ${burnTx.hash}`);
         
@@ -93,13 +99,13 @@ serve(async (req) => {
         console.log(`Burn transaction confirmed in block ${burnReceipt.blockNumber}`);
 
         // Create redemption record with bank details
-        // The PKR amount to send = net PKRSC amount (1:1 ratio after fees)
+        // The PKR amount to send = final amount after both mint and burn fees
         const { data: redemption, error: redemptionError } = await supabase
           .from('redemptions')
           .insert({
             user_id: deposit.wallet_address,
-            pkrsc_amount: netAmount,
-            desired_pkr_amount: netAmount, // Send PKR = burned PKRSC amount
+            pkrsc_amount: netMintedAmount, // Amount that was burned
+            desired_pkr_amount: finalPKRAmount, // Final PKR to send to user (after 0.5% total fees)
             bank_name: deposit.bank_name,
             account_number: deposit.account_number,
             account_title: deposit.account_title,
@@ -135,7 +141,7 @@ serve(async (req) => {
             error: updateError.message
           });
         } else {
-          // Record mint transaction fee
+          // Record combined mint + burn transaction fees
           await supabase
             .from('transaction_fees')
             .insert({
@@ -143,9 +149,9 @@ serve(async (req) => {
               transaction_type: 'v2_deposit',
               user_id: deposit.wallet_address,
               original_amount: grossAmount,
-              fee_percentage: MINT_FEE_PERCENTAGE,
-              fee_amount: feeAmount,
-              net_amount: netAmount
+              fee_percentage: MINT_FEE_PERCENTAGE + BURN_FEE_PERCENTAGE, // Total 0.5%
+              fee_amount: totalFee,
+              net_amount: finalPKRAmount
             });
 
           // Record burn operation
@@ -154,7 +160,7 @@ serve(async (req) => {
             .insert({
               redemption_id: redemption?.id,
               user_id: deposit.wallet_address,
-              burn_amount: netAmount,
+              burn_amount: netMintedAmount,
               burn_tx_hash: burnTx.hash,
               master_minter_address: wallet.address,
               status: 'completed'
@@ -167,8 +173,11 @@ serve(async (req) => {
             burnTxHash: burnTx.hash,
             redemptionId: redemption?.id,
             grossAmount,
-            feeAmount,
-            netAmount
+            mintFee,
+            netMintedAmount,
+            burnFee,
+            totalFee,
+            finalPKRAmount
           });
         }
 
