@@ -408,7 +408,7 @@ const PKRSCV2Dashboard = () => {
                     <Button
                       onClick={handleProceedToBankDetails}
                       disabled={!usdtAmount}
-                      className="w-full bg-primary hover:bg-primary/90"
+                      className="w-full bg-primary hover:bg-primary/80 text-white disabled:bg-gray-600 disabled:text-gray-300"
                       size="lg"
                     >
                       Continue
@@ -467,7 +467,7 @@ const PKRSCV2Dashboard = () => {
                           <Button
                             onClick={handleVerifyIBAN}
                             disabled={verifying || !iban || iban.length < 24}
-                            className="bg-primary hover:bg-primary/90 text-white whitespace-nowrap"
+                            className="bg-primary hover:bg-primary/80 text-white disabled:bg-gray-600 disabled:text-gray-300 whitespace-nowrap"
                           >
                             {verifying ? (
                               <>
@@ -526,14 +526,14 @@ const PKRSCV2Dashboard = () => {
                     <Button
                       onClick={() => setShowBankDetails(false)}
                       variant="outline"
-                      className="flex-1 border-primary/50 text-white hover:bg-primary/10"
+                      className="flex-1 border-primary text-primary hover:bg-primary hover:text-white"
                     >
                       Back
                     </Button>
                     <Button
                       onClick={handleSubmitBankDetails}
                       disabled={loading || !iban || !accountHolderName || verificationStatus !== "success"}
-                      className="flex-1 bg-primary hover:bg-primary/90 text-white"
+                      className="flex-1 bg-primary hover:bg-primary/80 text-white disabled:bg-gray-600 disabled:text-gray-300"
                     >
                       {loading ? (
                         <>
@@ -559,7 +559,7 @@ const PKRSCV2Dashboard = () => {
 
                   <Button
                     onClick={handleViewAddress}
-                    className="w-full bg-primary hover:bg-primary/90"
+                    className="w-full bg-primary hover:bg-primary/80 text-white"
                     size="lg"
                   >
                     View Deposit Address & QR Code
@@ -608,7 +608,7 @@ const PKRSCV2Dashboard = () => {
                   <Button
                     onClick={startNewExchange}
                     variant="outline"
-                    className="w-full border-primary/50 text-white hover:bg-primary/10"
+                    className="w-full border-primary text-primary hover:bg-primary hover:text-white"
                   >
                     Start New Exchange
                   </Button>
@@ -698,7 +698,7 @@ const PKRSCV2Dashboard = () => {
 
             <Button
               onClick={() => setShowAddressDialog(false)}
-              className="w-full bg-primary hover:bg-primary/90"
+              className="w-full bg-primary hover:bg-primary/80 text-white"
             >
               Close
             </Button>
