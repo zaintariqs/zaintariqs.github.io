@@ -467,8 +467,7 @@ const PKRSCV2Dashboard = () => {
                           <Button
                             onClick={handleVerifyIBAN}
                             disabled={verifying || !iban || iban.length < 24}
-                            variant="outline"
-                            className="border-white/20 text-white hover:bg-white/10 whitespace-nowrap"
+                            className="bg-primary hover:bg-primary/90 text-white whitespace-nowrap"
                           >
                             {verifying ? (
                               <>
@@ -527,14 +526,14 @@ const PKRSCV2Dashboard = () => {
                     <Button
                       onClick={() => setShowBankDetails(false)}
                       variant="outline"
-                      className="flex-1 bg-white text-black border-white hover:bg-white/90"
+                      className="flex-1 border-primary/50 text-white hover:bg-primary/10"
                     >
                       Back
                     </Button>
                     <Button
                       onClick={handleSubmitBankDetails}
                       disabled={loading || !iban || !accountHolderName || verificationStatus !== "success"}
-                      className="flex-1 bg-primary hover:bg-primary/90"
+                      className="flex-1 bg-primary hover:bg-primary/90 text-white"
                     >
                       {loading ? (
                         <>
@@ -609,7 +608,7 @@ const PKRSCV2Dashboard = () => {
                   <Button
                     onClick={startNewExchange}
                     variant="outline"
-                    className="w-full border-white/20 text-white hover:bg-white/10"
+                    className="w-full border-primary/50 text-white hover:bg-primary/10"
                   >
                     Start New Exchange
                   </Button>
