@@ -45,13 +45,8 @@ const PKRSCV2Dashboard = () => {
   const [verificationStatus, setVerificationStatus] = useState<"idle" | "success" | "error">("idle");
   const [verificationMessage, setVerificationMessage] = useState("");
 
-  // Fee calculations
-  const USDT_FEE_PERCENT = 0.25;
+  // Fee calculations - Only PKR burn fee for simplicity
   const BURN_FEE_PERCENT = 0.25;
-
-  const baseUsdtAmount = parseFloat(usdtAmount) || 0;
-  const usdtFee = (baseUsdtAmount * USDT_FEE_PERCENT) / 100;
-  const totalUsdtToSend = baseUsdtAmount + usdtFee;
   
   const grossPkrAmount = pkrAmount;
   const burnFee = (grossPkrAmount * BURN_FEE_PERCENT) / 100;
@@ -380,18 +375,6 @@ const PKRSCV2Dashboard = () => {
                       <label className="text-white text-sm mb-2 block">Fee Breakdown</label>
                       <div className="bg-white/10 border border-white/20 rounded-md p-4 space-y-3">
                         <div className="flex justify-between text-white/70 text-sm">
-                          <span>Base USDT Amount:</span>
-                          <span>{baseUsdtAmount.toLocaleString('en-US', { maximumFractionDigits: 2 })} USDT</span>
-                        </div>
-                        <div className="flex justify-between text-white/70 text-sm">
-                          <span>USDT Fee (0.25%):</span>
-                          <span>+{usdtFee.toLocaleString('en-US', { maximumFractionDigits: 2 })} USDT</span>
-                        </div>
-                        <div className="border-t border-white/20 pt-2 flex justify-between text-white font-semibold">
-                          <span>Total USDT to Send:</span>
-                          <span>{totalUsdtToSend.toLocaleString('en-US', { maximumFractionDigits: 2 })} USDT</span>
-                        </div>
-                        <div className="border-t border-white/20 pt-2 flex justify-between text-white/70 text-sm">
                           <span>Gross PKR Amount:</span>
                           <span>{grossPkrAmount.toLocaleString('en-US', { maximumFractionDigits: 2 })} PKR</span>
                         </div>
@@ -558,7 +541,7 @@ const PKRSCV2Dashboard = () => {
                   <div className="text-center">
                     <CheckCircle2 className="w-16 h-16 text-primary mx-auto mb-4" />
                     <h2 className="text-2xl font-bold text-white mb-2">Deposit Address Generated</h2>
-                    <p className="text-white/70">Send exactly {totalUsdtToSend.toFixed(2)} USDT on Base mainnet</p>
+                    <p className="text-white/70">Send exactly {usdtAmount} USDT on Base mainnet</p>
                   </div>
 
                   <Button
@@ -578,19 +561,11 @@ const PKRSCV2Dashboard = () => {
                   <div className="space-y-2">
                     <p className="text-white/70 text-sm">Exchange Summary:</p>
                     <div className="bg-white/10 rounded-md p-4 space-y-2">
-                      <div className="flex justify-between text-white/70 text-sm">
-                        <span>Base USDT Amount:</span>
-                        <span>{baseUsdtAmount.toFixed(2)} USDT</span>
+                      <div className="flex justify-between text-white">
+                        <span>USDT Amount:</span>
+                        <span className="font-semibold">{usdtAmount} USDT</span>
                       </div>
-                      <div className="flex justify-between text-white/70 text-sm">
-                        <span>USDT Fee (0.25%):</span>
-                        <span>+{usdtFee.toFixed(2)} USDT</span>
-                      </div>
-                      <div className="flex justify-between text-white font-semibold">
-                        <span>Total USDT to Send:</span>
-                        <span>{totalUsdtToSend.toFixed(2)} USDT</span>
-                      </div>
-                      <div className="flex justify-between text-white mt-2">
+                      <div className="flex justify-between text-white">
                         <span>Exchange Rate:</span>
                         <span className="font-semibold">1 USD = {usdPkrRate.toFixed(2)} PKR</span>
                       </div>
@@ -693,18 +668,10 @@ const PKRSCV2Dashboard = () => {
             </div>
 
             {/* Amount Info */}
-            <div className="bg-white/10 rounded-md p-4 space-y-2">
-              <div className="flex justify-between text-white/70 text-sm">
-                <span>Base Amount:</span>
-                <span>{baseUsdtAmount.toFixed(2)} USDT</span>
-              </div>
-              <div className="flex justify-between text-white/70 text-sm">
-                <span>Fee (0.25%):</span>
-                <span>+{usdtFee.toFixed(2)} USDT</span>
-              </div>
-              <div className="border-t border-white/20 pt-2 flex justify-between text-white">
-                <span className="font-semibold">Total to Send:</span>
-                <span className="font-bold text-primary text-lg">{totalUsdtToSend.toFixed(2)} USDT</span>
+            <div className="bg-white/10 rounded-md p-4">
+              <div className="flex justify-between text-white">
+                <span>Amount to Send:</span>
+                <span className="font-bold text-primary">{usdtAmount} USDT</span>
               </div>
             </div>
 
