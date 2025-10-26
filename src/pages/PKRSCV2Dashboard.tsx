@@ -385,7 +385,7 @@ const PKRSCV2Dashboard = () => {
                     <Button
                       onClick={() => setShowBankDetails(false)}
                       variant="outline"
-                      className="flex-1 border-white/20 text-white hover:bg-white/10"
+                      className="flex-1 bg-white text-black border-white hover:bg-white/90"
                     >
                       Back
                     </Button>
