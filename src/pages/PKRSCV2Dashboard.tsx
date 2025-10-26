@@ -45,12 +45,18 @@ const PKRSCV2Dashboard = () => {
   const [verificationStatus, setVerificationStatus] = useState<"idle" | "success" | "error">("idle");
   const [verificationMessage, setVerificationMessage] = useState("");
 
-  // Fee calculations - Only PKR burn fee for simplicity
+  // Fee calculations - Mint and Burn fees in PKR
+  const MINT_FEE_PERCENT = 0.25;
   const BURN_FEE_PERCENT = 0.25;
+  const EXCHANGE_RATE_MARKUP = 0.01; // 1% markup
   
-  const grossPkrAmount = pkrAmount;
+  // Apply 1% markup to exchange rate (reduce the rate by 1%)
+  const displayRate = usdPkrRate * (1 - EXCHANGE_RATE_MARKUP);
+  const grossPkrAmount = pkrAmount * (1 - EXCHANGE_RATE_MARKUP);
+  const mintFee = (grossPkrAmount * MINT_FEE_PERCENT) / 100;
   const burnFee = (grossPkrAmount * BURN_FEE_PERCENT) / 100;
-  const netPkrAmount = grossPkrAmount - burnFee;
+  const totalFees = mintFee + burnFee;
+  const netPkrAmount = grossPkrAmount - totalFees;
 
   // Pakistani banks list
   const pakistaniBanks = [
@@ -336,7 +342,7 @@ const PKRSCV2Dashboard = () => {
                     <div>
                       <p className="text-white/70 text-sm mb-1">bestpossible rates</p>
                       <p className="text-3xl font-bold text-white">
-                        1 USD = {usdPkrRate.toFixed(2)} PKR
+                        1 USD = {displayRate.toFixed(3)} PKR
                       </p>
                     </div>
                     <Button
@@ -379,8 +385,16 @@ const PKRSCV2Dashboard = () => {
                           <span>{grossPkrAmount.toLocaleString('en-US', { maximumFractionDigits: 2 })} PKR</span>
                         </div>
                         <div className="flex justify-between text-white/70 text-sm">
+                          <span>Mint Fee (0.25%):</span>
+                          <span>-{mintFee.toLocaleString('en-US', { maximumFractionDigits: 2 })} PKR</span>
+                        </div>
+                        <div className="flex justify-between text-white/70 text-sm">
                           <span>Burn Fee (0.25%):</span>
                           <span>-{burnFee.toLocaleString('en-US', { maximumFractionDigits: 2 })} PKR</span>
+                        </div>
+                        <div className="border-t border-white/20 pt-2 flex justify-between text-white/70 text-sm">
+                          <span>Total Fees (0.5%):</span>
+                          <span>-{totalFees.toLocaleString('en-US', { maximumFractionDigits: 2 })} PKR</span>
                         </div>
                         <div className="border-t border-white/20 pt-2 flex justify-between">
                           <span className="text-white font-semibold">Net Amount in Bank:</span>
@@ -567,15 +581,23 @@ const PKRSCV2Dashboard = () => {
                       </div>
                       <div className="flex justify-between text-white">
                         <span>Exchange Rate:</span>
-                        <span className="font-semibold">1 USD = {usdPkrRate.toFixed(2)} PKR</span>
+                        <span className="font-semibold">1 USD = {displayRate.toFixed(3)} PKR</span>
                       </div>
                       <div className="flex justify-between text-white/70 text-sm">
                         <span>Gross PKR Amount:</span>
                         <span>{grossPkrAmount.toLocaleString('en-US', { maximumFractionDigits: 2 })} PKR</span>
                       </div>
                       <div className="flex justify-between text-white/70 text-sm">
+                        <span>Mint Fee (0.25%):</span>
+                        <span>-{mintFee.toLocaleString('en-US', { maximumFractionDigits: 2 })} PKR</span>
+                      </div>
+                      <div className="flex justify-between text-white/70 text-sm">
                         <span>Burn Fee (0.25%):</span>
                         <span>-{burnFee.toLocaleString('en-US', { maximumFractionDigits: 2 })} PKR</span>
+                      </div>
+                      <div className="border-t border-white/20 pt-2 flex justify-between text-white/70 text-sm">
+                        <span>Total Fees (0.5%):</span>
+                        <span>-{totalFees.toLocaleString('en-US', { maximumFractionDigits: 2 })} PKR</span>
                       </div>
                       <div className="border-t border-white/20 pt-2 flex justify-between">
                         <span className="font-semibold">Net Amount in Bank:</span>
