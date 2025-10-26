@@ -17,6 +17,9 @@ import { verifyIBAN, formatIBAN } from "@/lib/mock-bank-verification";
 import { AlertCircle, CheckCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import QRCode from "react-qr-code";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MyV2Deposits } from "@/components/dashboard/MyV2Deposits";
+import { MyV2Redemptions } from "@/components/dashboard/MyV2Redemptions";
 
 const PKRSCV2Dashboard = () => {
   const { address, isConnected } = useAccount();
@@ -291,6 +294,20 @@ const PKRSCV2Dashboard = () => {
       <PKRHeader />
       <WhitelistCheck>
         <main className="container mx-auto px-4 py-16">
+          <Tabs defaultValue="exchange" className="max-w-5xl mx-auto space-y-8">
+            <TabsList className="grid w-full grid-cols-3 bg-white/5">
+              <TabsTrigger value="exchange" className="data-[state=active]:bg-primary">
+                Exchange
+              </TabsTrigger>
+              <TabsTrigger value="deposits" className="data-[state=active]:bg-primary">
+                My Deposits
+              </TabsTrigger>
+              <TabsTrigger value="redemptions" className="data-[state=active]:bg-primary">
+                My Redemptions
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="exchange" className="space-y-8">
           <div className="max-w-2xl mx-auto space-y-8">
             {/* Header */}
             <div className="text-center space-y-4">
@@ -580,6 +597,28 @@ const PKRSCV2Dashboard = () => {
               </Card>
             )}
           </div>
+            </TabsContent>
+
+            <TabsContent value="deposits">
+              <div className="space-y-6">
+                <div className="text-center space-y-2">
+                  <h2 className="text-3xl font-bold text-white">My Deposits</h2>
+                  <p className="text-white/70">Track your USDT deposits and PKRSC mint transactions</p>
+                </div>
+                <MyV2Deposits />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="redemptions">
+              <div className="space-y-6">
+                <div className="text-center space-y-2">
+                  <h2 className="text-3xl font-bold text-white">My Redemptions</h2>
+                  <p className="text-white/70">View your PKR withdrawals and PKRSC burn transactions</p>
+                </div>
+                <MyV2Redemptions />
+              </div>
+            </TabsContent>
+          </Tabs>
         </main>
       </WhitelistCheck>
 
