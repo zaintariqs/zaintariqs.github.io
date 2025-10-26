@@ -26,6 +26,9 @@ const PKRSCV2Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
+  const ADMIN_ADDRESS = '0x5be080f81552c2495B288c04D2B64b9F7A4A9F3F';
+  const isAdmin = address?.toLowerCase() === ADMIN_ADDRESS.toLowerCase();
+  
   const [usdPkrRate, setUsdPkrRate] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const [usdtAmount, setUsdtAmount] = useState("");
@@ -313,7 +316,20 @@ const PKRSCV2Dashboard = () => {
       <PKRHeader />
       <WhitelistCheck>
         <main className="container mx-auto px-4 py-16">
-          <Tabs defaultValue="exchange" className="max-w-5xl mx-auto space-y-8">
+          <div className="max-w-5xl mx-auto space-y-6">
+            {/* Admin Panel Button */}
+            {isAdmin && (
+              <div className="flex justify-end">
+                <Button
+                  onClick={() => navigate('/pkrsc/v2/admin')}
+                  className="bg-primary hover:bg-primary/80 text-white"
+                >
+                  Admin Panel
+                </Button>
+              </div>
+            )}
+
+            <Tabs defaultValue="exchange" className="space-y-8">
             <TabsList className="grid w-full grid-cols-3 bg-white/5">
               <TabsTrigger value="exchange" className="data-[state=active]:bg-primary">
                 Exchange
@@ -637,7 +653,8 @@ const PKRSCV2Dashboard = () => {
                 <MyV2Redemptions />
               </div>
             </TabsContent>
-          </Tabs>
+            </Tabs>
+          </div>
         </main>
       </WhitelistCheck>
 
