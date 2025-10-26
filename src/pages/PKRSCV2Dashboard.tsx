@@ -48,9 +48,9 @@ const PKRSCV2Dashboard = () => {
   // Fee calculations - Mint and Burn fees in PKR
   const MINT_FEE_PERCENT = 0.25;
   const BURN_FEE_PERCENT = 0.25;
-  const EXCHANGE_RATE_MARKUP = 0.01; // 1% markup
+  const EXCHANGE_RATE_MARKUP = 0.005; // 0.5% markup
   
-  // Apply 1% markup to exchange rate (reduce the rate by 1%)
+  // Apply 0.5% markup to exchange rate (reduce the rate by 0.5%)
   const displayRate = usdPkrRate * (1 - EXCHANGE_RATE_MARKUP);
   const grossPkrAmount = pkrAmount * (1 - EXCHANGE_RATE_MARKUP);
   const mintFee = (grossPkrAmount * MINT_FEE_PERCENT) / 100;
