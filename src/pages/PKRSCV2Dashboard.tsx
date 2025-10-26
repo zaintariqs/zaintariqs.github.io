@@ -13,6 +13,8 @@ import { ArrowRight, RefreshCw, Loader2, Copy, CheckCircle2, Building2 } from "l
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { z } from "zod";
+import { verifyIBAN, formatIBAN } from "@/lib/mock-bank-verification";
+import { AlertCircle, CheckCircle } from "lucide-react";
 
 const PKRSCV2Dashboard = () => {
   const { address, isConnected } = useAccount();
@@ -33,6 +35,9 @@ const PKRSCV2Dashboard = () => {
   const [selectedBank, setSelectedBank] = useState("");
   const [iban, setIban] = useState("");
   const [accountHolderName, setAccountHolderName] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState<"idle" | "success" | "error">("idle");
+  const [verificationMessage, setVerificationMessage] = useState("");
 
   // Fee calculations
   const MINT_FEE_PERCENT = 0.25;
@@ -211,6 +216,54 @@ const PKRSCV2Dashboard = () => {
     });
   };
 
+  const handleVerifyIBAN = async () => {
+    if (!iban || iban.length < 24) {
+      toast({
+        title: "Invalid IBAN",
+        description: "Please enter a complete 24-character IBAN",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setVerifying(true);
+    setVerificationStatus("idle");
+    setVerificationMessage("");
+
+    try {
+      const result = await verifyIBAN(iban);
+      
+      if (result.success) {
+        setVerificationStatus("success");
+        setVerificationMessage(`Account verified: ${result.bankName}`);
+        setAccountHolderName(result.accountHolderName || "");
+        setSelectedBank(result.bankName || "");
+        toast({
+          title: "Verification Successful",
+          description: `Account holder: ${result.accountHolderName}`,
+        });
+      } else {
+        setVerificationStatus("error");
+        setVerificationMessage(result.error || "Verification failed");
+        toast({
+          title: "Verification Failed",
+          description: result.error,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      setVerificationStatus("error");
+      setVerificationMessage("Connection error. Please try again.");
+      toast({
+        title: "Error",
+        description: "Failed to verify IBAN. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setVerifying(false);
+    }
+  };
+
   const startNewExchange = () => {
     setShowDeposit(false);
     setShowBankDetails(false);
@@ -221,6 +274,8 @@ const PKRSCV2Dashboard = () => {
     setSelectedBank("");
     setIban("");
     setAccountHolderName("");
+    setVerificationStatus("idle");
+    setVerificationMessage("");
   };
 
   return (
@@ -349,16 +404,54 @@ const PKRSCV2Dashboard = () => {
 
                     <div>
                       <Label htmlFor="iban" className="text-white text-sm mb-2 block">IBAN Number</Label>
-                      <Input
-                        id="iban"
-                        type="text"
-                        placeholder="PK36ABCD0000001234567890"
-                        value={iban}
-                        onChange={(e) => setIban(e.target.value.toUpperCase())}
-                        className="bg-white/10 border-white/20 text-white placeholder:text-white/50 font-mono"
-                        maxLength={24}
-                      />
-                      <p className="text-white/50 text-xs mt-1">24 characters starting with PK</p>
+                      <div className="space-y-2">
+                        <div className="flex gap-2">
+                          <Input
+                            id="iban"
+                            type="text"
+                            placeholder="PK36ABCD0000001234567890"
+                            value={iban}
+                            onChange={(e) => {
+                              setIban(e.target.value.toUpperCase());
+                              setVerificationStatus("idle");
+                              setVerificationMessage("");
+                            }}
+                            className="bg-white/10 border-white/20 text-white placeholder:text-white/50 font-mono"
+                            maxLength={24}
+                          />
+                          <Button
+                            onClick={handleVerifyIBAN}
+                            disabled={verifying || !iban || iban.length < 24}
+                            variant="outline"
+                            className="border-white/20 text-white hover:bg-white/10 whitespace-nowrap"
+                          >
+                            {verifying ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Verifying...
+                              </>
+                            ) : (
+                              "Verify IBAN"
+                            )}
+                          </Button>
+                        </div>
+                        
+                        {verificationStatus === "success" && (
+                          <div className="flex items-center gap-2 text-green-400 text-sm">
+                            <CheckCircle className="w-4 h-4" />
+                            <span>{verificationMessage}</span>
+                          </div>
+                        )}
+                        
+                        {verificationStatus === "error" && (
+                          <div className="flex items-center gap-2 text-red-400 text-sm">
+                            <AlertCircle className="w-4 h-4" />
+                            <span>{verificationMessage}</span>
+                          </div>
+                        )}
+                        
+                        <p className="text-white/50 text-xs">24 characters starting with PK</p>
+                      </div>
                     </div>
 
                     <div>
@@ -366,12 +459,16 @@ const PKRSCV2Dashboard = () => {
                       <Input
                         id="accountHolder"
                         type="text"
-                        placeholder="Enter full name as per bank account"
+                        placeholder="Verify IBAN to auto-fill or enter manually"
                         value={accountHolderName}
                         onChange={(e) => setAccountHolderName(e.target.value)}
                         className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
                         maxLength={100}
+                        readOnly={verificationStatus === "success"}
                       />
+                      {verificationStatus === "success" && (
+                        <p className="text-green-400 text-xs mt-1">✓ Auto-filled from verified IBAN</p>
+                      )}
                     </div>
                   </div>
 
@@ -391,7 +488,7 @@ const PKRSCV2Dashboard = () => {
                     </Button>
                     <Button
                       onClick={handleSubmitBankDetails}
-                      disabled={loading || !selectedBank || !iban || !accountHolderName}
+                      disabled={loading || !iban || !accountHolderName || verificationStatus !== "success"}
                       className="flex-1 bg-primary hover:bg-primary/90"
                     >
                       {loading ? (
